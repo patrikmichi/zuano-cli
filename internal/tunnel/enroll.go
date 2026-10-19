@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // DefaultKeyValidity is how long a key lives when the gateway names no date.

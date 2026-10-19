@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/text/unicode/norm"
 
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 // Definition is a tool as an MCP server describes it.

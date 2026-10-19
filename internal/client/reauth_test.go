@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 func TestReauthRequiredIsReportedWithoutARefreshAttempt(t *testing.T) {

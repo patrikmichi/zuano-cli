@@ -3,8 +3,8 @@ package cli
 import (
 	"encoding/json"
 
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 const policyOffReason = "policy_off"

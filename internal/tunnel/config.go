@@ -23,7 +23,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // BinaryName is the connector's command, named from the product.

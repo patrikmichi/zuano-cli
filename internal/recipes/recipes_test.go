@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 func testKey(seed string) (ed25519.PrivateKey, signing.Key) {

@@ -14,9 +14,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/brand"
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 // codeURLElicitationRequired is the JSON-RPC error a gateway answers a call

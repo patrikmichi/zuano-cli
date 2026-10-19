@@ -14,7 +14,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // Config holds all persisted CLI settings.

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 func TestWhoami_RefusesAnOversizedResponse(t *testing.T) {

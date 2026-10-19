@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
 // AgentRollbackCmd returns the `zuano agent rollback` cobra command —

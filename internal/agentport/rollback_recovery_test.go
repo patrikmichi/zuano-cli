@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/agentport/txn"
+	"github.com/patrikmichi/zuano-cli/internal/agentport/txn"
 )
 
 // TestRollback_RestoresPriorBytesAndModeFromLinkedTransaction proves the

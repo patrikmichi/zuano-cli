@@ -17,8 +17,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/textsafe"
-	"github.com/patrikmichi/zuano/internal/webhooksign"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/webhooksign"
 )
 
 // webhookSecretEnv holds the secret forwarded events are signed with.

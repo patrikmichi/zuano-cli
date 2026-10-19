@@ -8,7 +8,7 @@ project_name: zuano
 release:
   github:
     owner: patrikmichi
-    name: zuano
+    name: zuano-cli
   prerelease: auto
 
 before:
@@ -58,8 +58,8 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags:
       - -s -w -X main.version={{ .Version }} -X main.commit={{ .ShortCommit }} -X main.date={{ .CommitDate }}
-      - -X github.com/patrikmichi/zuano/internal/tunnel.UpdateKeyHex1={{ envOrDefault "CONNECTOR_UPDATE_KEY_1" "" }}
-      - -X github.com/patrikmichi/zuano/internal/tunnel.UpdateKeyHex2={{ envOrDefault "CONNECTOR_UPDATE_KEY_2" "" }}
+      - -X github.com/patrikmichi/zuano-cli/internal/tunnel.UpdateKeyHex1={{ envOrDefault "CONNECTOR_UPDATE_KEY_1" "" }}
+      - -X github.com/patrikmichi/zuano-cli/internal/tunnel.UpdateKeyHex2={{ envOrDefault "CONNECTOR_UPDATE_KEY_2" "" }}
     hooks:
       post:
         - cmd: bash .github/scripts/scan-denylist.sh "{{ .Path }}"
@@ -158,7 +158,7 @@ brews:
       name: patrikmichi
       email: yay@patrikmichalicka.com
     commit_msg_template: "zuano {{ .Tag }}"
-    homepage: "https://github.com/patrikmichi/zuano"
+    homepage: "https://github.com/patrikmichi/zuano-cli"
     description: "Manage AI agent skills and agents across providers"
     license: "Apache-2.0"
     install: |
@@ -181,7 +181,7 @@ scoops:
       name: patrikmichi
       email: yay@patrikmichalicka.com
     commit_msg_template: "zuano {{ .Tag }}"
-    homepage: "https://github.com/patrikmichi/zuano"
+    homepage: "https://github.com/patrikmichi/zuano-cli"
     description: "Manage AI agent skills and agents across providers"
     license: "Apache-2.0"
     skip_upload: auto
@@ -196,7 +196,7 @@ nfpms:
       - deb
       - rpm
     vendor: Loopmatic
-    homepage: "https://github.com/patrikmichi/zuano"
+    homepage: "https://github.com/patrikmichi/zuano-cli"
     maintainer: "patrikmichi <yay@patrikmichalicka.com>"
     description: "Connector agent: serves the HTTP and MCP targets named in its local config to the gateway"
     license: "Apache-2.0"
@@ -237,7 +237,7 @@ dockers_v2:
       - linux/arm64
     labels:
       org.opencontainers.image.title: "zuano-connector"
-      org.opencontainers.image.source: "https://github.com/patrikmichi/zuano"
+      org.opencontainers.image.source: "https://github.com/patrikmichi/zuano-cli"
       org.opencontainers.image.version: "{{ .Version }}"
       org.opencontainers.image.revision: "{{ .FullCommit }}"
       org.opencontainers.image.licenses: "Apache-2.0"

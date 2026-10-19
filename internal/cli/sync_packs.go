@@ -11,13 +11,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/agentport"
-	"github.com/patrikmichi/zuano/internal/agentsync"
-	"github.com/patrikmichi/zuano/internal/brand"
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/config"
-	"github.com/patrikmichi/zuano/internal/packs"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentsync"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/packs"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 // Installing a pack's skills and bundles goes through the same code as the

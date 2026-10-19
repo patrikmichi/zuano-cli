@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
 // Doer is the minimal HTTP interface FetchSkill needs to reach the gateway's

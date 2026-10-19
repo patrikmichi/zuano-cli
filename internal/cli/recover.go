@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/agentport/txn"
+	"github.com/patrikmichi/zuano-cli/internal/agentport/txn"
 )
 
 // RecoverCmd returns `zuano recover [id]` — inspects and completes or

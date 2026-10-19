@@ -17,11 +17,11 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/patrikmichi/zuano/internal/brand"
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/config"
-	"github.com/patrikmichi/zuano/internal/packs"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/packs"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 // packApplyWait bounds how long an install is followed.

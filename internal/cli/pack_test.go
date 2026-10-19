@@ -17,8 +17,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/config"
-	"github.com/patrikmichi/zuano/internal/signing/signingtest"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/signing/signingtest"
 )
 
 type packServer struct {

@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/dpop"
-	"github.com/patrikmichi/zuano/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/dpop"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 type seen struct {

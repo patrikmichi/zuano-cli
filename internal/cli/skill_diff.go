@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
 // SkillDiffCmd returns the `zuano skill diff <name>` cobra command — a

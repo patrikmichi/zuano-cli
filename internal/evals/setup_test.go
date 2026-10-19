@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 func suiteDir(t *testing.T, suiteYAML, cases string) *Config {

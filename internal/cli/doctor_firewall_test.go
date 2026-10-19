@@ -10,8 +10,8 @@ import (
 
 	"github.com/zalando/go-keyring"
 
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 func TestDoctorFlagsServersTheOrganisationRequiresRouted(t *testing.T) {

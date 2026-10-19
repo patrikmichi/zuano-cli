@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // nameCall classifies a tool name for agents that join the MCP server and the

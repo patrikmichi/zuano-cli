@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
 // TestProviderIDsCSV_MatchesLiveAdapterRegistry proves providerIDsCSV is

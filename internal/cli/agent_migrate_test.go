@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
 // TestAgentMigrate_ClaudeToOpencodeAndBack exercises the full round trip:

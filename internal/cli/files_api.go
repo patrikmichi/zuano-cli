@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/config"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 // fileDoc mirrors a file in the gateway's file store.

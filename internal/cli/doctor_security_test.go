@@ -10,9 +10,9 @@ import (
 
 	"github.com/zalando/go-keyring"
 
-	"github.com/patrikmichi/zuano/internal/config"
-	"github.com/patrikmichi/zuano/internal/dpop"
-	"github.com/patrikmichi/zuano/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/dpop"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 func doctorGateway(t *testing.T, strict bool, passkeys string) *httptest.Server {

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/evals"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/evals"
 )
 
 func fastPolling(t *testing.T) {

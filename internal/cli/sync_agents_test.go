@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/agentport"
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 func writeTestFile(t *testing.T, path, content string) {

@@ -3,8 +3,8 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/brand"
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 // maxResponseBytes is the per-response read cap (10 MiB).

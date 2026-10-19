@@ -18,8 +18,8 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/patrikmichi/zuano/internal/agentport"
-	"github.com/patrikmichi/zuano/internal/agentsync"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentsync"
 )
 
 // connectorRequirement is one entry of GET /api/marketplace/skills/{id}/requirements:

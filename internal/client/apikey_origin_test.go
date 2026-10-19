@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 func apiKeyEnv(t *testing.T, savedGateway, boundOrigin string) {

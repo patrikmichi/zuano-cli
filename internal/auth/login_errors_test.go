@@ -15,8 +15,8 @@ import (
 
 	"github.com/zalando/go-keyring"
 
-	"github.com/patrikmichi/zuano/internal/config"
-	"github.com/patrikmichi/zuano/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 // stubBrowser replaces openBrowser with one that follows the redirect with a

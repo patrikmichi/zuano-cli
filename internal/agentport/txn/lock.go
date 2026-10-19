@@ -10,7 +10,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // pollInterval mirrors internal/client/sessionlock's flock retry cadence —

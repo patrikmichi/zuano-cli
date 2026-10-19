@@ -11,8 +11,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/brand"
-	"github.com/patrikmichi/zuano/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 var envPrefix = strings.ToUpper(brand.Name)

@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // fake is a Provider answered by a function; it records the requests.

@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/webhooksign"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/webhooksign"
 )
 
 func fastStream(t *testing.T) {

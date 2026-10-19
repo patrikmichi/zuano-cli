@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/auth"
-	"github.com/patrikmichi/zuano/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/auth"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 // TokensCmd returns the `zuano tokens` cobra command with list and revoke subcommands.

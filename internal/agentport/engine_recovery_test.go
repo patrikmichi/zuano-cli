@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/agentport/txn"
+	"github.com/patrikmichi/zuano-cli/internal/agentport/txn"
 )
 
 // TestWrite_PartialFailureLeavesNothingBehind makes the target root

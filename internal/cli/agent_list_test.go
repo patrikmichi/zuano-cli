@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
 func TestAgentList_EnumeratesAcrossProviders(t *testing.T) {

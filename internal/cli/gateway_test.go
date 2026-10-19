@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/config"
-	"github.com/patrikmichi/zuano/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 // withLoggedInSession sets ZUANO_EMAIL and writes a matching token into the

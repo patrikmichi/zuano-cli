@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/agentport"
-	"github.com/patrikmichi/zuano/internal/catalog"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/catalog"
 )
 
 func TestTranslateGatewayFetchError_MapsEachSentinel(t *testing.T) {

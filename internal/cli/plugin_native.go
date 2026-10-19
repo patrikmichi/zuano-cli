@@ -14,10 +14,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/agentsync"
-	"github.com/patrikmichi/zuano/internal/brand"
-	"github.com/patrikmichi/zuano/internal/plugins"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/agentsync"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/plugins"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 // pluginAgent describes how a plugin reaches one coding agent.

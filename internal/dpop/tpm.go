@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // The TPM 2.0 constants and structures this file needs, from the TCG TPM 2.0

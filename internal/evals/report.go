@@ -7,8 +7,8 @@ import (
 	"html/template"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/brand"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 //go:embed report.html.tmpl

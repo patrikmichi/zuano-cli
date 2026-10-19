@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/agentport/txn"
+	"github.com/patrikmichi/zuano-cli/internal/agentport/txn"
 )
 
 // committedJournal records a finished write of name into root.

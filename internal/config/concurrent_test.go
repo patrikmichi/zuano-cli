@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 func TestSetters_ConcurrentUpdatesAreNotLost(t *testing.T) {

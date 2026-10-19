@@ -14,11 +14,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/config"
-	"github.com/patrikmichi/zuano/internal/redact"
-	"github.com/patrikmichi/zuano/internal/textsafe"
-	"github.com/patrikmichi/zuano/internal/transcripts"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/redact"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/transcripts"
 )
 
 type fromSessionOpts struct {

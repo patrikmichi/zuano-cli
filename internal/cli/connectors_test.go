@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 // connectorGateway is a gateway double covering the endpoints connectors and

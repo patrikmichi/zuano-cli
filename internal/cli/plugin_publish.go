@@ -18,8 +18,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/patrikmichi/zuano/internal/nofollow"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/nofollow"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 // pluginManifestName is the file that describes a bundle in a directory.

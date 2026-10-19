@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 // Reply is a gateway response.

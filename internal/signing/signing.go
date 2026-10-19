@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/brand"
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 // Wire names of the contract.

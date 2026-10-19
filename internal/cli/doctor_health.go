@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 // doctorHealth reports the gateway's public health and where it publishes its

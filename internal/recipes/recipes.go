@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 // KeysPath is where the gateway publishes the keys recipes are signed with.

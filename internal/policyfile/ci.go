@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 const githubWorkflow = `# Plans a policy change on every pull request and applies it when it is merged.
@@ -32,7 +32,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: stable
-      - run: go install github.com/patrikmichi/{{CMD}}/cmd/{{CMD}}@latest
+      - run: go install github.com/patrikmichi/{{REPO}}/cmd/{{CMD}}@latest
       - name: Plan
         if: github.event_name == 'pull_request'
         run: |
@@ -55,7 +55,7 @@ variables:
     {{ENV}}_ID_TOKEN:
       aud: ${{ENV}}_URL
   before_script:
-    - go install github.com/patrikmichi/{{CMD}}/cmd/{{CMD}}@latest
+    - go install github.com/patrikmichi/{{REPO}}/cmd/{{CMD}}@latest
     - export PATH="$PATH:$(go env GOPATH)/bin"
 
 {{CMD}}-policy-plan:
@@ -80,7 +80,7 @@ variables:
 // (github or gitlab) that plans on review and applies on merge. dir is the
 // policy directory.
 func CI(provider, dir string) (name, content string, err error) {
-	r := strings.NewReplacer("{{DIR}}", dir, "{{CMD}}", brand.Name, "{{ENV}}", strings.ToUpper(brand.Name))
+	r := strings.NewReplacer("{{DIR}}", dir, "{{REPO}}", brand.Name+"-cli", "{{CMD}}", brand.Name, "{{ENV}}", strings.ToUpper(brand.Name))
 	switch provider {
 	case "github":
 		return ".github/workflows/" + brand.Name + "-policy.yml", r.Replace(githubWorkflow), nil

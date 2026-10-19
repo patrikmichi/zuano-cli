@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/signing"
-	"github.com/patrikmichi/zuano/internal/signing/signingtest"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/signing/signingtest"
 )
 
 // bundle describes a bundle to build; each field can be spoiled by a test.

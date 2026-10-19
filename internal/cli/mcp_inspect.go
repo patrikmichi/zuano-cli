@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 	"github.com/spf13/cobra"
 )
 

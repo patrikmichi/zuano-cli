@@ -11,10 +11,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/agentport"
-	"github.com/patrikmichi/zuano/internal/agentsync"
-	"github.com/patrikmichi/zuano/internal/brand"
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentsync"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 // zuanoSource is the "from" of a route that writes settings (mcp, env, hooks,

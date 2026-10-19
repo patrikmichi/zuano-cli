@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 func TestWhoami_Success(t *testing.T) {

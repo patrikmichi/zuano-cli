@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/cli"
+	"github.com/patrikmichi/zuano-cli/internal/cli"
 )
 
 func TestOfflineFlagPresent(t *testing.T) {

@@ -1,4 +1,4 @@
-module github.com/patrikmichi/zuano
+module github.com/patrikmichi/zuano-cli
 
 // Compiler support policy: track the latest two upstream Go major
 // releases (https://go.dev/doc/devel/release#policy). Bump the `go` line
@@ -16,6 +16,7 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.9
 	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/sys v0.48.0
 	golang.org/x/text v0.42.0
@@ -26,5 +27,4 @@ require (
 	github.com/danieljoos/wincred v1.2.3 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
 )

@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 // Signer holds a private key and the pinned form of its public key.

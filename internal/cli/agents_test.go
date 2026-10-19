@@ -13,8 +13,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/agentsync"
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/agentsync"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 const agentJSON = `{"id":"agt_1","name":"Claude on laptop","kind":"mcp_client","owner":"ann@example.com","status":"active","lastActivity":"2026-10-15","exposure":"high"}`

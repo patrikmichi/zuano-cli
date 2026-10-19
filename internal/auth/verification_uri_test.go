@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 func TestDeviceLogin_WarnsWhenVerificationURLIsOffGateway(t *testing.T) {

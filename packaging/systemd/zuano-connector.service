@@ -1,6 +1,6 @@
 [Unit]
 Description=zuano-connector: serves the targets named in /etc/zuano-connector/config.yaml
-Documentation=https://github.com/patrikmichi/zuano/blob/main/docs/reference/connector.md
+Documentation=https://github.com/patrikmichi/zuano-cli/blob/main/docs/reference/connector.md
 After=network-online.target
 Wants=network-online.target
 

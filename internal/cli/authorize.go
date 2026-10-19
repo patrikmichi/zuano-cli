@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 	"github.com/spf13/cobra"
 )
 

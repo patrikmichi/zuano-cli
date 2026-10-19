@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 func pollDeviceToken(ctx context.Context, gatewayURL, deviceCode string, intervalSecs int) (*LoginResult, error) {

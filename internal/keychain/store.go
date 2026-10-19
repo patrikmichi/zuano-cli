@@ -12,7 +12,7 @@ import (
 
 	"github.com/zalando/go-keyring"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 const serviceName = brand.Name + "-cli"

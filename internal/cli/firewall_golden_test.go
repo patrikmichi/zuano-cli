@@ -12,7 +12,7 @@ import (
 
 	"github.com/zalando/go-keyring"
 
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 var updateFirewallGolden = flag.Bool("update-firewall-golden", false, "rewrite the firewall sync golden files")

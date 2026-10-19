@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 func TestUpdateSyncPersistsRoutesAndDropsEmptySettings(t *testing.T) {

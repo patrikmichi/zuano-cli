@@ -8,7 +8,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 // KeyCache keeps the published recipe keys on disk, so showing a recipe

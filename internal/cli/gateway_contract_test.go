@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/plugins"
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/plugins"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 // The documents these tests decode are the ones the gateway's route tests

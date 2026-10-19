@@ -3,7 +3,7 @@ package config_test
 import (
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 func TestAgentMode(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 func TestCommandDoer_PostThroughContextClientAndCancelledContext(t *testing.T) {

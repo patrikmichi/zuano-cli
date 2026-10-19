@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/config"
-	"github.com/patrikmichi/zuano/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 // writeToken is a shared helper to write a token to the OS keychain — bound

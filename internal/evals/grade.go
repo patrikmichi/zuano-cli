@@ -11,7 +11,7 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
-	"github.com/patrikmichi/zuano/internal/redact"
+	"github.com/patrikmichi/zuano-cli/internal/redact"
 )
 
 // ToolCall is a tool a model asked to run.

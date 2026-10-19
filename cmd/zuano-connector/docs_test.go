@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/tunnel"
+	"github.com/patrikmichi/zuano-cli/internal/tunnel"
 )
 
 func connectorDocs(t *testing.T) string {

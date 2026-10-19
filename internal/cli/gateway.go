@@ -4,7 +4,7 @@ package cli
 import (
 	"errors"
 
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 // offlineGuidance is the fail-closed degradation message shown whenever a

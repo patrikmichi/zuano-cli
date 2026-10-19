@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 func TestCatalogDiscoveryHonorsCancellation(t *testing.T) {

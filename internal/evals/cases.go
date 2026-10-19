@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // CaseFormat is the version of the case document, the line format of a

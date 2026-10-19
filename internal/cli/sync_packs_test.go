@@ -12,7 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/packs"
+	"github.com/patrikmichi/zuano-cli/internal/packs"
 )
 
 const assignmentsDoc = `{"revision":3,"profiles":[{"id":"spf_1","source":"pack","name":"finance","pack":{"slug":"finance","version":"1.0.0"},

@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 // Names inside a bundle.

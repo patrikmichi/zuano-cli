@@ -38,14 +38,14 @@ scoop install patrikmichi/zuano
 **Go install** (requires Go 1.26 or newer):
 
 ```bash
-go install github.com/patrikmichi/zuano/cmd/zuano@latest
+go install github.com/patrikmichi/zuano-cli/cmd/zuano@latest
 ```
 
 **Direct download:** archives for macOS, Linux and Windows (amd64, arm64) are
-on the [releases page](https://github.com/patrikmichi/zuano/releases).
+on the [releases page](https://github.com/patrikmichi/zuano-cli/releases).
 `SHA256SUMS.txt` is signed with Sigstore cosign, and every archive has an
 SBOM and a GitHub build provenance attestation
-(`gh attestation verify <archive> --repo patrikmichi/zuano`).
+(`gh attestation verify <archive> --repo patrikmichi/zuano-cli`).
 
 Every install is a single static `zuano` binary with no runtime
 dependencies and no built-in gateway: point it at one with

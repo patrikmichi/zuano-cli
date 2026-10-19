@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // ErrPending means a prior operation touching one of the same lock keys

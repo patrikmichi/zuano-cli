@@ -3,7 +3,7 @@ package evals
 import (
 	"fmt"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // File is a file `eval init` writes.

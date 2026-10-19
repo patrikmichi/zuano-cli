@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 // Operation statuses in a plan.

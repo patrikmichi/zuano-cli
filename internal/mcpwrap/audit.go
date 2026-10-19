@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 const genesisHash = "0000000000000000000000000000000000000000000000000000000000000000"

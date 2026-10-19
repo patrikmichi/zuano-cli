@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // SplitAll is the summary over every split.

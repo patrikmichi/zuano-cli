@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/plugins"
+	"github.com/patrikmichi/zuano-cli/internal/plugins"
 )
 
 func TestDoctor_ReportsPluginDriftAndAMissingClaudeHelper(t *testing.T) {

@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 // Exit statuses without a command of their own yet, named as in the registry

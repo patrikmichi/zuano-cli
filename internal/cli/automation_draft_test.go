@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 const draftReply = `{"automationId":"atm_dr4ft","customManifestId":"acm_1","wizardUrl":"/automations/atm_dr4ft/wizard","analysis":{"trigger":{"type":"github.issue_opened"},"steps":[{},{}],"derivedPermissions":["github.add_labels (write)","slack.post_message (outward)"],"maxRisk":"outward","preapprovableSteps":["steps[1]"],"missingConnections":["slack"],"minimumPlan":"pro"}}`

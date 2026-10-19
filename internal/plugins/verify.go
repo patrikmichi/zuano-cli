@@ -18,7 +18,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 // SignatureFile is the name of the signature at the root of a package.

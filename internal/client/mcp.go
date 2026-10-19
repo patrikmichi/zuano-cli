@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // MCPSessionHeader carries the session id a gateway assigns at initialize.

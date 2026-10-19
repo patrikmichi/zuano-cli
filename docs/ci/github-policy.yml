@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: stable
-      - run: go install github.com/patrikmichi/zuano/cmd/zuano@latest
+      - run: go install github.com/patrikmichi/zuano-cli/cmd/zuano@latest
       - name: Plan
         if: github.event_name == 'pull_request'
         run: |

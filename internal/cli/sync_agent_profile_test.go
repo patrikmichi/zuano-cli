@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/agentsync"
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/agentsync"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 func TestSync_SetsTheAgentProfileWhereAgentsHaveAnEnvironment(t *testing.T) {

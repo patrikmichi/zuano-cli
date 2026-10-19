@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/agentsync"
+	"github.com/patrikmichi/zuano-cli/internal/agentsync"
 )
 
 func doctorChecksByName(t *testing.T) (map[string]doctorCheck, error) {

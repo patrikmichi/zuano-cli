@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 // MarkdownLimit is the longest plan comment the gateway's hosts accept.

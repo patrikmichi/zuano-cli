@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/transcripts"
+	"github.com/patrikmichi/zuano-cli/internal/transcripts"
 )
 
 // Secret-shaped test values are built at run time so that no literal in the

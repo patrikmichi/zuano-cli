@@ -17,7 +17,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/tunnel"
+	"github.com/patrikmichi/zuano-cli/internal/tunnel"
 )
 
 type lockedWriter struct {

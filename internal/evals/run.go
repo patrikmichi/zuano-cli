@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // ResultsFormat is the version of a results document.

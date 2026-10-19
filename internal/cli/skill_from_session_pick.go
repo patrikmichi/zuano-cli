@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/textsafe"
-	"github.com/patrikmichi/zuano/internal/transcripts"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/transcripts"
 )
 
 const (

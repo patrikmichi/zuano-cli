@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // State is one node of the transaction state machine. It is stored on disk, so

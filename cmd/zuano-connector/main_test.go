@@ -23,7 +23,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/patrikmichi/zuano/internal/tunnel"
+	"github.com/patrikmichi/zuano-cli/internal/tunnel"
 )
 
 // testToken has the shape of an enrollment token and is assembled at run time.

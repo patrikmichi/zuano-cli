@@ -5,6 +5,6 @@ type: application
 version: 0.1.0
 appVersion: "0.1.0"
 kubeVersion: ">=1.27.0-0"
-home: https://github.com/patrikmichi/zuano
+home: https://github.com/patrikmichi/zuano-cli
 sources:
-  - https://github.com/patrikmichi/zuano
+  - https://github.com/patrikmichi/zuano-cli

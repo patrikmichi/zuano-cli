@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 func TestSkillSearch_PrintsResultsTable(t *testing.T) {

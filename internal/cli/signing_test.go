@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/config"
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 func keyFromSeed(b byte) (ed25519.PrivateKey, signing.Key) {

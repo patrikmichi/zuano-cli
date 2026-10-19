@@ -10,10 +10,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/agentport"
-	"github.com/patrikmichi/zuano/internal/agentsync"
-	"github.com/patrikmichi/zuano/internal/plugins"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentsync"
+	"github.com/patrikmichi/zuano-cli/internal/plugins"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 // expandSubagents installs a bundle's subagents (agents/<name>.md, Claude

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/signing"
-	"github.com/patrikmichi/zuano/internal/signing/signingtest"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/signing/signingtest"
 )
 
 func TestVerifyContent(t *testing.T) {

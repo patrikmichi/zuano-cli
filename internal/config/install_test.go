@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 func TestInstallIDIsCreatedOnceAndKept(t *testing.T) {

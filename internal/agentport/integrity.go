@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/patrikmichi/zuano/internal/nofollow"
+	"github.com/patrikmichi/zuano-cli/internal/nofollow"
 )
 
 // permissionsDiffer compares a file's mode with the one recorded at install.

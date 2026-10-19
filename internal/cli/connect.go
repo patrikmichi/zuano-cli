@@ -17,8 +17,8 @@ import (
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 var errTokenRevoked = errors.New("token expired or revoked — run `zuano login` to re-authenticate")

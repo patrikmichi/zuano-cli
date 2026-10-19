@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/evidence"
-	"github.com/patrikmichi/zuano/internal/signing"
-	"github.com/patrikmichi/zuano/internal/signing/signingtest"
+	"github.com/patrikmichi/zuano-cli/internal/evidence"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/signing/signingtest"
 )
 
 func complianceGateway(t *testing.T, routes routeMap) *packServer {

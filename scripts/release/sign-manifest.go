@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/tunnel"
+	"github.com/patrikmichi/zuano-cli/internal/tunnel"
 )
 
 func main() {

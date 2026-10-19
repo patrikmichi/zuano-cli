@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/zuano/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 // stepUpGateway answers /act with a step-up challenge until the retry carries

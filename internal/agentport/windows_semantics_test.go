@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/agentport/txn"
+	"github.com/patrikmichi/zuano-cli/internal/agentport/txn"
 )
 
 func TestPermissionsNeverDifferOnWindows(t *testing.T) {

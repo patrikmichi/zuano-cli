@@ -3,7 +3,7 @@ package redact
 import (
 	"encoding/json"
 
-	"github.com/patrikmichi/zuano/internal/transcripts"
+	"github.com/patrikmichi/zuano-cli/internal/transcripts"
 )
 
 // Session redacts every text of a session in place and records what was

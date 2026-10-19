@@ -14,7 +14,7 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/patrikmichi/zuano/internal/tunnel"
+	"github.com/patrikmichi/zuano-cli/internal/tunnel"
 )
 
 // Set at build time.

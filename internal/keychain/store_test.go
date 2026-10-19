@@ -6,7 +6,7 @@ import (
 
 	"github.com/zalando/go-keyring"
 
-	"github.com/patrikmichi/zuano/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 // init installs a mock keyring so tests don't touch the real OS keychain.

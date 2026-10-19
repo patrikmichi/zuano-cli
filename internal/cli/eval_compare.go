@@ -15,8 +15,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/evals"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/evals"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 // evalRoot is the directory baselines live under: the one holding the config

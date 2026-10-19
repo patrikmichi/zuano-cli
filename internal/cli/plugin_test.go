@@ -19,9 +19,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/config"
-	"github.com/patrikmichi/zuano/internal/plugins"
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/plugins"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 const testSkill = "---\nname: triage\ndescription: Triage issues\n---\n# Triage\n"

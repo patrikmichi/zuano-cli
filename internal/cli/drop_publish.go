@@ -17,9 +17,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/zuano/internal/client"
-	"github.com/patrikmichi/zuano/internal/drop"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/drop"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 // Timings are variables so tests can shorten them.

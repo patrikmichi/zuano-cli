@@ -15,8 +15,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/patrikmichi/zuano/internal/agentport/txn"
-	"github.com/patrikmichi/zuano/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/agentport/txn"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
 )
 
 // SourceDir is where zuano reads what to sync: ~/.config/zuano/sync for the

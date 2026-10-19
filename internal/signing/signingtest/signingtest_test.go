@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/patrikmichi/zuano/internal/signing"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
 func TestSignedBodyVerifies(t *testing.T) {

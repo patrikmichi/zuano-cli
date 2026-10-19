@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/patrikmichi/zuano/internal/brand"
-	"github.com/patrikmichi/zuano/internal/textsafe"
+	"github.com/patrikmichi/zuano-cli/internal/brand"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 // Process exit statuses for the gateway refusals every command shares.

@@ -7,7 +7,7 @@ import (
 
 	"github.com/zalando/go-keyring"
 
-	"github.com/patrikmichi/zuano/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 func withBrokenKeychain(t *testing.T) {

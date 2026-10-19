@@ -9,7 +9,7 @@ variables:
     ZUANO_ID_TOKEN:
       aud: $ZUANO_URL
   before_script:
-    - go install github.com/patrikmichi/zuano/cmd/zuano@latest
+    - go install github.com/patrikmichi/zuano-cli/cmd/zuano@latest
     - export PATH="$PATH:$(go env GOPATH)/bin"
 
 zuano-policy-plan:

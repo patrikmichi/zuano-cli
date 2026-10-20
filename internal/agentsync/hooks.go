@@ -190,7 +190,7 @@ func windsurfToolHookEvents(prefix, matcher string) ([]string, string) {
 		kinds = all
 	} else {
 		seen := map[string]bool{}
-		for _, tok := range strings.Split(m, "|") {
+		for tok := range strings.SplitSeq(m, "|") {
 			tok = strings.Trim(strings.TrimSpace(tok), "^$()")
 			k, ok := windsurfToolEvents[tok]
 			if !ok && strings.HasPrefix(tok, "mcp__") {

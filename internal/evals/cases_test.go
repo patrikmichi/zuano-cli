@@ -89,7 +89,7 @@ func TestLoadDatasetPicksTheReaderByExtension(t *testing.T) {
 func TestAssignSplitIsStableAndKeepsGivenSplits(t *testing.T) {
 	mk := func() []Case {
 		var cs []Case
-		for i := 0; i < 200; i++ {
+		for i := range 200 {
 			cs = append(cs, Case{Key: "k" + string(rune('a'+i%26)) + strings.Repeat("x", i/26)})
 		}
 		cs[0].Split = SplitTest

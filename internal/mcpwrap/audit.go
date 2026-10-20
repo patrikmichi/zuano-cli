@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"sync"
@@ -78,9 +79,7 @@ func (l *AuditLog) Append(event string, fields map[string]any) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	body := map[string]any{"seq": l.seq + 1, "ts": now(), "event": event}
-	for k, v := range fields {
-		body[k] = v
-	}
+	maps.Copy(body, fields)
 	hash, err := chainHash(l.prev, body)
 	if err != nil {
 		return err

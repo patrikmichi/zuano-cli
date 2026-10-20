@@ -21,10 +21,8 @@ func TestAcquire_MutualExclusion(t *testing.T) {
 	var maxActive int32
 	var wg sync.WaitGroup
 
-	for i := 0; i < 8; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 8 {
+		wg.Go(func() {
 			lock, err := Acquire(ctx, gateway, account)
 			if err != nil {
 				t.Errorf("Acquire: %v", err)
@@ -42,7 +40,7 @@ func TestAcquire_MutualExclusion(t *testing.T) {
 			if err := lock.Unlock(); err != nil {
 				t.Errorf("Unlock: %v", err)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 

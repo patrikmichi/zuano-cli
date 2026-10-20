@@ -15,7 +15,7 @@ func TestSetters_ConcurrentUpdatesAreNotLost(t *testing.T) {
 	withTempHome(t)
 	var wg sync.WaitGroup
 	errs := make(chan error, 3*20)
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		wg.Add(3)
 		go func() { defer wg.Done(); errs <- config.SetEmail("a@example.com") }()
 		go func() { defer wg.Done(); errs <- config.SetAgentEmail("agent@example.com") }()
@@ -42,7 +42,7 @@ func TestSetters_ConcurrentUpdatesAreNotLost(t *testing.T) {
 
 func TestSave_LeavesNoTempFilesAndNeverATornFile(t *testing.T) {
 	home := withTempHome(t)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if err := config.Save(config.Config{GatewayURL: fmt.Sprintf("https://gw%d.example.com", i)}); err != nil {
 			t.Fatal(err)
 		}

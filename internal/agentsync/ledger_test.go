@@ -26,13 +26,11 @@ func TestLedgerSaveKeepsAConcurrentSyncsEntries(t *testing.T) {
 	b.set("/cfg/b.json", "mcp:two", "h2")
 	var wg sync.WaitGroup
 	for _, l := range []*Ledger{a, b} {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			if err := l.Save(); err != nil {
 				t.Error(err)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 

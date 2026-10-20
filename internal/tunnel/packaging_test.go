@@ -37,7 +37,7 @@ func TestExampleConfigIsValid(t *testing.T) {
 	// The commented examples are valid too once uncommented.
 	var lines []string
 	inTargets := false
-	for _, l := range strings.Split(repoFile(t, "packaging", "config.example.yaml"), "\n") {
+	for l := range strings.SplitSeq(repoFile(t, "packaging", "config.example.yaml"), "\n") {
 		switch {
 		case strings.HasPrefix(l, "targets:"):
 			inTargets = true

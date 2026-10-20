@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -98,7 +99,7 @@ func (b *bundle) write() string {
 		b.files["chain/checkpoints.jsonl"] = b.jsonl(b.cps)
 	}
 	if _, ok := b.files["chain/verification.json"]; !ok {
-		b.files["chain/verification.json"] = []byte(fmt.Sprintf(`{"ok":true,"from_seq":5,"to_seq":9,"recomputed_head":%q}`, b.head))
+		b.files["chain/verification.json"] = fmt.Appendf(nil, `{"ok":true,"from_seq":5,"to_seq":9,"recomputed_head":%q}`, b.head)
 	}
 	if _, ok := b.files["controls.csv"]; !ok {
 		b.files["controls.csv"] = []byte("control_id,status\nCC6.1,covered\n")
@@ -347,9 +348,7 @@ func TestGarbledChainFilesAreFailures(t *testing.T) {
 		"bad checkpoint": {"chain/checkpoints.jsonl": []byte("{nope\n")},
 	} {
 		b := newBundle(t)
-		for k, v := range files {
-			b.files[k] = v
-		}
+		maps.Copy(b.files, files)
 		if r := verify(t, b); r.OK() {
 			t.Errorf("%s verified", name)
 		}

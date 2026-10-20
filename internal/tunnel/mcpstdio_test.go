@@ -258,7 +258,7 @@ func TestStdioSupervisorEnvironment(t *testing.T) {
 func TestStdioSupervisorSurvivesConcurrentCalls(t *testing.T) {
 	s := newSupervisor(t, nil)
 	errs := make(chan error, 20)
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		go func(i int) {
 			res, xerr := call(t, s, i, "tools/call", map[string]any{"name": "echo", "arguments": map[string]any{"i": i}})
 			if xerr != nil {
@@ -273,7 +273,7 @@ func TestStdioSupervisorSurvivesConcurrentCalls(t *testing.T) {
 			errs <- nil
 		}(i)
 	}
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		if err := <-errs; err != nil {
 			t.Error(err)
 		}

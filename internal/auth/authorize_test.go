@@ -22,7 +22,7 @@ func TestPollDeviceToken_SuccessOnFirstPoll(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token":  "access-1",
 			"refresh_token": "refresh-1",
 			"email":         "user@example.com",
@@ -51,11 +51,11 @@ func TestPollDeviceToken_PendingThenSuccess(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if atomic.AddInt32(&hits, 1) == 1 {
 			w.WriteHeader(http.StatusRequestTimeout) // authorization_pending
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{"error": "authorization_pending"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "authorization_pending"})
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "access-2", "refresh_token": "refresh-2", "email": "user@example.com", "expires_in": 3600,
 		})
 	}))
@@ -80,11 +80,11 @@ func TestPollDeviceToken_428PendingThenSuccess(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if atomic.AddInt32(&hits, 1) == 1 {
 			w.WriteHeader(428) // Precondition Required — alternate pending code
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{"error": "authorization_pending"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "authorization_pending"})
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "access-3", "refresh_token": "refresh-3", "email": "user@example.com", "expires_in": 3600,
 		})
 	}))
@@ -115,11 +115,11 @@ func TestPollDeviceToken_SlowDownIncreasesInterval(t *testing.T) {
 		pollTimes = append(pollTimes, time.Now())
 		if atomic.AddInt32(&hits, 1) == 1 {
 			w.WriteHeader(http.StatusBadRequest)
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{"error": "slow_down"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "slow_down"})
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "access-slow", "refresh_token": "refresh-slow", "email": "user@example.com", "expires_in": 3600,
 		})
 	}))
@@ -152,7 +152,7 @@ func TestPollDeviceToken_ExpiredToken(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"error": "expired_token", "error_description": "device code expired",
 		})
 	}))
@@ -172,7 +172,7 @@ func TestPollDeviceToken_GenericBadRequest(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"error": "access_denied", "error_description": "user denied the request",
 		})
 	}))
@@ -256,7 +256,7 @@ func TestPollDeviceToken_ContextCancelledWhilePending(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusRequestTimeout)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{"error": "authorization_pending"})
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "authorization_pending"})
 	}))
 	defer srv.Close()
 

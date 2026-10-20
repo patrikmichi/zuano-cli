@@ -180,7 +180,6 @@ func TestFetchSkill_StatusCodeMapping(t *testing.T) {
 		{http.StatusTooManyRequests, ErrRateLimited},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(http.StatusText(tc.status), func(t *testing.T) {
 			doer := newFakeGateway(t, func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tc.status)

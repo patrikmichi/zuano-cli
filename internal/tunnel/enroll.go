@@ -243,7 +243,7 @@ func writeStarterConfig(path string, id *Identity) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(path, []byte(fmt.Sprintf(starterConfig, id.NetworkID, id.Name)), 0o644)
+	return os.WriteFile(path, fmt.Appendf(nil, starterConfig, id.NetworkID, id.Name), 0o644)
 }
 
 type rotateChallenge struct {

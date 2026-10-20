@@ -141,12 +141,7 @@ func (h Hook) appliesTo(a AgentID) bool {
 	if len(h.Agents) == 0 {
 		return true
 	}
-	for _, x := range h.Agents {
-		if x == a {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(h.Agents, a)
 }
 
 // Rule is a persistent instruction. Rules with Globs apply to matching
@@ -204,7 +199,7 @@ func ParseAgents(values []string) ([]AgentID, error) {
 	var out []AgentID
 	seen := map[AgentID]bool{}
 	for _, raw := range values {
-		for _, v := range strings.Split(raw, ",") {
+		for v := range strings.SplitSeq(raw, ",") {
 			v = strings.ToLower(strings.TrimSpace(v))
 			if v == "" {
 				continue

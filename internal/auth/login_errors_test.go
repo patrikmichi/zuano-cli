@@ -50,7 +50,7 @@ func tokenServer(t *testing.T, status int) *httptest.Server {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "access-1", "refresh_token": "refresh-1", "expires_in": 3600, "email": "user@example.com",
 		})
 	}))
@@ -159,7 +159,7 @@ func TestOAuthCallbackHandler_RejectsNonGet(t *testing.T) {
 func TestOAuthCallbackHandler_ProviderErrorIsReported(t *testing.T) {
 	codes, failures := make(chan string, 1), make(chan error, 1)
 	h := oauthCallbackHandler("s", codes, failures)
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/callback?state=s&error=access_denied", nil))
 		if rec.Code != http.StatusBadRequest {

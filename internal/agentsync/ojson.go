@@ -248,7 +248,7 @@ func decodeNode(dec *json.Decoder) (*jnode, error) {
 
 func (n *jnode) encode(buf *bytes.Buffer, indent string, depth int) {
 	pad := func(d int) {
-		for i := 0; i < d; i++ {
+		for range d {
 			buf.WriteString(indent)
 		}
 	}
@@ -340,7 +340,7 @@ func (n *jnode) hash() string {
 // detectIndent reports the indentation unit of an existing JSON document so
 // the rewrite does not reformat the user's file.
 func detectIndent(data []byte) string {
-	for _, line := range bytes.Split(data, []byte("\n")) {
+	for line := range bytes.SplitSeq(data, []byte("\n")) {
 		if len(line) == 0 || (line[0] != ' ' && line[0] != '\t') {
 			continue
 		}

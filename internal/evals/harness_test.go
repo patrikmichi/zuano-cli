@@ -255,7 +255,7 @@ func TestAppHarnessSignsAndRetries(t *testing.T) {
 		hdr := r.Header.Get(brand.SignatureHeader)
 		var ts string
 		var sig string
-		for _, part := range strings.Split(hdr, ",") {
+		for part := range strings.SplitSeq(hdr, ",") {
 			k, v, _ := strings.Cut(part, "=")
 			switch k {
 			case "t":

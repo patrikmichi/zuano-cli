@@ -42,8 +42,8 @@ func Detect(name string, data []byte) (string, error) {
 		return SourcePlainText, nil
 	}
 	first := trimmed
-	if i := bytes.IndexByte(trimmed, '\n'); i >= 0 {
-		first = bytes.TrimSpace(trimmed[:i])
+	if before, _, ok := bytes.Cut(trimmed, []byte{'\n'}); ok {
+		first = bytes.TrimSpace(before)
 	}
 	var doc any
 	whole := json.Unmarshal(trimmed, &doc) == nil
@@ -93,7 +93,7 @@ func jsonlSource(line obj) string {
 }
 
 func roleMarkerPresent(text string) bool {
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		if _, _, ok := markerOf(line); ok {
 			return true
 		}

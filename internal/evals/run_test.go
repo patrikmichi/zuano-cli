@@ -29,7 +29,7 @@ func (s stubHarness) Run(_ context.Context, c Case, cell Cell) Output {
 
 func taskCases(n int) []Case {
 	var cs []Case
-	for i := 0; i < n; i++ {
+	for i := range n {
 		cs = append(cs, Case{Kind: KindTask, Key: fmt.Sprintf("c%02d", i), Name: fmt.Sprintf("case %d", i), Input: Input{Text: "q"},
 			Expected: &Expected{Assertions: []Assertion{{Type: "contains", Value: "ok"}}}})
 	}

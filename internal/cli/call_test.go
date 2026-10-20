@@ -26,8 +26,8 @@ func init() {
 // parseArgValue mirrors the key=value → typed-value logic in call.go / service_cmd.go.
 // We duplicate the inline logic here because it is embedded in cobra RunE closures
 // and not exported. The tests validate the parsing contract independently.
-func parseArgValue(v string) interface{} {
-	var parsed interface{}
+func parseArgValue(v string) any {
+	var parsed any
 	if err := json.Unmarshal([]byte(v), &parsed); err == nil {
 		return parsed
 	}
@@ -90,7 +90,7 @@ func TestParseArgValue_Boolean(t *testing.T) {
 // TestParseArgValue_JSON ensures JSON objects and arrays decode correctly.
 func TestParseArgValue_JSON(t *testing.T) {
 	got := parseArgValue(`{"key":"val"}`)
-	m, ok := got.(map[string]interface{})
+	m, ok := got.(map[string]any)
 	if !ok {
 		t.Fatalf("parseArgValue(json object): got %T, want map", got)
 	}
@@ -99,7 +99,7 @@ func TestParseArgValue_JSON(t *testing.T) {
 	}
 
 	arr := parseArgValue(`["a","b"]`)
-	sl, ok := arr.([]interface{})
+	sl, ok := arr.([]any)
 	if !ok {
 		t.Fatalf("parseArgValue(json array): got %T, want []interface{}", arr)
 	}

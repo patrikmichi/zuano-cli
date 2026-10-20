@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -119,10 +120,5 @@ func detectDocument(doc map[string]any) (string, error) {
 
 // Valid reports whether f is a format the gateway imports.
 func Valid(f string) bool {
-	for _, x := range Formats {
-		if f == x {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(Formats, f)
 }

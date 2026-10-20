@@ -18,7 +18,7 @@ func TestConformanceVectorsMatchTheirRecordedHashes(t *testing.T) {
 		t.Fatal(err)
 	}
 	listed := 0
-	for _, line := range strings.Split(strings.TrimSpace(string(sums)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(sums)), "\n") {
 		want, name, ok := strings.Cut(line, "  ")
 		if !ok {
 			t.Fatalf("malformed line %q", line)

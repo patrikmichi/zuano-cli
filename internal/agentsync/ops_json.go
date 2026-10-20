@@ -3,6 +3,7 @@ package agentsync
 import (
 	"fmt"
 	"io/fs"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -420,10 +421,8 @@ func (o *jsonItemsOp) userHas(existing []*jnode, want *jnode) bool {
 			continue
 		}
 		for _, a := range cmds {
-			for _, b := range wc {
-				if a == b {
-					return true
-				}
+			if slices.Contains(wc, a) {
+				return true
 			}
 		}
 	}

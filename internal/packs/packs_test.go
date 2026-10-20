@@ -96,7 +96,7 @@ func TestValidateChecksParamsAndRules(t *testing.T) {
 		Params: []Param{{Key: "A", Type: "enum"}, {Key: "b", Type: "bogus"}, {Key: "c", Type: "enum"}, {Key: "d", Type: "string"}, {Key: "d", Type: "string"}},
 		Rules:  []Rule{{Name: "r", Body: "x"}, {Name: "r", Body: "x"}, {Name: "big", Body: strings.Repeat("a", MaxRuleBytes+1)}, {Name: "empty", Body: " "}},
 	}
-	for i := 0; i < MaxRules; i++ {
+	for range MaxRules {
 		m.Rules = append(m.Rules, Rule{Name: "x", Body: "y"})
 	}
 	err := m.Validate().Error()

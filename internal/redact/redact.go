@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math"
 	"net/netip"
 	"regexp"
@@ -130,9 +131,7 @@ func New(terms []string) *Redactor {
 // Counts is how many values of each class the redactor has replaced so far.
 func (r *Redactor) Counts() map[string]int {
 	out := make(map[string]int, len(r.counts))
-	for k, v := range r.counts {
-		out[k] = v
-	}
+	maps.Copy(out, r.counts)
 	return out
 }
 

@@ -469,7 +469,7 @@ func TestNewAgentRefusals(t *testing.T) {
 
 func TestDefaultBackoffIsBoundedAndJittered(t *testing.T) {
 	seen := map[time.Duration]bool{}
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		d := defaultBackoff(0)
 		if d <= 0 || d > time.Second {
 			t.Fatalf("attempt 0: %s", d)
@@ -479,7 +479,7 @@ func TestDefaultBackoffIsBoundedAndJittered(t *testing.T) {
 	if len(seen) < 10 {
 		t.Error("no jitter")
 	}
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		if d := defaultBackoff(20); d <= 0 || d > 60*time.Second {
 			t.Fatalf("attempt 20: %s", d)
 		}

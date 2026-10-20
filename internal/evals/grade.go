@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -178,13 +179,13 @@ func ExtractJSON(text string) (any, bool) {
 	if v, ok := try(text); ok && strings.ContainsAny(text[:1], "{[") {
 		return v, true
 	}
-	if i := strings.Index(text, "```"); i >= 0 {
-		rest := text[i+3:]
+	if _, after, ok := strings.Cut(text, "```"); ok {
+		rest := after
 		if nl := strings.IndexByte(rest, '\n'); nl >= 0 {
 			rest = rest[nl+1:]
 		}
-		if j := strings.Index(rest, "```"); j >= 0 {
-			if v, ok := try(strings.TrimSpace(rest[:j])); ok {
+		if before, _, ok := strings.Cut(rest, "```"); ok {
+			if v, ok := try(strings.TrimSpace(before)); ok {
 				return v, true
 			}
 		}
@@ -226,7 +227,7 @@ func ReadPath(doc any, path string) (any, bool) {
 
 func splitPath(p string) []string {
 	var out []string
-	for _, seg := range strings.Split(p, ".") {
+	for seg := range strings.SplitSeq(p, ".") {
 		if seg == "" {
 			continue
 		}
@@ -317,12 +318,7 @@ func findings(text string, classes []string, filter []string) (int, []string) {
 }
 
 func contains(list []string, s string) bool {
-	for _, x := range list {
-		if x == s {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, s)
 }
 
 // Check runs one assertion against an output.

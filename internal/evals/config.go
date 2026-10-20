@@ -123,8 +123,8 @@ type Suite struct {
 	MaxTokens   int           `json:"max_tokens,omitempty"`
 	TimeoutSecs int           `json:"timeout_seconds,omitempty"`
 	Split       *SplitPercent `json:"split,omitempty"`
-	Graders     Graders       `json:"graders,omitempty"`
-	Gates       Gates         `json:"gates,omitempty"`
+	Graders     Graders       `json:"graders"`
+	Gates       Gates         `json:"gates"`
 }
 
 // Config is the evaluation config of a repository.

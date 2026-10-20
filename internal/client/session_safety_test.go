@@ -273,17 +273,15 @@ func TestSharedClientConcurrentRequestsRefreshOnce(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 20 {
+		wg.Go(func() {
 			resp, err := c.Get("/test")
 			if err != nil {
 				t.Errorf("Get: %v", err)
 				return
 			}
 			resp.Body.Close()
-		}()
+		})
 	}
 	wg.Wait()
 

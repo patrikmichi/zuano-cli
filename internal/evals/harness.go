@@ -392,7 +392,7 @@ func newAgentHarness(cfg *Config, t Target) (Harness, error) {
 	switch v := fm.Tools.(type) {
 	case string:
 		tools = []string{}
-		for _, s := range strings.Split(v, ",") {
+		for s := range strings.SplitSeq(v, ",") {
 			if s = strings.TrimSpace(s); s != "" {
 				tools = append(tools, s)
 			}
@@ -539,7 +539,7 @@ func (h *appHarness) Run(ctx context.Context, c Case, cell Cell) Output {
 	body, _ := json.Marshal(map[string]any{"case_id": c.ID(), "input": c.Input.Prompt(), "messages": c.Input.Messages, "variables": c.Input.Variables, "model": cell.Model.String()})
 	start := time.Now()
 	var last *CaseError
-	for attempt := 0; attempt < 2; attempt++ {
+	for range 2 {
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.url, bytes.NewReader(body))
 		if err != nil {
 			return Output{Error: &CaseError{Kind: ErrSetup, Message: err.Error()}}

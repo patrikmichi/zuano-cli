@@ -124,7 +124,7 @@ func TestExchangeCode_Success(t *testing.T) {
 		gotRedirect = r.FormValue("redirect_uri")
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token":  "access-1",
 			"refresh_token": "refresh-1",
 			"token_type":    "Bearer",
@@ -239,7 +239,7 @@ func TestLogin_HappyPath(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token":  "access-1",
 			"refresh_token": "refresh-1",
 			"token_type":    "Bearer",

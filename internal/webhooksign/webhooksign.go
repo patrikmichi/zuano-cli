@@ -91,7 +91,7 @@ func Verify(secret string, h http.Header, body []byte, tolerance time.Duration, 
 		}
 	}
 	want := mac(k, id, ts, body)
-	for _, s := range strings.Fields(sigs) {
+	for s := range strings.FieldsSeq(sigs) {
 		v, sig, ok := strings.Cut(s, ",")
 		if ok && v == "v1" && hmac.Equal([]byte(sig), []byte(want)) {
 			return nil

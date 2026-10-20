@@ -382,7 +382,7 @@ func TestHTTPExecLocalRateLimit(t *testing.T) {
 	now := time.Now()
 	x.Now = func() time.Time { return now }
 	tg := httpTarget(srv.URL, func(tg *Target) { tg.Rate = &Rate{PerSecond: 1, Burst: 2} })
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		res, e := do(t, x, tg, RequestHeader{Method: "GET", Path: "/health"}, nil)
 		if e != nil {
 			t.Fatal(e)

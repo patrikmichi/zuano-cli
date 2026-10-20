@@ -120,7 +120,7 @@ func TestStatisticsEdges(t *testing.T) {
 		t.Errorf("power hint floor = %d", PowerHint(0))
 	}
 	r := NewRand(5)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		if n := r.Intn(7); n < 0 || n > 6 {
 			t.Fatalf("Intn out of range: %d", n)
 		}

@@ -273,7 +273,7 @@ func (s *syncBuffer) String() string {
 
 func (s *syncBuffer) lines() []map[string]any {
 	var out []map[string]any
-	for _, l := range strings.Split(strings.TrimSpace(s.String()), "\n") {
+	for l := range strings.SplitSeq(strings.TrimSpace(s.String()), "\n") {
 		var m map[string]any
 		if json.Unmarshal([]byte(l), &m) == nil {
 			out = append(out, m)

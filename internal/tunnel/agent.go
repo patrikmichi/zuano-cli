@@ -159,10 +159,7 @@ func NewAgent(o AgentOptions) (*Agent, error) {
 }
 
 func defaultBackoff(attempt int) time.Duration {
-	ceil := time.Second << min(attempt, 6)
-	if ceil > 60*time.Second {
-		ceil = 60 * time.Second
-	}
+	ceil := min(time.Second<<min(attempt, 6), 60*time.Second)
 	return time.Duration(rand.Int64N(int64(ceil)) + 1)
 }
 

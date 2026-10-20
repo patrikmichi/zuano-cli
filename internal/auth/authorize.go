@@ -107,7 +107,7 @@ func (dtr deviceTokenResponse) validateSuccess() error {
 // decodeJSONCapped decodes body into v, refusing to buffer more than
 // maxAuthResponseBytes — applied before any gateway response byte is
 // trusted or parsed.
-func decodeJSONCapped(body io.Reader, v interface{}) error {
+func decodeJSONCapped(body io.Reader, v any) error {
 	data, err := io.ReadAll(io.LimitReader(body, maxAuthResponseBytes+1))
 	if err != nil {
 		return err
@@ -186,10 +186,7 @@ func DeviceLogin(ctx context.Context, gatewayURL string, profile keychain.Profil
 	defer cancel()
 
 	// 3. Poll /api/cli/device/token
-	interval := dc.Interval
-	if interval < 5 {
-		interval = 5
-	}
+	interval := max(dc.Interval, 5)
 	binding := newDeviceBinding(out)
 	res, err := pollDeviceTokenBound(pollCtx, origin, dc.DeviceCode, interval, profile, binding, out)
 	if err != nil {

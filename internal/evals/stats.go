@@ -98,10 +98,7 @@ func Flakiness(pass, n int) float64 {
 	if n <= 0 {
 		return 0
 	}
-	minority := pass
-	if n-pass < minority {
-		minority = n - pass
-	}
+	minority := min(n-pass, pass)
 	return float64(minority) / float64(n)
 }
 
@@ -112,10 +109,7 @@ func McNemarExact(b, c int) float64 {
 	if n == 0 {
 		return 1
 	}
-	lo := b
-	if c < lo {
-		lo = c
-	}
+	lo := min(c, b)
 	var tail float64
 	for i := 0; i <= lo; i++ {
 		tail += math.Exp(logChoose(n, i) - float64(n)*math.Ln2)
@@ -163,7 +157,7 @@ func Bootstrap(deltas []float64, iterations int, seed uint32) BootstrapResult {
 	means := make([]float64, iterations)
 	for i := range means {
 		var s float64
-		for j := 0; j < n; j++ {
+		for range n {
 			s += deltas[r.Intn(n)]
 		}
 		means[i] = s / float64(n)

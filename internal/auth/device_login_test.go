@@ -52,7 +52,7 @@ func TestDeviceLogin_PromptsAndStoresSession(t *testing.T) {
 		var body map[string]string
 		_ = json.NewDecoder(r.Body).Decode(&body)
 		polledCode = body["device_code"]
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "access-d", "refresh_token": "refresh-d", "email": "user@example.com",
 		})
 	})
@@ -207,7 +207,7 @@ func TestPollDeviceToken_SuccessWithUndecodableBody(t *testing.T) {
 func TestPollDeviceToken_KeychainFailureAborts(t *testing.T) {
 	withTempHome(t)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "access-1", "refresh_token": "refresh-1", "email": "user@example.com", "expires_in": 60,
 		})
 	}))

@@ -23,14 +23,14 @@ const crockford = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 func newULID(now time.Time, entropy io.Reader) (string, error) {
 	var b [16]byte
 	ms := uint64(now.UnixMilli())
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		b[i] = byte(ms >> (8 * (5 - i)))
 	}
 	if _, err := io.ReadFull(entropy, b[6:]); err != nil {
 		return "", err
 	}
 	var hi, lo uint64
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		hi = hi<<8 | uint64(b[i])
 		lo = lo<<8 | uint64(b[8+i])
 	}

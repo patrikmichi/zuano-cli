@@ -133,7 +133,7 @@ func TestDo_RefreshesAndRetriesOnceOn401(t *testing.T) {
 	mux.HandleFunc("/api/cli/refresh", func(w http.ResponseWriter, r *http.Request) {
 		refreshHits++
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token":  "rotated-access",
 			"refresh_token": "rotated-refresh",
 			"token_type":    "Bearer",
@@ -270,7 +270,7 @@ func TestDo_ProactivelyRefreshesNearExpiry(t *testing.T) {
 	mux.HandleFunc("/api/cli/refresh", func(w http.ResponseWriter, r *http.Request) {
 		refreshHits++
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token":  "fresh-access",
 			"refresh_token": "fresh-refresh",
 			"token_type":    "Bearer",
@@ -364,7 +364,7 @@ func TestDo_PostRetriesWithBodyIntactAfter401(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/cli/refresh", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "rotated-access", "refresh_token": "rotated-refresh", "expires_in": 3600,
 		})
 	})

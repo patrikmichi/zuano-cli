@@ -217,7 +217,7 @@ func TestPlanRendering(t *testing.T) {
 
 func TestMarkdownIsCutToTheCommentLimit(t *testing.T) {
 	p := Plan{Classification: "neutral", URL: "https://gw/p"}
-	for i := 0; i < 3000; i++ {
+	for i := range 3000 {
 		p.Changes = append(p.Changes, Change{Op: "added", Path: "risk.overrides." + strings.Repeat("x", 30), File: "policy.yaml", Line: i + 1})
 	}
 	md := p.RenderMarkdown()

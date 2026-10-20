@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -118,10 +119,8 @@ func (u UpstreamPolicy) Classify(def Definition) string {
 		return "write"
 	}
 	for _, vr := range verbRisk {
-		for _, v := range vr.verbs {
-			if words[0] == v {
-				return vr.risk
-			}
+		if slices.Contains(vr.verbs, words[0]) {
+			return vr.risk
 		}
 	}
 	if ann, _ := def["annotations"].(map[string]any); ann != nil {

@@ -68,7 +68,7 @@ func TestLoggerUploadModesAndTextFormat(t *testing.T) {
 	}
 	// The upload buffer is bounded.
 	l, _ = NewLogger(nil, "json", "", 1, 1, "errors")
-	for i := 0; i < 250; i++ {
+	for i := range 250 {
 		l.Event("error", "x", map[string]any{"i": i})
 	}
 	if n := len(l.TakeUpload()); n != maxUploadLines {
@@ -89,7 +89,7 @@ func TestRotatingFileKeepsTheNewestFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		if _, err := f.Write([]byte(strings.Repeat(string(rune('a'+i)), 40) + "\n")); err != nil {
 			t.Fatal(err)
 		}
@@ -109,7 +109,7 @@ func TestRotatingFileKeepsTheNewestFiles(t *testing.T) {
 	}
 	// keep = 0 discards instead of rotating.
 	f2, _ := newRotatingFile(filepath.Join(dir, "y.log"), 10, 0)
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		_, _ = f2.Write([]byte("0123456789abc\n"))
 	}
 	_ = f2.Close()

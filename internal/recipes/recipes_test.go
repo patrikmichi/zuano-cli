@@ -115,7 +115,7 @@ func TestKeyCacheFetchesOnceAndRefetchesOnRotation(t *testing.T) {
 	now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
 	c := KeyCache{Path: filepath.Join(t.TempDir(), "sub", "keys.json"), TTL: time.Hour, Now: func() time.Time { return now },
 		Fetch: func(context.Context, string) ([]signing.Key, error) { fetches++; return current, nil }}
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		if keys, err := c.Keys(context.Background(), "https://gw", "plat-test"); err != nil || len(keys) != 1 {
 			t.Fatalf("keys = %v, %v", keys, err)
 		}

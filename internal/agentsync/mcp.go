@@ -2,8 +2,10 @@ package agentsync
 
 import (
 	"fmt"
+	"maps"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -38,10 +40,8 @@ func hasRef(s MCPServer) bool {
 	if envRef.MatchString(s.URL) || envRef.MatchString(s.Command) {
 		return true
 	}
-	for _, a := range s.Args {
-		if envRef.MatchString(a) {
-			return true
-		}
+	if slices.ContainsFunc(s.Args, envRef.MatchString) {
+		return true
 	}
 	for _, v := range s.Env {
 		if envRef.MatchString(v) {
@@ -114,12 +114,8 @@ func remoteHeaders(s MCPServer, bearerHeaders map[string]string) map[string]stri
 		return bearerHeaders
 	}
 	out := make(map[string]string, len(s.Headers)+len(bearerHeaders))
-	for k, v := range s.Headers {
-		out[k] = v
-	}
-	for k, v := range bearerHeaders {
-		out[k] = v
-	}
+	maps.Copy(out, s.Headers)
+	maps.Copy(out, bearerHeaders)
 	return out
 }
 

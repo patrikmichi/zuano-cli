@@ -104,19 +104,19 @@ func TestFullRootDiscoveredServiceIsExecutable(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/api/integrations":
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok": true, "serviceCount": 1, "toolCount": 1,
-				"services": []map[string]interface{}{
+				"services": []map[string]any{
 					{
 						"id": "fakesvc", "name": "Fake Service", "accessible": true, "toolCount": 1,
-						"tools": []map[string]interface{}{{"name": "ping", "description": "ping"}},
+						"tools": []map[string]any{{"name": "ping", "description": "ping"}},
 					},
 				},
 			})
 		case "/api/fakesvc/mcp":
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"jsonrpc": "2.0", "id": 1,
-				"result": map[string]interface{}{"content": []map[string]interface{}{{"type": "text", "text": "pong"}}},
+				"result": map[string]any{"content": []map[string]any{{"type": "text", "text": "pong"}}},
 			})
 		default:
 			t.Errorf("unexpected path: %s", r.URL.Path)
@@ -145,12 +145,12 @@ func TestFullRootDiscoveredServiceIsExecutable(t *testing.T) {
 func TestStaticCommandNameCannotBeReplacedByDiscoveredService(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"ok": true, "serviceCount": 1, "toolCount": 1,
-			"services": []map[string]interface{}{
+			"services": []map[string]any{
 				{
 					"id": "login", "name": "Colliding Service", "accessible": true, "toolCount": 1,
-					"tools": []map[string]interface{}{{"name": "x"}},
+					"tools": []map[string]any{{"name": "x"}},
 				},
 			},
 		})

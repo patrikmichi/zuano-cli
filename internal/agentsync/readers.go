@@ -113,7 +113,7 @@ func zuanoOwned(data []byte) bool { return strings.Contains(string(data), Marker
 func stripBlocks(text string) (string, bool) {
 	var out []string
 	skipping := false
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		switch {
 		case !skipping && strings.Contains(line, Marker+":begin"):
 			skipping = true
@@ -139,7 +139,7 @@ func listOf(v any) []string {
 	switch t := v.(type) {
 	case string:
 		var out []string
-		for _, g := range strings.Split(t, ",") {
+		for g := range strings.SplitSeq(t, ",") {
 			if g = strings.TrimSpace(g); g != "" {
 				out = append(out, g)
 			}
@@ -167,14 +167,14 @@ func splitMarkdown(text string) (readFrontmatter, string, error) {
 	if strings.HasPrefix(rest, "---") {
 		return fm, strings.TrimSpace(afterLine(rest[3:])), nil
 	}
-	end := strings.Index(rest, "\n---")
-	if end < 0 {
+	before, after, ok := strings.Cut(rest, "\n---")
+	if !ok {
 		return fm, "", errors.New("unterminated frontmatter")
 	}
-	if err := yaml.Unmarshal([]byte(rest[:end]), &fm); err != nil {
+	if err := yaml.Unmarshal([]byte(before), &fm); err != nil {
 		return fm, "", fmt.Errorf("invalid frontmatter: %w", err)
 	}
-	return fm, strings.TrimSpace(afterLine(rest[end+4:])), nil
+	return fm, strings.TrimSpace(afterLine(after)), nil
 }
 
 // ---- rules ----

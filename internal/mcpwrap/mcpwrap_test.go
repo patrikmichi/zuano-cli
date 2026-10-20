@@ -305,7 +305,7 @@ func TestAuditChainDetectsEdits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if err := log.Append("call", map[string]any{"tool": "read", "n": i}); err != nil {
 			t.Fatal(err)
 		}

@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -51,9 +52,7 @@ func (f fixture) signature(t *testing.T, plugin, version, platform string, files
 	}
 	doc := map[string]any{"schema": "plugin-signature/1", "plugin": plugin, "version": version, "platform": platform, "files": listed, "kid": "2026-10", "alg": "ed25519"}
 	canon := map[string]any{}
-	for k, v := range doc {
-		canon[k] = v
-	}
+	maps.Copy(canon, doc)
 	canon["files"] = toAny(listed)
 	msg, err := signing.CanonicalJSON(canon)
 	if err != nil {
@@ -113,9 +112,7 @@ var bundle = map[string][]byte{
 func signedZip(t *testing.T, f fixture) ([]byte, Expect) {
 	t.Helper()
 	files := map[string][]byte{SignatureFile: f.signature(t, "toolkit", "1.2.0", "claude", bundle)}
-	for n, b := range bundle {
-		files[n] = b
-	}
+	maps.Copy(files, bundle)
 	archive := zipOf(t, files)
 	return archive, Expect{Plugin: "toolkit", Version: "1.2.0", Platform: "claude", SHA256: sum(archive), Keys: f.keys}
 }
@@ -150,9 +147,7 @@ func TestVerify_AcceptsASignedPackage(t *testing.T) {
 func TestVerify_ATarballIsReadWithoutItsPackagePrefix(t *testing.T) {
 	f := newFixture(t)
 	files := map[string][]byte{SignatureFile: f.signature(t, "toolkit", "1.2.0", "opencode_npm", bundle)}
-	for n, b := range bundle {
-		files[n] = b
-	}
+	maps.Copy(files, bundle)
 	archive := tgzOf(t, "package/", files)
 	pkg, err := Verify(archive, ".tgz", Expect{Plugin: "toolkit", Version: "1.2.0", Platform: "opencode_npm", SHA256: sum(archive), Keys: f.keys})
 	if err != nil || len(pkg.Files) != 2 {
@@ -173,9 +168,7 @@ func TestVerify_RejectsEveryKindOfMismatch(t *testing.T) {
 	}
 	with := func(mut func(map[string][]byte)) map[string][]byte {
 		files := map[string][]byte{SignatureFile: signed}
-		for n, b := range bundle {
-			files[n] = b
-		}
+		maps.Copy(files, bundle)
 		mut(files)
 		return files
 	}

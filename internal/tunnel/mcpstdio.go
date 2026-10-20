@@ -101,10 +101,7 @@ func (s *StdioSupervisor) ensure(ctx context.Context) (*stdioProc, *ExecError) {
 		}
 	}
 	if s.crashes > 0 {
-		wait := s.MinBackoff << min(s.crashes-1, 10)
-		if wait > s.MaxBackoff {
-			wait = s.MaxBackoff
-		}
+		wait := min(s.MinBackoff<<min(s.crashes-1, 10), s.MaxBackoff)
 		if since := time.Since(s.lastExit); since < wait {
 			return nil, &ExecError{Code: "upstream_connect_failed", Retryable: true, Msg: fmt.Sprintf("the process stopped %s ago; it is started again after %s", since.Round(time.Second), wait)}
 		}

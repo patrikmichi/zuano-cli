@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -498,9 +499,7 @@ func (ex *exchange) respond(res *Result) *ExecError {
 		}
 	}
 	hdr := http.Header{}
-	for k, v := range res.Header {
-		hdr[k] = v
-	}
+	maps.Copy(hdr, res.Header)
 	payload, err := rs.Header(ResponseHeader{Status: res.Status, Headers: hdr, Spilled: spilled})
 	if err != nil {
 		return &ExecError{Code: "decrypt_failed", Msg: err.Error()}

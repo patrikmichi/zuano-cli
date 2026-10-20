@@ -45,7 +45,7 @@ func VerifyNoSymlinks(root, rel string) error {
 	}
 
 	cur := root
-	for _, part := range strings.Split(filepath.ToSlash(rel), "/") {
+	for part := range strings.SplitSeq(filepath.ToSlash(rel), "/") {
 		if part == "" {
 			continue
 		}

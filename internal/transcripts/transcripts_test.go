@@ -285,7 +285,7 @@ func TestReadDispatchesBySource(t *testing.T) {
 
 func TestTrimCanonicalAndLimits(t *testing.T) {
 	var lines []string
-	for i := 0; i < 450; i++ {
+	for i := range 450 {
 		lines = append(lines, `{"type":"user","message":{"role":"user","content":"m`+strings.Repeat("x", i%3)+`"}}`)
 	}
 	s, err := ReadClaudeCode([]byte(strings.Join(lines, "\n")))

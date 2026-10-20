@@ -18,6 +18,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -556,12 +557,7 @@ func (x *HTTPExecutor) redirectPolicy(t Target, base *url.URL) func(*http.Reques
 }
 
 func contains(list []string, s string) bool {
-	for _, x := range list {
-		if x == s {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, s)
 }
 
 // scrubber replaces secret values in a stream with [redacted], including ones

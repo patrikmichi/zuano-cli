@@ -133,10 +133,7 @@ func summarize(cell, split string, rs []Result, repeats int, subject string) Cel
 		if Flakiness(c[0], c[1]) > FlakyThreshold {
 			s.Flaky = append(s.Flaky, key)
 		}
-		k := repeats
-		if k > c[1] {
-			k = c[1]
-		}
+		k := min(repeats, c[1])
 		s.PassAtK += PassAtK(c[1], c[0], k)
 		s.PassPowK += PassPowK(c[1], c[0], k)
 	}

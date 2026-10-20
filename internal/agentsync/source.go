@@ -213,7 +213,7 @@ func (f frontmatter) globs() []string {
 	switch t := f.Globs.(type) {
 	case string:
 		var out []string
-		for _, g := range strings.Split(t, ",") {
+		for g := range strings.SplitSeq(t, ",") {
 			if g = strings.TrimSpace(g); g != "" {
 				out = append(out, g)
 			}
@@ -288,20 +288,20 @@ func splitFrontmatter(s string) (frontmatter, string, error) {
 		// An empty block, "---" directly followed by "---".
 		return fm, afterLine(rest[3:]), nil
 	}
-	end := strings.Index(rest, "\n---")
-	if end < 0 {
+	before, after, ok := strings.Cut(rest, "\n---")
+	if !ok {
 		return fm, "", errors.New("unterminated frontmatter")
 	}
-	if err := yaml.Unmarshal([]byte(rest[:end]), &fm); err != nil {
+	if err := yaml.Unmarshal([]byte(before), &fm); err != nil {
 		return fm, "", fmt.Errorf("invalid frontmatter: %w", err)
 	}
-	return fm, afterLine(rest[end+len("\n---"):]), nil
+	return fm, afterLine(after), nil
 }
 
 // afterLine drops the rest of the current line, the end of a "---" fence.
 func afterLine(s string) string {
-	if i := strings.Index(s, "\n"); i >= 0 {
-		return s[i+1:]
+	if _, after, ok := strings.Cut(s, "\n"); ok {
+		return after
 	}
 	return ""
 }

@@ -144,7 +144,7 @@ func TestExtractTarGz_SkipsHardlinkEntry(t *testing.T) {
 func TestExtractTarGz_RejectsEntryCountBomb(t *testing.T) {
 	dest := t.TempDir()
 	var entries []tarEntry
-	for i := 0; i < MaxBundleEntries+10; i++ {
+	for i := range MaxBundleEntries + 10 {
 		entries = append(entries, tarEntry{name: filepath.Join("f", string(rune('a'+i%26)), "x.txt"), body: []byte("x")})
 	}
 	bomb := buildTarGz(t, entries)
@@ -159,7 +159,7 @@ func TestExtractTarGz_RejectsSizeBomb(t *testing.T) {
 	var entries []tarEntry
 	// enough entries * 1 MiB to exceed MaxBundleBytes (50 MiB), staying well
 	// under MaxBundleEntries so the entry-count cap doesn't trigger first.
-	for i := 0; i < 60; i++ {
+	for i := range 60 {
 		entries = append(entries, tarEntry{name: filepathJoinf("big", i), body: big})
 	}
 	bomb := buildTarGz(t, entries)

@@ -45,7 +45,6 @@ func TestVerifyScanVerdict_AllRequiredGatesPassingWithExtrasAccepted(t *testing.
 func TestVerifyScanVerdict_MissingOneRequiredGateRefused(t *testing.T) {
 	cases := []string{"ai_scan", "skillspector", "static_scan"}
 	for _, missing := range cases {
-		missing := missing
 		t.Run(missing, func(t *testing.T) {
 			gates := map[string]string{
 				"ai_scan":      "pass",

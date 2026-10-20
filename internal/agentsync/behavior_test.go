@@ -120,12 +120,12 @@ func TestDryRunWritesNothingAndShowsDiff(t *testing.T) {
 	if got := readFile(t, path); got != "{\n  \"numStartups\": 1\n}\n" {
 		t.Fatalf("dry run modified the file: %s", got)
 	}
-	var diff string
+	var diff strings.Builder
 	for _, e := range plan.Edits {
-		diff += e.Diff()
+		diff.WriteString(e.Diff())
 	}
-	contains(t, diff, "+  \"mcpServers\"")
-	contains(t, diff, "--- a/")
+	contains(t, diff.String(), "+  \"mcpServers\"")
+	contains(t, diff.String(), "--- a/")
 	if _, err := os.Stat(LedgerPath(env.Home)); err == nil {
 		t.Fatal("dry run wrote the ledger")
 	}

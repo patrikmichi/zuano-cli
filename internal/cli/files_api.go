@@ -47,7 +47,7 @@ var (
 var fileIDPattern = regexp.MustCompile(`^fil_[A-Za-z0-9_-]{6,64}$`)
 
 // parseFileRef reads a file id from a bare id, a file:<id> reference or the
-// URI of a resource link (.../api/files/<id>).
+// URI of a resource link (.../api/v1/files/<id>).
 func parseFileRef(ref string) (string, error) {
 	ref = strings.TrimSpace(ref)
 	if rest, ok := strings.CutPrefix(ref, "file:"); ok {
@@ -73,7 +73,7 @@ func fileGet(ctx context.Context, c *client.Client, id string) (fileDoc, error) 
 	var doc struct {
 		File fileDoc `json:"file"`
 	}
-	if _, err := gatewayJSON(ctx, c, http.MethodGet, "/api/files/"+url.PathEscape(id), nil, &doc); err != nil {
+	if _, err := gatewayJSON(ctx, c, http.MethodGet, "/api/v1/files/"+url.PathEscape(id), nil, &doc); err != nil {
 		return fileDoc{}, err
 	}
 	return doc.File, nil
@@ -89,7 +89,7 @@ func fileList(ctx context.Context, c *client.Client, state, createdVia string, m
 				q.Set(k, v)
 			}
 		}
-		path := "/api/files"
+		path := "/api/v1/files"
 		if len(q) > 0 {
 			path += "?" + q.Encode()
 		}
@@ -172,7 +172,7 @@ func uploadFile(ctx context.Context, c *client.Client, path string, o uploadOpti
 		FileID string       `json:"file_id"`
 		Upload uploadTarget `json:"upload"`
 	}
-	if _, err := gatewayJSON(ctx, c, http.MethodPost, "/api/files", map[string]any{
+	if _, err := gatewayJSON(ctx, c, http.MethodPost, "/api/v1/files", map[string]any{
 		"name": name, "content_type": contentType, "size": info.Size(), "sha256": digest, "share_with_org": o.shareOrg,
 	}, &created); err != nil {
 		return fileDoc{}, err
@@ -203,7 +203,7 @@ func uploadFile(ctx context.Context, c *client.Client, path string, o uploadOpti
 	var done struct {
 		File fileDoc `json:"file"`
 	}
-	if _, err := gatewayJSON(ctx, c, http.MethodPost, "/api/files/"+url.PathEscape(created.FileID)+"/complete", map[string]any{}, &done); err != nil {
+	if _, err := gatewayJSON(ctx, c, http.MethodPost, "/api/v1/files/"+url.PathEscape(created.FileID)+"/complete", map[string]any{}, &done); err != nil {
 		return fileDoc{}, err
 	}
 	if done.File.ID == "" {
@@ -348,7 +348,7 @@ func downloadFile(ctx context.Context, c *client.Client, id, dest string, force 
 		return meta, "", err
 	}
 	defer cancel()
-	resp, location, err := c.GetRedirect(reqCtx, "/api/files/"+url.PathEscape(id)+"/download")
+	resp, location, err := c.GetRedirect(reqCtx, "/api/v1/files/"+url.PathEscape(id)+"/download")
 	if err != nil {
 		return meta, "", timeoutCause(reqCtx, err)
 	}

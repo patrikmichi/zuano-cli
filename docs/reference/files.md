@@ -16,14 +16,14 @@ a few megabytes). Files expire; `zuano files list` shows when.
 ## How an upload works
 
 1. zuano hashes the file (sha256) and asks the gateway for an upload target
-   (`POST /api/files`).
+   (`POST /api/v1/files`).
 2. It sends the bytes with a plain `PUT` to the signed address the gateway
    returned, with the headers the gateway listed. The gateway's credential is
    never sent to the object store, and redirects from it are not followed. The
    address must be `https` (plain `http` only to a loopback host). A network
    failure is retried once; a refusal by the store is not.
-3. It tells the gateway the upload is complete (`POST /api/files/{id}/complete`).
-4. Unless `--no-wait`, it polls `GET /api/files/{id}` until the file is
+3. It tells the gateway the upload is complete (`POST /api/v1/files/{id}/complete`).
+4. Unless `--no-wait`, it polls `GET /api/v1/files/{id}` until the file is
    `ready`. A `quarantined`, `failed` or `deleted` file is an error, and so is
    one that is still being checked after two minutes (check it later with
    `files list`).
@@ -35,7 +35,7 @@ argument with `--arg` is an error.
 
 ## How a download works
 
-`GET /api/files/{id}/download` answers with a redirect to a signed address (or
+`GET /api/v1/files/{id}/download` answers with a redirect to a signed address (or
 the bytes). zuano does not follow the redirect with its credential: it fetches
 the signed address without one. The file is written to a temporary file in the
 destination directory and renamed into place only after its size and sha256

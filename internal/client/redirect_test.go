@@ -15,7 +15,7 @@ func TestGetRedirect_ReturnsTheTargetWithoutFollowingIt(t *testing.T) {
 	defer target.Close()
 	gw := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/api/files/fil_1/download":
+		case "/api/v1/files/fil_1/download":
 			http.Redirect(w, r, target.URL+"/blob?sig=abc", http.StatusFound)
 		case "/api/direct":
 			_, _ = io.WriteString(w, "bytes")
@@ -26,7 +26,7 @@ func TestGetRedirect_ReturnsTheTargetWithoutFollowingIt(t *testing.T) {
 	defer gw.Close()
 	c := New(gw.URL, "secret")
 
-	resp, loc, err := c.GetRedirect(t.Context(), "/api/files/fil_1/download")
+	resp, loc, err := c.GetRedirect(t.Context(), "/api/v1/files/fil_1/download")
 	if err != nil || resp != nil || loc != target.URL+"/blob?sig=abc" {
 		t.Fatalf("resp %v, loc %q, err %v", resp, loc, err)
 	}

@@ -182,7 +182,7 @@ func filesRmCmd() *cobra.Command {
 				return err
 			}
 			for _, id := range ids {
-				if _, err := gatewayJSON(cmd.Context(), c, http.MethodDelete, "/api/files/"+url.PathEscape(id), nil, nil); err != nil {
+				if _, err := gatewayJSON(cmd.Context(), c, http.MethodDelete, "/api/v1/files/"+url.PathEscape(id), nil, nil); err != nil {
 					return fmt.Errorf("delete %s: %w", id, err)
 				}
 				if !f.jsonOut {

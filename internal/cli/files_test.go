@@ -36,7 +36,7 @@ type fileGateway struct {
 	putHeaders  http.Header
 	putAuth     string
 	gets        int
-	states      []string // states GET /api/files/{id} walks through
+	states      []string // states GET /api/v1/files/{id} walks through
 	downloadSHA string
 	deleted     []string
 	tamper      bool
@@ -52,15 +52,15 @@ func newFileGateway(t *testing.T) *fileGateway {
 		g.mu.Lock()
 		defer g.mu.Unlock()
 		switch {
-		case r.Method == http.MethodPost && r.URL.Path == "/api/files":
+		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/files":
 			_ = json.NewDecoder(r.Body).Decode(&g.created)
 			_, _ = io.WriteString(w, fill(contractFixture(t, "file-create.json")))
 		case r.Method == http.MethodPut && strings.HasPrefix(r.URL.Path, "/store/files/"):
 			g.uploaded, _ = io.ReadAll(r.Body)
 			g.putHeaders, g.putAuth = r.Header.Clone(), r.Header.Get("Authorization")
-		case r.Method == http.MethodPost && r.URL.Path == "/api/files/"+fileTestID+"/complete":
+		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/files/"+fileTestID+"/complete":
 			_, _ = io.WriteString(w, `{"file":{"id":"`+fileTestID+`","state":"uploaded"}}`)
-		case r.Method == http.MethodGet && r.URL.Path == "/api/files/"+fileTestID:
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/files/"+fileTestID:
 			doc := fill(contractFixture(t, "file-meta.json"))
 			if len(g.states) > 0 {
 				state := g.states[min(g.gets, len(g.states)-1)]
@@ -68,7 +68,7 @@ func newFileGateway(t *testing.T) *fileGateway {
 				doc = strings.Replace(doc, `"state":"ready"`, `"state":"`+state+`"`, 1)
 			}
 			_, _ = io.WriteString(w, doc)
-		case r.Method == http.MethodGet && r.URL.Path == "/api/files/"+fileTestID+"/download":
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/files/"+fileTestID+"/download":
 			if r.Header.Get("Authorization") == "" {
 				t.Error("the download request carried no credentials")
 			}
@@ -82,10 +82,10 @@ func newFileGateway(t *testing.T) *fileGateway {
 				return
 			}
 			_, _ = w.Write(fileTestBody)
-		case r.Method == http.MethodGet && r.URL.Path == "/api/files":
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/files":
 			_, _ = io.WriteString(w, fill(contractFixture(t, "files-list.json")))
-		case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/api/files/"):
-			g.deleted = append(g.deleted, strings.TrimPrefix(r.URL.Path, "/api/files/"))
+		case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/api/v1/files/"):
+			g.deleted = append(g.deleted, strings.TrimPrefix(r.URL.Path, "/api/v1/files/"))
 			w.WriteHeader(http.StatusNoContent)
 		default:
 			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
@@ -176,7 +176,7 @@ func TestFilesDownload_FollowsTheRedirectWithoutTheCredentialAndChecksTheHash(t 
 	if info, _ := os.Stat(filepath.Join(dir, "report.txt")); info.Mode().Perm() != 0o600 {
 		t.Errorf("mode = %v", info.Mode().Perm())
 	}
-	if _, err := runCommand(t, FilesCmd(), "download", g.srv.URL+"/api/files/"+fileTestID, "-o", dir); err == nil || !strings.Contains(err.Error(), "already exists") {
+	if _, err := runCommand(t, FilesCmd(), "download", g.srv.URL+"/api/v1/files/"+fileTestID, "-o", dir); err == nil || !strings.Contains(err.Error(), "already exists") {
 		t.Errorf("overwrite err = %v", err)
 	}
 	if _, err := runCommand(t, FilesCmd(), "download", fileTestID, "-o", dir, "--force"); err != nil {
@@ -232,8 +232,8 @@ func TestParseFileRef(t *testing.T) {
 	for in, want := range map[string]string{
 		fileTestID:           fileTestID,
 		"file:" + fileTestID: fileTestID,
-		"https://gw.example/api/files/" + fileTestID:               fileTestID,
-		"https://gw.example/api/files/" + fileTestID + "/download": fileTestID,
+		"https://gw.example/api/v1/files/" + fileTestID:               fileTestID,
+		"https://gw.example/api/v1/files/" + fileTestID + "/download": fileTestID,
 	} {
 		if got, err := parseFileRef(in); err != nil || got != want {
 			t.Errorf("parseFileRef(%q) = %q, %v", in, got, err)
@@ -278,7 +278,7 @@ func TestCall_FileUploadsFirstAndPassesAReference(t *testing.T) {
 	if gotArgs["file"] != "file:"+fileTestID || gotArgs["folder"] != "root" {
 		t.Errorf("arguments = %v", gotArgs)
 	}
-	if !strings.Contains(out, "File: report.txt "+g.srv.URL+"/api/files/"+fileTestID+" (text/plain, 11 bytes)") {
+	if !strings.Contains(out, "File: report.txt "+g.srv.URL+"/api/v1/files/"+fileTestID+" (text/plain, 11 bytes)") {
 		t.Errorf("resource link not rendered:\n%s", out)
 	}
 	saved, err := os.ReadFile(filepath.Join(saveDir, "report.txt"))

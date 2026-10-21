@@ -142,13 +142,13 @@ Fixtures: `file-create.json`, `file-meta.json`, `files-list.json`,
 
 | Route | Request and response |
 |---|---|
-| `POST /api/files` | `{"name", "content_type", "size", "sha256", "share_with_org"}` answers `{"file_id": "fil_...", "upload": {"url", "method": "PUT", "headers": {}, "expires_at"}}`; over a limit: `402 quota_exceeded` or `413` |
+| `POST /api/v1/files` | `{"name", "content_type", "size", "sha256", "share_with_org"}` answers `{"file_id": "fil_...", "upload": {"url", "method": "PUT", "headers": {}, "expires_at"}}`; over a limit: `402 quota_exceeded` or `413` |
 | `PUT {upload.url}` | the object store, not the gateway: zuano sends the bytes, the listed headers and no credential |
-| `POST /api/files/{id}/complete` | `{}` answers `{"file": FILE}` |
-| `GET /api/files/{id}` | `{"file": FILE}`; `404` for a file the caller may not read |
-| `GET /api/files?state=&created_via=&cursor=` | `{"files": [FILE], "next_cursor": null\|text}` |
-| `GET /api/files/{id}/download` | `302` to a signed address (zuano does not send its credential there), or `200` with the bytes |
-| `DELETE /api/files/{id}` | `200` or `204` |
+| `POST /api/v1/files/{id}/complete` | `{}` answers `{"file": FILE}` |
+| `GET /api/v1/files/{id}` | `{"file": FILE}`; `404` for a file the caller may not read |
+| `GET /api/v1/files?state=&created_via=&cursor=` | `{"files": [FILE], "next_cursor": null\|text}` |
+| `GET /api/v1/files/{id}/download` | `302` to a signed address (zuano does not send its credential there), or `200` with the bytes |
+| `DELETE /api/v1/files/{id}` | `200` or `204` |
 
 ```json
 FILE = {"id": "fil_...", "name", "content_type", "size_bytes", "sha256": null|hex,

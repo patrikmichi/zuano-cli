@@ -23,7 +23,6 @@ import (
 const (
 	studioStateFile  = ".zuano-draft.json"
 	studioSamplesDir = "samples"
-	maxStudioFile    = 1 << 20
 )
 
 var unsafeFileChars = regexp.MustCompile(`[^A-Za-z0-9._-]+`)

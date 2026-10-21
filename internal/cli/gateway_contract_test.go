@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/patrikmichi/zuano-cli/internal/client"
 	"github.com/patrikmichi/zuano-cli/internal/plugins"
 	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
@@ -66,6 +67,65 @@ func TestContract_ApproveOpensThePageForAnApprovalTheGatewayReturns(t *testing.T
 	out, err := runCommand(t, ApprovalsCmd(), "approve", "apr_1", "--no-browser")
 	if err != nil || !strings.Contains(out, "/approvals/apr_1?decision=approve") {
 		t.Fatalf("approve = %v\n%s", err, out)
+	}
+}
+
+func TestContract_ApprovalsListDecodes(t *testing.T) {
+	approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
+		"GET /api/approvals?status=pending": reply(200, contractFixture(t, "approvals-list.json")),
+	})
+	out, err := runCommand(t, ApprovalsCmd(), "list")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"apr_1", "pending", "stripe.create_refund", "destructive", "dev@example.com", "2026-10-16T12:15:00.000Z"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("list lacks %q:\n%s", want, out)
+		}
+	}
+}
+
+// Every refusal document the gateway writes must end a command with the
+// status the registry gives it. A document the table does not know fails, so
+// a new refusal cannot ship unmapped.
+func TestContract_RefusalsEndWithTheirRegisteredExitCode(t *testing.T) {
+	var docs map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(contractFixture(t, "refusals.json")), &docs); err != nil {
+		t.Fatal(err)
+	}
+	statuses := map[string]struct{ status, exit int }{
+		"plan_required":         {402, client.ExitPlanRequired},
+		"limit_reached":         {402, client.ExitPlanRequired},
+		"verification_required": {402, client.ExitPlanRequired},
+		"quota_exceeded":        {402, client.ExitUsageExhausted},
+		"spend_cap_reached":     {402, client.ExitUsageExhausted},
+		"billing_unavailable":   {503, client.ExitBillingDown},
+		"org_suspended":         {403, client.ExitSuspended},
+		"seat_suspended":        {403, client.ExitSuspended},
+	}
+	for name, doc := range docs {
+		want, known := statuses[name]
+		if !known {
+			t.Errorf("the gateway writes a %q refusal this client does not map", name)
+			continue
+		}
+		t.Run(name, func(t *testing.T) {
+			approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
+				"GET /api/approvals?status=pending": reply(want.status, string(doc)),
+			})
+			_, err := runCommand(t, ApprovalsCmd(), "list")
+			if got := exitCodeOf(err); got != want.exit {
+				t.Fatalf("exit %d, want %d (%v)", got, want.exit, err)
+			}
+			if !strings.Contains(err.Error(), name+" message.") {
+				t.Errorf("the gateway's sentence is lost: %v", err)
+			}
+		})
+	}
+	for name := range statuses {
+		if _, ok := docs[name]; !ok {
+			t.Errorf("the gateway no longer writes the %q refusal", name)
+		}
 	}
 }
 

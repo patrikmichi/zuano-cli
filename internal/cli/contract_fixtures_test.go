@@ -34,6 +34,8 @@ func contractFixture(t *testing.T, name string) string {
 }
 
 func TestContractFixtureDir_PrefersTheEnvironment(t *testing.T) {
+	// The gateway-contract job runs with the variable set; the default is what it falls back to unset.
+	t.Setenv(contractFixturesEnv, "")
 	if got := contractFixtureDir(); got != vendoredFixtures {
 		t.Errorf("default dir = %q, want %q", got, vendoredFixtures)
 	}

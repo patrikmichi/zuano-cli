@@ -103,7 +103,9 @@ jobs:
           ref: main
           token: ${{ secrets.GATEWAY_REPO_READ_TOKEN }}
           path: gateway-src
-          sparse-checkout: gateway/contract-fixtures
+          sparse-checkout: |
+            gateway/contract-fixtures
+            gateway/openapi
           persist-credentials: false
 
       - name: Look for the fixtures
@@ -130,6 +132,7 @@ jobs:
         if: ${{ steps.found.outputs.present == 'true' }}
         env:
           ZUANO_CONTRACT_FIXTURES: ${{ github.workspace }}/gateway-src/gateway/contract-fixtures
+          ZUANO_GATEWAY_OPENAPI: ${{ github.workspace }}/gateway-src/gateway/openapi/v1.json
         run: go test -count=1 -run Contract ./internal/cli/
 
   hostname-denylist:

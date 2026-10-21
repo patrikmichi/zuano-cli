@@ -100,9 +100,9 @@ const publisherAPI = marketAPI + "/publisher"
 func marketPublisherCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "publisher",
-		Short: "The signing key a verified publisher signs its workflow versions with",
+		Short: "Your publisher profile, its proofs and the key you sign workflow versions with",
 	}
-	cmd.AddCommand(marketSigningKeyCmd())
+	cmd.AddCommand(publisherInitCmd(), publisherVerifyCmd(), publisherStatusCmd(), marketSigningKeyCmd())
 	return cmd
 }
 

@@ -149,6 +149,7 @@ func MarketCmd() *cobra.Command {
 Install one with 'zuano workflow install <handle>/<slug>'.`,
 	}
 	cmd.AddCommand(marketSearchCmd(), marketShowCmd(), marketCostCmd(), marketUpdateCmd(), marketUpdatePolicyCmd(), marketPublisherCmd(), marketSubmitCmd())
+	cmd.AddCommand(marketLifecycleCmds()...)
 	return cmd
 }
 

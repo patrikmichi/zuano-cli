@@ -32,6 +32,11 @@ const (
 	exitSignatureRequired    = 64
 	exitPublisherKeyMissing  = 65
 	exitPublisherNotVerified = 66
+	exitReviewNotEligible    = 67
+	exitNoticeTooShort       = 68
+	exitVersionNotWithdrawn  = 69
+	exitVerificationFailed   = 70
+	exitHandleUnavailable    = 71
 )
 
 // exitCodeEntry is one row of the exit-code registry.
@@ -85,4 +90,9 @@ var exitRegistry = []exitCodeEntry{
 	{exitSignatureRequired, "signature_required"},
 	{exitPublisherKeyMissing, "publisher_key_missing"},
 	{exitPublisherNotVerified, "publisher_not_verified"},
+	{exitReviewNotEligible, "review_not_eligible"},
+	{exitNoticeTooShort, "notice_too_short"},
+	{exitVersionNotWithdrawn, "version_not_withdrawable"},
+	{exitVerificationFailed, "verification_failed"},
+	{exitHandleUnavailable, "handle_unavailable"},
 }

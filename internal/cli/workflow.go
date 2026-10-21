@@ -64,7 +64,18 @@ run and logs exit status
 		workflowEnableCmd(), workflowPreapproveCmd(), workflowPauseCmd("pause"), workflowPauseCmd("disable"),
 		workflowUpgradeCmd(), workflowUninstallCmd(), workflowValidateCmd(), workflowDraftCmd(), workflowSchemaCmd(),
 		workflowPullCmd(), workflowPushCmd(), workflowDiffCmd(), workflowSimulateCmd(), workflowPublishCmd(),
-		workflowQualityCmd(), workflowOutcomeCmd(), workflowCompareCmd(), workflowEvalCmd(), workflowReplayCmd(), workflowResumeCmd())
+		workflowQualityCmd(), workflowOutcomeCmd(), workflowCompareCmd(), workflowEvalCmd(), workflowReplayCmd(), workflowResumeCmd(), workflowMarketCmd())
+	return cmd
+}
+
+// workflowMarketCmd is `zuano workflow market`: the same withdrawal, review
+// and report commands as `zuano market`, next to 'workflow publish'.
+func workflowMarketCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "market",
+		Short: "Withdraw, review and report listed workflows",
+	}
+	cmd.AddCommand(marketLifecycleCmds()...)
 	return cmd
 }
 

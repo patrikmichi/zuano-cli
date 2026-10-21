@@ -52,8 +52,15 @@ admins can register an Ed25519 public key; from then on every submission must
 carry a signature made with the matching private key, and the gateway keeps it
 beside its own signature. An install checks both.
 
+`zuano publisher` is the same group as `zuano market publisher`.
+
 | Command | Request |
 |---|---|
+| `zuano market publisher init --handle H --name N --support-email E --country CC [--website U] [--support-url U] [--privacy-url U] [--bio T]` | `POST /api/v1/market/publisher`: creates the profile as a community publisher (an admin; the plan must include publishing) |
+| `zuano market publisher status [--listings]` | `GET /api/v1/market/publisher`: the profile and which proofs it has given; `--listings` reads `GET /api/v1/market/publisher/listings` |
+| `zuano market publisher verify email [--code C]` | `POST .../verifications/email` mails a code to the support address (one a minute, valid 24 hours); with `--code`, `POST .../verifications/email/confirm` |
+| `zuano market publisher verify domain <domain>` | `POST .../verifications/domain`: prints the DNS TXT record and the well-known file that prove control |
+| `zuano market publisher verify domain --check` | `POST .../verifications/domain/check`: looks for either and confirms the domain |
 | `zuano market publisher signing-key generate [--key-file F]` | none: writes a new private key (PKCS#8 PEM, mode 0600) and prints the public key; never replaces a key |
 | `zuano market publisher signing-key set [--key-file F \| --public-key K]` | `PUT /api/v1/market/publisher/signing-key` |
 | `zuano market publisher signing-key remove` | `DELETE /api/v1/market/publisher/signing-key` |
@@ -81,6 +88,33 @@ prints the problems and exits 1.
 | 64 | `signature_required` | a signing key is registered, so the submission must be signed |
 | 65 | `publisher_key_missing` | a signature was sent but no key is registered |
 | 66 | `publisher_not_verified` | only a verified publisher submits or registers a signing key |
+| 67 | `review_not_eligible` | only an organisation with three successful live runs, and an admin or the installer, reviews; a publisher never reviews its own listing |
+| 68 | `notice_too_short` | an end date needs 7 days of notice for a free listing and 90 for a paid one, and must be in the future |
+| 69 | `version_not_withdrawable` | `version_not_published` (only a published version is deprecated; a published or deprecated one is yanked) or `version_already_yanked` |
+| 70 | `verification_failed` | `invalid_token` (a wrong or expired code), `verification_expired`, or a domain check that found no proof yet |
+| 71 | `handle_unavailable` | `handle_taken` or `handle_reserved` |
+
+## Withdrawing, reviews and reports
+
+The same commands are under `zuano workflow market`. Publisher actions are for
+the admins of the publisher organisation.
+
+| Command | Request |
+|---|---|
+| `zuano market deprecate <handle>/<slug>@<version> [--note T]` | `POST /api/v1/market/listings/{handle}/{slug}/versions/{version}/deprecate`: hides the version from new installs; installations keep running and are offered the update |
+| `zuano market yank <handle>/<slug>@<version> --reason security\|broken\|legal\|policy [--note T]` | `POST .../versions/{version}/yank`: withdraws the version; its installations pause and are offered the newest other version; `security` also revokes their standing grants |
+| `zuano market end-of-life <handle>/<slug> --at DATE` | `POST .../end-of-life` with `ends_at` in UTC: installers are told and the listing is archived that day |
+| `zuano market reviews list <handle>/<slug> [--cursor C] [--limit N]` | `GET .../reviews`: the visible reviews, the average and whether your organisation may review |
+| `zuano market reviews post <handle>/<slug> --rating 1-5 [--text T]` | `POST .../reviews`: one review per organisation |
+| `zuano market reviews edit <handle>/<slug> [--rating N] [--text T]` | `PATCH .../reviews`; an empty `--text` removes the text |
+| `zuano market reviews reply <review-id> --reply T` | `POST /api/v1/market/reviews/{id}/reply`: the publisher answers once |
+| `zuano market reports list [--status open\|responded]` | `GET /api/v1/market/publisher/reports`: the problems reported on your listings; the reporter is not named |
+| `zuano market reports file <handle>/<slug> --kind K --text T` | `POST .../reports`; `K` is `broken`, `security`, `misleading`, `abuse` or `other` |
+| `zuano market reports respond <report-id> --message T` | `POST /api/v1/market/reports/{id}/respond`: the first answer ends the response clock |
+
+`--at` is a date such as `2027-03-31` (the start of that day in UTC) or an
+RFC 3339 time. A review that holds an email address or a phone number is refused
+with `422` `review_contains_personal_data` (exit 1, with the gateway's sentence).
 
 ## App requests
 

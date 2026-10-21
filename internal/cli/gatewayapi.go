@@ -90,7 +90,28 @@ func gatewayStatusError(status int, raw []byte) error {
 	if status == http.StatusUnauthorized {
 		return errTokenRevoked
 	}
-	return errors.New(text)
+	return &gatewayRefusal{Code: doc.Error, text: text}
+}
+
+// gatewayRefusal is a refusal whose code has no exit status of its own for
+// every route; a command that knows what the code means there maps it.
+type gatewayRefusal struct {
+	Code string
+	text string
+}
+
+func (e *gatewayRefusal) Error() string { return e.text }
+
+// withRouteExit gives a refusal the exit status its code has on the route the
+// command called; the same code means something else on other routes.
+func withRouteExit(err error, codes map[string]int) error {
+	var refusal *gatewayRefusal
+	if errors.As(err, &refusal) {
+		if code, ok := codes[refusal.Code]; ok {
+			return &ExitError{Code: code, Msg: refusal.text}
+		}
+	}
+	return err
 }
 
 // refusalExit maps the refusals that have a status of their own to their place
@@ -103,7 +124,18 @@ var refusalExit = map[string]int{
 	"signature_required":     exitSignatureRequired,
 	"publisher_key_missing":  exitPublisherKeyMissing,
 	"publisher_not_verified": exitPublisherNotVerified,
+	"review_not_eligible":    exitReviewNotEligible,
+	"notice_too_short":       exitNoticeTooShort,
+	"version_already_yanked": exitVersionNotWithdrawn,
+	"handle_taken":           exitHandleUnavailable,
+	"handle_reserved":        exitHandleUnavailable,
 }
+
+// Refusal codes the gateway also writes on routes unrelated to the market.
+var (
+	withdrawRefusals     = map[string]int{"version_not_published": exitVersionNotWithdrawn}
+	verificationRefusals = map[string]int{"invalid_token": exitVerificationFailed, "verification_expired": exitVerificationFailed}
+)
 
 // gatewayRequest sends one control request with extra headers and returns the
 // status and body.

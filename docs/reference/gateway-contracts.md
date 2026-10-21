@@ -20,15 +20,14 @@ The documents the contract tests read from the gateway's own fixtures:
 `approval-preview.json`, `approval-full.json`, `approval-args-gone.json`,
 `approvals-list.json`, `mcp-pending-approval.json`, `refusals.json` (every
 billing and suspension refusal, which must end with the exit code the registry
-gives it) and the `plugin-*.json` documents. `skill-requirements.json` is read
-too but the gateway does not write it yet, so a run against the gateway's
-fixtures fails on it until it does. Ids and timestamps are stable placeholders,
+gives it), the `plugin-*.json` documents and `skill-requirements.json`. Ids and
+timestamps are stable placeholders,
 so a fixture changes only when a route's shape does.
 
 The gateway's OpenAPI document (`gateway/openapi/v1.json`) is vendored as
 `internal/cli/testdata/contracts/openapi-v1.json`; `ZUANO_GATEWAY_OPENAPI`
 names the gateway's own copy. The contract test sends every auth-config,
-connected-account and connect-link command to a recording server and checks
+connected-account, connect-link and `zuano runs` command to a recording server and checks
 each request's method and path against the document, its query parameters
 against the declared ones, and its body against the request schema (unknown
 fields where the schema is closed, missing required fields).
@@ -125,6 +124,11 @@ the constants in the code, both ways.
 | 64 | `signature_required` | `422` `signature_required`: the publisher registered a signing key, so the submission must carry a signature |
 | 65 | `publisher_key_missing` | `422` `publisher_key_missing`: a signature was sent but no signing key is registered |
 | 66 | `publisher_not_verified` | `409` or `403` `publisher_not_verified`: only a verified publisher submits or registers a signing key |
+| 67 | `review_not_eligible` | `403` `review_not_eligible`: the organisation has fewer than three successful live runs, is not an admin or the installer, or is the publisher |
+| 68 | `notice_too_short` | `422` `notice_too_short`: an end-of-life date needs 7 days of notice for a free listing, 90 for a paid one, and must be in the future |
+| 69 | `version_not_withdrawable` | `409` `version_not_published` (on a deprecate or yank) or `version_already_yanked` |
+| 70 | `verification_failed` | `400` `invalid_token` or `409` `verification_expired` on the publisher verification routes, or a domain check that found no proof |
+| 71 | `handle_unavailable` | `409` `handle_taken` or `handle_reserved` |
 
 SDK builder and catalog refusal codes map onto these by class: `400`, `409` and
 `422` end with 1 and keep the code in the JSON, `403` with 10, `402` with 30
@@ -344,13 +348,13 @@ integration branch.
 | `DELETE /api/me/sessions?id=` | `{"ended": 1}`; `404` for a session that is not the person's |
 | `DELETE /api/me/sessions` | `{"sessions", "families", "keys"}`: every session, refresh family and CLI key of the person ends; the sessions of the cookie that made the request are kept unless `?include=current` |
 
-The gateway reads these routes from a browser sign-in cookie only (they do not
-accept a bearer token) and checks `X-Requested-With: zuano` with the origin on
-the mutations of a cookie. zuano sends bearer credentials and never a cookie,
-so it sends no `X-Requested-With`, and a `401` from these routes is reported as
-"browser sign-in only". `zuano sessions end` and `end-all` (aliases `revoke` and
-`revoke-all`) use the routes above and need no passkey. The fixture is written
-by this client; the gateway's route tests do not produce one yet.
+The routes accept a bearer token as well as a browser cookie. zuano sends the
+bearer token and never a cookie, so no session is "current" for it and no
+`X-Requested-With` is sent; a `401` is an expired or revoked token like on any
+other route. `zuano sessions end` and `end-all` (aliases `revoke` and
+`revoke-all`) use the routes above and need no passkey. `end-all` always sends
+`?include=current`, which ends the keys of this login too. The fixture is
+written by this client; the gateway's route tests do not produce one yet.
 
 Source: the gateway's `app/api/me/sessions/route.ts` and `lib/sessions`. The
 route does not list CLI sessions, which the risk policy plan asked for.
@@ -446,21 +450,22 @@ types; `micros` are millionths of the currency unit.
 | Route | Response |
 |---|---|
 | `POST /api/runtime/run`, or a tool that starts background work | `202` `{"run_id", "job_id", "status": "queued"}`, or the same object as an MCP tool result's `structuredContent`. Fixture: `run-accepted.json` |
-| `GET /api/jobs?kind=&status=&cursor=` | `{"jobs": [JOB], "nextCursor": null\|text}`. Fixture: `jobs.json` |
-| `GET /api/jobs/{id}` | `{"job": JOB}`. Fixture: `job.json` |
-| `POST /api/jobs/{id}/cancel`, `POST /api/jobs/{id}/retry` | `{"job": JOB}`; retry is admin-only and for `failed` or `dead` jobs |
+| `GET /api/v1/jobs?kind=&status=&cursor=&limit=` | `{"items": [JOB], "nextCursor"?: text}`; `limit` is 1 to 200; the key is absent on the last page. Fixture: `jobs.json` |
+| `GET /api/v1/jobs/{id}` | `{"job": JOB}`. Fixture: `job.json` |
+| `POST /api/v1/jobs/{id}/cancel`, `POST /api/v1/jobs/{id}/retry` | `{"job": JOB}`; cancel of a finished job returns it unchanged; retry is admin-only and for `failed` or `dead` jobs (`409` `conflict` otherwise) |
 | `GET /api/runtime/runs/{id}` | a run document that gains `job_status` (a top-level field, or under `run`); `POST /api/runtime/runs/{id}/cancel` is the existing cooperative cancel |
 
 ```json
 JOB = {"id": "job_<ulid>", "kind", "status": "queued|running|retrying|succeeded|failed|cancelled|dead",
-       "attempts", "progress": {}, "error": null|text,
-       "created_at", "started_at": null|text, "finished_at": null|text}
+       "attempts", "progress": {name: number}, "error": null|text,
+       "createdAt", "startedAt": null|text, "finishedAt": null|text}
 ```
 
-Source: scalability plan sections 5.1, 5.3, 6, 7 and 8. The plan names the
-routes, the statuses and the table columns; the `{"job": ...}` wrapper and
-`snake_case` fields are this client's decision, following the approvals and
-runtime routes. zuano treats an id that starts with `job_` as a job.
+Source: the gateway's `lib/jobs/member-view.ts` and `lib/api/contract/jobs.ts`,
+and `gateway/openapi/v1.json`, which the contract test checks every `zuano runs`
+request against. The job routes take a CLI login as well as a browser session;
+a member sees the jobs they started, an administrator all of them, and no job
+input is returned. zuano treats an id that starts with `job_` as a job.
 
 ## Quota usage
 
@@ -1204,6 +1209,15 @@ are the contract.
 | `POST /api/v1/models/settings/resume` | `{}`; owner or admin, step-up `billing_change`; answers `{"platform_pause": null}`; `409` `not_paused` when nothing is paused |
 | `GET /api/v1/models/defaults`, `PUT /api/v1/models/defaults` | `{"default_source", "default_models": {surface: model}}`; for an agency acting in a client with the `models:defaults` scope (`X-Zuano-Client-Org`), otherwise `403` `agency_scope_required`. `PUT` takes `{"defaultModels": {surface: model}}` (strict, replaces the whole map) and changes nothing else |
 | `GET /api/v1/market/publisher` | `{"publisher": {"handle", "display_name", "tier", ...}, "standing": {"email_verified", "domain_verified", "may_submit"}}`; `404` `publisher_not_found` |
+| `POST /api/v1/market/publisher` | `{"handle", "display_name", "support_email", "country", "website"?, "support_url"?, "privacy_url"?, "bio"?}` (strict); answers `201` `{"publisher"}`; `400` `invalid_handle`, `409` `handle_taken`, `handle_reserved`, `publisher_exists`; admins, plan feature `market.publish` |
+| `POST /api/v1/market/publisher/verifications/email`, `.../email/confirm` | `{}` answers `{"sent_to"}` (`429` within a minute of the last); `{"token"}` answers `{"standing": {"email_verified", "domain_verified", "domain", "may_submit"}}`; `400` `invalid_token`, `503` `email_unavailable` |
+| `POST /api/v1/market/publisher/verifications/domain`, `.../domain/check` | `{"domain"}` answers `201` `{"domain", "token", "dns": {"type", "name", "value"}, "well_known": {"url", "body"}}`; the check answers `{"verified", "method": "dns\|well_known"\|null, "standing"}`; `404` `verification_not_found`, `409` `verification_expired` |
+| `GET /api/v1/market/publisher/listings`, `.../reports?status=open\|responded` | `{"listings": [...]}`; `{"reports": [{"id", "kind", "status", "listing", "body", "response", "created_at", "first_response_at"}]}`; admins |
+| `POST /api/v1/market/listings/{handle}/{slug}/versions/{version}/deprecate`, `.../yank` | `{"note"?}` answers `{"listing", "version", "state": "deprecated", "installations"}`; `{"reason": "security\|broken\|legal\|policy", "note"?}` answers `{"listing", "version", "state": "suspended", "reason", "installations", "upgrade_to"}`; `404` `listing_not_found`, `version_not_found`, `409` `version_not_published`, `version_already_yanked` |
+| `POST /api/v1/market/listings/{handle}/{slug}/end-of-life` | `{"ends_at": UTC datetime ending in Z}` answers `{"listing", "ends_at"}`; `422` `notice_too_short`, `409` `listing_archived` |
+| `GET\|POST\|PATCH /api/v1/market/listings/{handle}/{slug}/reviews` | `?cursor&limit` answers `{"reviews": [{"id", "rating", "body", "version", "live_runs", "publisher_reply", "created_at", "mine"}], "summary": {"count", "mean"}, "eligible", "live_runs", "next"}`; `{"rating", "body"?}` answers `201` `{"review"}`; the `PATCH` takes `{"rating"?, "body"?: text\|null}`; `403` `review_not_eligible`, `409` `review_exists`, `422` `review_contains_personal_data` |
+| `POST /api/v1/market/reviews/{id}/reply` | `{"reply"}` answers `{"review"}`; `409` `reply_exists`, `review_hidden` |
+| `POST /api/v1/market/listings/{handle}/{slug}/reports`, `POST /api/v1/market/reports/{id}/respond` | `{"kind": "broken\|security\|misleading\|abuse\|other", "body"}` answers `201` `{"report"}`; `{"message"}` answers `{"report"}` |
 | `PUT /api/v1/market/publisher/signing-key`, `DELETE ...` | `{"public_key": base64url}` (the raw 32-byte Ed25519 key, 43 characters); answers `{"signing_public_key": text\|null}`; an admin of a verified publisher only: `403` `publisher_not_verified`, `422` `public_key_invalid` |
 | `POST /api/v1/market/submissions` | `{"resource_version_id", "listing", "screenshots": {path: base64}, "publisher_signature"?: base64}`; answers `201` `{"submission": {"id", "handle", "slug", "version", "status", "elevated", "elevated_reasons", "gates": [{"gate", "status"}], "problems"}}`; `422` `signature_required`, `signature_invalid`, `publisher_key_missing`; `409` `publisher_not_verified` |
 | `GET /api/v1/market/listings?q&category&connectors&invocation&max_risk&badge&sort&ready&limit&offset` | `{"listings": [{"handle", "slug", "title", "publisherName", "maxRisk", "badges", "missing"?}], "total"}` |

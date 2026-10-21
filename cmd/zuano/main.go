@@ -249,6 +249,7 @@ func newRootCmd() *cobra.Command {
 		cli.FleetCmd(),
 		cli.ModelsCmd(),
 		cli.MarketCmd(),
+		cli.PublisherCmd(),
 		cli.AppsCmd(),
 	)
 

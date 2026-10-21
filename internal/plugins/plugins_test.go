@@ -246,7 +246,7 @@ func TestVerify_RefusesUnsafePathsAndDuplicates(t *testing.T) {
 }
 
 func TestParseMarketplace(t *testing.T) {
-	good := `{"name":"zuano-acme","owner":{"name":"Acme"},"plugins":[{"name":"toolkit","version":"1.2.0","description":"d","source":{"source":"url","url":"https://gw.example/m/acme/pkg/toolkit/1.2.0/claude.zip","sha256":"` + strings.Repeat("a", 64) + `"}}]}`
+	good := `{"name":"zuano-acme","owner":{"name":"Acme"},"plugins":[{"name":"toolkit","version":"1.2.0","description":"d","source":{"source":"archive","url":"https://gw.example/m/acme/pkg/toolkit/1.2.0/claude.zip","sha256":"` + strings.Repeat("a", 64) + `"}}]}`
 	m, err := ParseMarketplace([]byte(good))
 	if err != nil || m.Owner.Name != "Acme" {
 		t.Fatalf("m %+v, err %v", m, err)
@@ -265,7 +265,7 @@ func TestParseMarketplace(t *testing.T) {
 		"no name":      `{"plugins":[]}`,
 		"string owner": `{"name":"x","owner":"Acme","plugins":[]}`,
 		"relative":     `{"name":"x","plugins":[{"name":"a","version":"1","source":"./plugins/a"}]}`,
-		"no hash":      `{"name":"x","plugins":[{"name":"a","version":"1","source":{"source":"url","url":"https://x/a.zip"}}]}`,
+		"no hash":      `{"name":"x","plugins":[{"name":"a","version":"1","source":{"source":"archive","url":"https://x/a.zip"}}]}`,
 		"duplicate":    strings.Replace(good, `"plugins":[`, `"plugins":[`+good[strings.Index(good, `{"name":"toolkit"`):strings.LastIndex(good, `]}`)]+`,`, 1),
 	} {
 		if _, err := ParseMarketplace([]byte(bad)); err == nil {

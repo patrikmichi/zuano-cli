@@ -18,15 +18,15 @@ import (
 // write; see contract_fixtures_test.go for where they are read from.
 
 func TestContract_PluginMarketplaceDecodes(t *testing.T) {
-	m, err := plugins.ParseMarketplace([]byte(contractFixture(t, "plugin-marketplace.json")))
+	m, err := plugins.ParseMarketplace([]byte(contractFixture(t, "plugin-claude-marketplace.json")))
 	if err != nil {
 		t.Fatalf("the gateway's marketplace does not decode: %v", err)
 	}
-	if m.Owner.Name != "org_abc123" || m.Owner.Email != "admin@example.com" || len(m.Plugins) != 1 {
+	if m.Owner.Name != "Acme" || len(m.Plugins) != 1 {
 		t.Fatalf("marketplace = %+v", m)
 	}
 	p := m.Plugins[0]
-	if p.Name != "searcher" || p.Version != "1.2.3" || p.Source.Source != "url" || p.Ext() != ".zip" || len(p.Source.SHA256) != 64 {
+	if p.Name != "sales-kit" || p.Version != "1.2.0" || p.Source.Source != "archive" || p.Ext() != ".zip" || len(p.Source.SHA256) != 64 {
 		t.Errorf("entry = %+v", p)
 	}
 	if empty, err := plugins.ParseMarketplace([]byte(`{"name":"zuano-acme-beta","owner":{"name":"org"},"plugins":[]}`)); err != nil || empty.Owner.Name != "org" {

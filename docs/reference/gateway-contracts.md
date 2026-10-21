@@ -257,7 +257,7 @@ build signed packages).
 |---|---|
 | `GET /api/org/plugin-feeds` | `{"feed": {"slug", "base_url": "https://gateway/m/{slug}", "npm_scope", "git_mirror": bool, "channels": ["stable", "beta"]}}`; `base_url` must be on the gateway's own origin under `/m/` |
 | `POST /api/cli/feed-token` | `{}` answers `{"token", "expires_in"}` (`feeds:read`, an hour); `{"kind": "api_key", "name"}` answers `{"token"}`, a long-lived key shown under Settings, API keys. `402 plan_required` when the plan lacks private feeds |
-| `GET /m/{feed}/claude/{channel}/marketplace.json`, `GET /m/{feed}/agent-plugins/{channel}/marketplace.json` | `{"name", "owner": {"name", "email"?}, "plugins": [{"name", "version", "description"?, "displayName"?, "source": {"source": "url", "url", "sha256"}}]}`; `source.url` is on the gateway's origin |
+| `GET /m/{feed}/claude/{channel}/marketplace.json`, `GET /m/{feed}/agent-plugins/{channel}/marketplace.json` | `{"name", "owner": {"name", "email"?}, "plugins": [{"name", "version", "description"?, "displayName"?, "source": {"source": "archive", "url", "sha256"}}]}`; `source.url` is on the gateway's origin |
 | `GET {source.url}` | the package: `.zip`, or `.tgz` for npm (members under `package/`), carrying `SIGNATURE.json` |
 | `GET /api/plugins/{name}/packages?version=` | `{"packages": [{"platform", "state", "sha256", "url"}]}` for the platforms the marketplaces do not list (`gemini`, `opencode_npm`, `cline`) |
 | `GET /api/plugins/{name}/requirements` | `{"missing": [connector slug]}`; warnings only |

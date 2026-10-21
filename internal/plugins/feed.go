@@ -42,7 +42,7 @@ type Marketplace struct {
 }
 
 // ParseMarketplace reads a marketplace document. `owner` is an object; every
-// entry must name a url source with a sha256, since an install is pinned to it.
+// entry must name an archive source with a sha256, since an install is pinned to it.
 func ParseMarketplace(raw []byte) (Marketplace, error) {
 	var m Marketplace
 	if err := json.Unmarshal(raw, &m); err != nil {
@@ -58,8 +58,8 @@ func ParseMarketplace(raw []byte) (Marketplace, error) {
 			return m, errors.New("a marketplace entry has no name or version")
 		case seen[p.Name]:
 			return m, fmt.Errorf("the marketplace lists %s twice", p.Name)
-		case p.Source.Source != "url" || p.Source.URL == "":
-			return m, fmt.Errorf("%s has no url source", p.Name)
+		case p.Source.Source != "archive" || p.Source.URL == "":
+			return m, fmt.Errorf("%s has no archive source", p.Name)
 		case !sha256Hex.MatchString(p.Source.SHA256):
 			return m, fmt.Errorf("%s lists no sha256 for its package", p.Name)
 		}

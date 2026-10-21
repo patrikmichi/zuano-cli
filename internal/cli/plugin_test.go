@@ -151,7 +151,7 @@ func (g *pluginGW) marketplace(platform string) string {
 	if !g.listed {
 		return `{"name":"zuano-acme","owner":{"name":"Acme"},"plugins":[]}`
 	}
-	return fmt.Sprintf(`{"name":"zuano-acme","owner":{"name":"Acme"},"plugins":[{"name":"toolkit","version":%q,"description":"Team toolkit","source":{"source":"url","url":%q,"sha256":%q}}]}`,
+	return fmt.Sprintf(`{"name":"zuano-acme","owner":{"name":"Acme"},"plugins":[{"name":"toolkit","version":%q,"description":"Team toolkit","source":{"source":"archive","url":%q,"sha256":%q}}]}`,
 		g.version, g.pkgURL(platform), sha256Hex(archive))
 }
 

@@ -1,0 +1,1 @@
+{"name":"zuano-acme","description":"Plugins for Acme","owner":{"name":"Acme"},"plugins":[{"name":"sales-kit","version":"1.2.0","description":"Sales tools.","displayName":"Sales kit","source":{"source":"archive","url":"https://gateway.example/m/acme/pkg/sales-kit/1.2.0/claude.zip","sha256":"5e6b3056523cc3a39869b2e5d021b5ce73e3c14cc168adb26d58854cd763f68e"}}]}

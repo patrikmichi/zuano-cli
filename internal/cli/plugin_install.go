@@ -105,7 +105,7 @@ func (s *pluginSession) packageEntry(base plugins.Entry, platform string) (plugi
 			if p.State != "ready" {
 				return plugins.Entry{}, fmt.Errorf("the %s package of %s %s is %s on the gateway", platform, base.Name, base.Version, textsafe.Clean(p.State))
 			}
-			return plugins.Entry{Name: base.Name, Version: base.Version, Source: plugins.Source{Source: "url", URL: p.URL, SHA256: p.SHA256}}, nil
+			return plugins.Entry{Name: base.Name, Version: base.Version, Source: plugins.Source{Source: "archive", URL: p.URL, SHA256: p.SHA256}}, nil
 		}
 	}
 	return plugins.Entry{}, fmt.Errorf("%s %s has no %s package", base.Name, base.Version, platform)

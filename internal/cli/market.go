@@ -111,6 +111,7 @@ is never offered on the platform.`,
 	}
 	f.bind(cmd, "Print the gateway's answer unchanged")
 	cmd.Flags().StringVar(&surface, "surface", "", "Where the model will run: "+strings.Join(modelSurfaces, ", ")+" (default: workflow_step)")
+	cmd.AddCommand(modelsSettingsCmd(), modelsResumeCmd(), modelsDefaultsCmd())
 	return cmd
 }
 
@@ -147,7 +148,7 @@ func MarketCmd() *cobra.Command {
 		Long: `Reading and searching are never metered. Listings are addressed as handle/slug.
 Install one with 'zuano workflow install <handle>/<slug>'.`,
 	}
-	cmd.AddCommand(marketSearchCmd(), marketShowCmd(), marketCostCmd(), marketUpdateCmd(), marketUpdatePolicyCmd())
+	cmd.AddCommand(marketSearchCmd(), marketShowCmd(), marketCostCmd(), marketUpdateCmd(), marketUpdatePolicyCmd(), marketPublisherCmd(), marketSubmitCmd())
 	return cmd
 }
 

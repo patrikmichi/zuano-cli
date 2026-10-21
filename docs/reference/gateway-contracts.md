@@ -16,11 +16,27 @@ instead; a file missing from that directory fails the test. The CI job
 `gateway-contract` runs the `Contract` tests that way against the gateway's
 `main` branch.
 
-The documents the contract tests read: `approval-preview.json`,
-`approval-full.json`, `approval-args-gone.json`, `mcp-pending-approval.json`,
-`skill-requirements.json`, `eval-run.json`, `eval-set.json` and
-`marketplace-manifest.json`. Ids and timestamps are stable placeholders, so a
-fixture changes only when a route's shape does.
+The documents the contract tests read from the gateway's own fixtures:
+`approval-preview.json`, `approval-full.json`, `approval-args-gone.json`,
+`approvals-list.json`, `mcp-pending-approval.json`, `refusals.json` (every
+billing and suspension refusal, which must end with the exit code the registry
+gives it) and the `plugin-*.json` documents. `skill-requirements.json` is read
+too but the gateway does not write it yet, so a run against the gateway's
+fixtures fails on it until it does. Ids and timestamps are stable placeholders,
+so a fixture changes only when a route's shape does.
+
+The gateway's OpenAPI document (`gateway/openapi/v1.json`) is vendored as
+`internal/cli/testdata/contracts/openapi-v1.json`; `ZUANO_GATEWAY_OPENAPI`
+names the gateway's own copy. The contract test sends every auth-config,
+connected-account and connect-link command to a recording server and checks
+each request's method and path against the document, its query parameters
+against the declared ones, and its body against the request schema (unknown
+fields where the schema is closed, missing required fields).
+
+A signing vector for the publisher signature is written by the gateway's own
+signing code: `scripts/publisher-signing-vector.ts` regenerates
+`internal/signing/testdata/publisher-signature.json`, and the Go side must
+reproduce its payload bytes and signature exactly.
 
 `zuano docs gen --out DIR` (hidden) writes one Markdown page per command, for
 the gateway's docs site to pull in.
@@ -70,7 +86,7 @@ the constants in the code, both ways.
 | 0 | `ok` | |
 | 1 | `error` | unclassified failure; also `spec_fetch_blocked` and `federated_mode_unsupported`, with the code in the JSON |
 | 2 | `usage` | bad flags or unreadable input; `policy plan --detailed-exitcode` also returns 2 for "changes present" |
-| 4 | `signature_invalid` | any signature or content-hash verification failure; never a timeout |
+| 4 | `signature_invalid` | any signature or content-hash verification failure, including `signature_invalid` from the gateway when a publisher's signature does not match; never a timeout |
 | 10 | `denied` | `policy_off`, DLP block, `meta_executor_blocked`, `source_not_preferred`, `agent_not_allowed`, `denied_by_policy`, `tool_not_pinned` |
 | 11 | `approval_expired` | |
 | 12 | `pending_approval` | held call |
@@ -106,6 +122,9 @@ the constants in the code, both ways.
 | 61 | `spec_unsupported` | |
 | 62 | `connector_conflict` | `connector_slug_taken`, `connector_version_conflict` |
 | 63 | `quality_gate_failed` | |
+| 64 | `signature_required` | `422` `signature_required`: the publisher registered a signing key, so the submission must carry a signature |
+| 65 | `publisher_key_missing` | `422` `publisher_key_missing`: a signature was sent but no signing key is registered |
+| 66 | `publisher_not_verified` | `409` or `403` `publisher_not_verified`: only a verified publisher submits or registers a signing key |
 
 SDK builder and catalog refusal codes map onto these by class: `400`, `409` and
 `422` end with 1 and keep the code in the JSON, `403` with 10, `402` with 30
@@ -321,13 +340,20 @@ integration branch.
 
 | Route | Response |
 |---|---|
-| `GET /api/me/sessions` | `{"sessions": [{"id", "kind": "dashboard\|viewer\|cli_personal\|cli_agent", "auth_method", "created_at", "last_seen_at", "idle_expires_at", "absolute_expires_at", "ip_prefix", "user_agent", "current"}]}`. Fixture: `sessions.json` |
-| `DELETE /api/me/sessions/{id}` | `200` any JSON |
-| `POST /api/me/sessions/revoke-all` | `200` any JSON; step-up gated |
+| `GET /api/me/sessions` | `{"sessions": [{"id", "kind": "admin\|viewer", "createdAt", "expiresAt", "ipPrefix": null\|text, "userAgent": null\|text, "current"}]}`. Fixture: `sessions.json` |
+| `DELETE /api/me/sessions?id=` | `{"ended": 1}`; `404` for a session that is not the person's |
+| `DELETE /api/me/sessions` | `{"sessions", "families", "keys"}`: every session, refresh family and CLI key of the person ends; the sessions of the cookie that made the request are kept unless `?include=current` |
 
-Source: risk policy plan 5.6, 5.13 and 5.14. The session document follows the
-`user_sessions` table; zuano lists CLI sessions beside browser ones, which the
-plan asks for, so the gateway must include them.
+The gateway reads these routes from a browser sign-in cookie only (they do not
+accept a bearer token) and checks `X-Requested-With: zuano` with the origin on
+the mutations of a cookie. zuano sends bearer credentials and never a cookie,
+so it sends no `X-Requested-With`, and a `401` from these routes is reported as
+"browser sign-in only". `zuano sessions end` and `end-all` (aliases `revoke` and
+`revoke-all`) use the routes above and need no passkey. The fixture is written
+by this client; the gateway's route tests do not produce one yet.
+
+Source: the gateway's `app/api/me/sessions/route.ts` and `lib/sessions`. The
+route does not list CLI sessions, which the risk policy plan asked for.
 
 ## Audit
 
@@ -1174,6 +1200,12 @@ are the contract.
 | Request | Carries / answers |
 |---|---|
 | `GET /api/v1/models?surface=` | `{"mode": {"allowed", "default"}, "defaults": {"model", "source"}, "balanceNano": N\|null, "models": [{"id", "label", "status", "sources": {"platform": {"available", "reason"?, "price"?: {"inputPerMTokNano", "outputPerMTokNano"}}, "byo": {"available", "reason"?, "account"?}}}]}`; `surface` is `studio_ai`, `workflow_step`, `agent`, `eval_subject`, `eval_judge` or `internal` |
+| `GET /api/v1/models/settings` | `{"allowed_sources": ["byo"\|"platform"], "default_source", "default_models": {surface: model}, "platform_members": "all\|admins\|listed", "listed_members": [id], "platform_pause": null\|{"reason", "since"}, "platform_models_available": bool}`; any member reads it |
+| `POST /api/v1/models/settings/resume` | `{}`; owner or admin, step-up `billing_change`; answers `{"platform_pause": null}`; `409` `not_paused` when nothing is paused |
+| `GET /api/v1/models/defaults`, `PUT /api/v1/models/defaults` | `{"default_source", "default_models": {surface: model}}`; for an agency acting in a client with the `models:defaults` scope (`X-Zuano-Client-Org`), otherwise `403` `agency_scope_required`. `PUT` takes `{"defaultModels": {surface: model}}` (strict, replaces the whole map) and changes nothing else |
+| `GET /api/v1/market/publisher` | `{"publisher": {"handle", "display_name", "tier", ...}, "standing": {"email_verified", "domain_verified", "may_submit"}}`; `404` `publisher_not_found` |
+| `PUT /api/v1/market/publisher/signing-key`, `DELETE ...` | `{"public_key": base64url}` (the raw 32-byte Ed25519 key, 43 characters); answers `{"signing_public_key": text\|null}`; an admin of a verified publisher only: `403` `publisher_not_verified`, `422` `public_key_invalid` |
+| `POST /api/v1/market/submissions` | `{"resource_version_id", "listing", "screenshots": {path: base64}, "publisher_signature"?: base64}`; answers `201` `{"submission": {"id", "handle", "slug", "version", "status", "elevated", "elevated_reasons", "gates": [{"gate", "status"}], "problems"}}`; `422` `signature_required`, `signature_invalid`, `publisher_key_missing`; `409` `publisher_not_verified` |
 | `GET /api/v1/market/listings?q&category&connectors&invocation&max_risk&badge&sort&ready&limit&offset` | `{"listings": [{"handle", "slug", "title", "publisherName", "maxRisk", "badges", "missing"?}], "total"}` |
 | `GET /api/v1/market/listings/{handle}/{slug}` and `.../cost-estimate` | the listing page; the cost and its breakdown by meter (printed as the gateway sends them) |
 | `GET /api/v1/market/installations/{id}/update` | the newer version, what it adds, whether it needs consent |
@@ -1184,6 +1216,17 @@ are the contract.
 
 Install a listing with `POST /api/v1/workflows/installations` and `listing`; the
 rollback route needs a browser session and is not offered.
+
+The publisher signature is Ed25519 over the canonical JSON (keys sorted at every
+depth, no whitespace, `<`, `>` and `&` unescaped) of `{"content_hash", "handle",
+"manifest", "slug", "version"}`, sent as standard base64; the key is registered as
+raw base64url. `content_hash` is `analysis.manifestDigest` and `manifest` the
+`manifest` of `GET /api/v1/workflows/templates/{resourceId}?version=`, so both sides
+sign what the gateway stored. A platform pause on model calls (`403`
+`platform_paused`, with `reason` and `since`) is the gateway's sentence and exits
+1; `zuano models settings` shows the pause and `zuano models resume` ends it. The
+signing and defaults routes are in the gateway's integration branch; the signing
+routes and `POST /api/v1/market/submissions` signature field are not in it yet.
 
 ## Shadow MCP quarantine
 

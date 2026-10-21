@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/signing"
 	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
@@ -92,12 +93,16 @@ func gatewayStatusError(status int, raw []byte) error {
 	return errors.New(text)
 }
 
-// refusalExit maps the workflow refusals that have a status of their own to
-// their place in the exit-code registry.
+// refusalExit maps the refusals that have a status of their own to their place
+// in the exit-code registry.
 var refusalExit = map[string]int{
-	"manifest_invalid": exitInvalidManifest,
-	"input_invalid":    exitInputInvalid,
-	"draft_conflict":   exitDraftConflict,
+	"manifest_invalid":       exitInvalidManifest,
+	"input_invalid":          exitInputInvalid,
+	"draft_conflict":         exitDraftConflict,
+	"signature_invalid":      signing.ExitContentSignature,
+	"signature_required":     exitSignatureRequired,
+	"publisher_key_missing":  exitPublisherKeyMissing,
+	"publisher_not_verified": exitPublisherNotVerified,
 }
 
 // gatewayRequest sends one control request with extra headers and returns the

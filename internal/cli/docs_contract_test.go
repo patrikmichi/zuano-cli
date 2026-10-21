@@ -67,6 +67,19 @@ func TestRecipesReferenceDocumentsEveryCommandAndFlag(t *testing.T) {
 	assertDocumented(t, RecipesCmd(), "zuano recipes", "../../docs/reference/recipes.md")
 }
 
+func TestMarketReferenceDocumentsEveryCommandAndFlag(t *testing.T) {
+	for _, c := range []struct {
+		cmd  *cobra.Command
+		path string
+	}{{ModelsCmd(), "zuano models"}, {MarketCmd(), "zuano market"}, {AppsCmd(), "zuano apps"}} {
+		assertDocumented(t, c.cmd, c.path, "../../docs/reference/market.md")
+	}
+}
+
+func TestSessionsAreDocumented(t *testing.T) {
+	assertDocumented(t, SessionsCmd(), "zuano sessions", "../../docs/reference/security-commands.md")
+}
+
 func TestApprovalsTrustsAreDocumented(t *testing.T) {
 	assertDocumented(t, approvalsTrustsCmd(), "zuano approvals trusts", "../../docs/reference/approvals.md")
 }

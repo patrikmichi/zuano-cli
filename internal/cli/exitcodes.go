@@ -28,6 +28,10 @@ const (
 	exitSpecUnsupported  = 61
 	exitConnectorClash   = 62
 	exitQualityGate      = 63
+
+	exitSignatureRequired    = 64
+	exitPublisherKeyMissing  = 65
+	exitPublisherNotVerified = 66
 )
 
 // exitCodeEntry is one row of the exit-code registry.
@@ -78,4 +82,7 @@ var exitRegistry = []exitCodeEntry{
 	{exitSpecUnsupported, "spec_unsupported"},
 	{exitConnectorClash, "connector_conflict"},
 	{exitQualityGate, "quality_gate_failed"},
+	{exitSignatureRequired, "signature_required"},
+	{exitPublisherKeyMissing, "publisher_key_missing"},
+	{exitPublisherNotVerified, "publisher_not_verified"},
 }

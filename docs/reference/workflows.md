@@ -45,6 +45,22 @@ changing anything; the steps are printed instead of the output. `--test` runs it
 for real with the given input, under the normal approvals, and asks first
 (`--yes` skips the question).
 
+## Editing a draft
+
+`zuano workflow pull <workflow> [--dir]` writes the draft's `workflow.json` and
+its saved samples to `samples/`. Edit the file, then `zuano workflow push <dir>`
+saves the difference as one revision and prints what the draft needs
+(`--message` names a checkpoint). A directory that was not pulled creates a new
+draft. If the draft changed since the pull, push exits 25: pull it again and
+redo the edit; `pull` refuses to overwrite unpushed edits without `--force`.
+
+`zuano workflow diff <workflow> --from v:1.2.0 [--to draft]` summarises the
+steps, permissions and schemas that changed and the version bump the change
+calls for. `simulate <workflow> --input file.json | --sample name | --fixtures`
+dry-runs the draft, waits, and reports each run and the branches taken.
+`publish <workflow> --version 1.3.0` publishes a revision; it never changes an
+installation.
+
 ## Pre-approvals
 
 A pre-approval lets one outward step, such as a message to a Slack channel, run
@@ -72,10 +88,11 @@ refused with exit 14 and the gateway refuses them too.
 | 12 | the run waits for an approval (the link is printed) |
 | 13 | rate limited |
 | 14 | a person must do this in the browser with a passkey |
-| 16 | `validate` and `draft`: the manifest has issues, each printed on its own line |
+| 16 | `validate`, `draft` and `push`: the manifest has issues, each printed on its own line |
 | 17 | `--wait` ran out, or a gateway request hit the time limit |
 | 18 | the input does not match the workflow's input schema |
 | 20 | the run failed |
+| 25 | `push`: the draft changed since `pull` |
 | 30-33 | the plan does not allow it; see [billing.md](billing.md) |
 
 ## Triggers

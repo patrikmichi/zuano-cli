@@ -54,14 +54,16 @@ run and logs exit status
   17  --wait ran out
   18  the input does not match the workflow's input schema
   20  the run failed
-  16  'validate' and 'draft': the manifest has issues, listed one per line
+  16  'validate', 'draft' and 'push': the manifest has issues, listed one per line
+  25  'push': the draft changed since 'pull'; pull it again
   13  rate limited
   14  a person must do this in the browser
   30-33  the plan does not allow it, see 'zuano billing'`,
 	}
 	cmd.AddCommand(workflowListCmd(), workflowShowCmd(), workflowInstallCmd(), workflowRunCmd(), workflowRunsCmd(), workflowLogsCmd(), workflowCancelCmd(),
 		workflowEnableCmd(), workflowPreapproveCmd(), workflowPauseCmd("pause"), workflowPauseCmd("disable"),
-		workflowUpgradeCmd(), workflowUninstallCmd(), workflowValidateCmd(), workflowDraftCmd(), workflowSchemaCmd())
+		workflowUpgradeCmd(), workflowUninstallCmd(), workflowValidateCmd(), workflowDraftCmd(), workflowSchemaCmd(),
+		workflowPullCmd(), workflowPushCmd(), workflowDiffCmd(), workflowSimulateCmd(), workflowPublishCmd())
 	return cmd
 }
 

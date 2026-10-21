@@ -712,6 +712,22 @@ installation's MCP tool name.
 | `GET /{installation}/runs?status=&invocation=&cursor=` | `{"runs": [RUN], "next_cursor"}` newest first |
 | `GET /runs/{run}?after=<seq>` | `{"run": RUN, "steps": [STEP], "next_after": null\|seq}`; only steps with `seq` greater than `after` |
 | `POST /runs/{run}/cancel` | `RUN` |
+| `POST /studio/drafts` | `{"manifest"?, "source"?: "blank\|import\|template\|run\|version"}` answers `201` `DRAFT` |
+| `GET /studio/drafts/{workflow}` | `DRAFT` |
+| `PUT /studio/drafts/{workflow}` | `{"baseRevision", "ops": [OP], "source"?: "human\|json", "sessionId"?}` answers `{"draft": DRAFT, "inverse": [OP]}`; a stale `baseRevision` answers `409` `draft_conflict` with `issues` `[{"pointer": "/revision", "message": current}]` (exit 25); a draft held by another editor answers `409` `draft_locked` |
+| `POST /studio/drafts/{workflow}/checkpoints` | `{"name", "baseRevision"}` |
+| `GET /studio/drafts/{workflow}/samples?after=&limit=` | `{"samples": [{"id", "name", "invocation", "payload"}], "next"}` |
+| `GET /studio/drafts/{workflow}/diff?from=&to=` | `from` and `to` are `draft`, `rev:<n>` or `v:<version>`; answers `{"from", "to", "diff": {"stepsAdded", "stepsRemoved", "stepsChanged", "stepsMoved", "permissionsAdded", "permissionsRemoved", "connectorsAdded", "invocationsChanged"}, "input_change", "output_change": "none\|compatible\|breaking", "upgrade_class", "reasons"}` |
+| `POST /studio/drafts/{workflow}/simulate` | `{"samples": [name], "inputs": [{"name", "input"}]}` answers `202` `{"batch", "runs": [{"name", "run_id": null\|id, "error": null\|{"code", "message"}}]}` |
+| `GET /studio/drafts/{workflow}/simulate?runs=a,b` | `{"runs": [{"id", "status", "steps"}], "coverage": null\|{"edges": [{"step_id", "label", "exercised"}], "exercised", "total"}}` |
+| `POST /studio/drafts/{workflow}/publish` | `{"revision", "version", "channel"?: "stable\|beta", "notes"?, "override_eval_gate"?}` answers `201` `{"version", "upgrade_class", "gates": [{"gate", "status"}]}` |
+
+`DRAFT = {"workflow_id", "revision", "manifest", "validation": {"valid", "issues"?, "analysis"?}}`.
+An `OP` is one of the gateway's edit operations (`setMeta`, `setInput`, `setOutput`,
+`setVerify`, `setLimits`, `setParam`, `removeParam`, `setInvocation`,
+`removeInvocation`, `addStep`, `removeStep`, `updateStep`). `push` keeps a step
+in place with `updateStep` when the tree is unchanged and replaces the step tree
+(`removeStep`, `addStep`) otherwise.
 
 Pages the CLI opens (no API call): `/workflows/{id}` (turn on, pre-approve),
 `/approvals/{id}` for a held step.

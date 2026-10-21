@@ -498,7 +498,7 @@ ASSIGNMENTS = {"revision", "profiles": [{"id", "source": "pack", "name", "pack":
 Operation kinds: `connector.enable`, `connector.prompt`, `group.create`,
 `group.map`, `resource.enable`, `resource.assign`, `risk.cell`,
 `risk.override`, `approvals.approver_group`, `approvals.grant_max`,
-`automation.create`, `sync_profile.upsert`. A plan is applied only with the
+`workflow.create`, `sync_profile.upsert`. A plan is applied only with the
 `planHash` of the plan the person was shown.
 
 Source: starter packs plan (manifest, planner, apply, member delivery and CLI

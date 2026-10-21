@@ -26,34 +26,35 @@ const (
 )
 
 var (
-	namePattern    = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
-	semverPattern  = regexp.MustCompile(`^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$`)
-	placeholderRe  = regexp.MustCompile(`\{\{\s*([^}]*?)\s*\}\}`)
-	paramKeyRe     = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
-	allowedActions = map[string]bool{"skill_run": true, "agent_run": true, "tool_call": true, "n8n": true}
-	paramTypes     = map[string]bool{"string": true, "number": true, "boolean": true, "enum": true, "group": true}
+	namePattern   = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
+	semverPattern = regexp.MustCompile(`^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$`)
+	placeholderRe = regexp.MustCompile(`\{\{\s*([^}]*?)\s*\}\}`)
+	paramKeyRe    = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+	workflowKeyRe = regexp.MustCompile(`^[a-z][a-z0-9-]{0,39}$`)
+	workflowRefRe = regexp.MustCompile(`^([a-z0-9][a-z0-9-]{1,38}[a-z0-9]/)?[a-z0-9-]{3,64}@[\^~]?\d+(\.\d+){0,2}$`)
+	paramTypes    = map[string]bool{"string": true, "number": true, "boolean": true, "enum": true, "group": true}
 )
 
 // Manifest is the authoring form (YAML) of a pack.
 type Manifest struct {
-	Format      string       `yaml:"format" json:"format"`
-	Name        string       `yaml:"name" json:"name"`
-	Version     string       `yaml:"version" json:"version"`
-	DisplayName string       `yaml:"displayName" json:"displayName"`
-	Summary     string       `yaml:"summary" json:"summary"`
-	Category    string       `yaml:"category,omitempty" json:"category,omitempty"`
-	Icon        string       `yaml:"icon,omitempty" json:"icon,omitempty"`
-	Locales     []string     `yaml:"locales,omitempty" json:"locales,omitempty"`
-	BasedOn     string       `yaml:"basedOn,omitempty" json:"basedOn,omitempty"`
-	Params      []Param      `yaml:"params,omitempty" json:"params,omitempty"`
-	Connectors  []Connector  `yaml:"connectors,omitempty" json:"connectors,omitempty"`
-	Groups      []Group      `yaml:"groups,omitempty" json:"groups,omitempty"`
-	Skills      []Ref        `yaml:"skills,omitempty" json:"skills,omitempty"`
-	Bundles     []Ref        `yaml:"bundles,omitempty" json:"bundles,omitempty"`
-	Rules       []Rule       `yaml:"rules,omitempty" json:"rules,omitempty"`
-	Risk        *Risk        `yaml:"risk,omitempty" json:"risk,omitempty"`
-	Approvals   *Approvals   `yaml:"approvals,omitempty" json:"approvals,omitempty"`
-	Automations []Automation `yaml:"automations,omitempty" json:"automations,omitempty"`
+	Format      string      `yaml:"format" json:"format"`
+	Name        string      `yaml:"name" json:"name"`
+	Version     string      `yaml:"version" json:"version"`
+	DisplayName string      `yaml:"displayName" json:"displayName"`
+	Summary     string      `yaml:"summary" json:"summary"`
+	Category    string      `yaml:"category,omitempty" json:"category,omitempty"`
+	Icon        string      `yaml:"icon,omitempty" json:"icon,omitempty"`
+	Locales     []string    `yaml:"locales,omitempty" json:"locales,omitempty"`
+	BasedOn     string      `yaml:"basedOn,omitempty" json:"basedOn,omitempty"`
+	Params      []Param     `yaml:"params,omitempty" json:"params,omitempty"`
+	Connectors  []Connector `yaml:"connectors,omitempty" json:"connectors,omitempty"`
+	Groups      []Group     `yaml:"groups,omitempty" json:"groups,omitempty"`
+	Skills      []Ref       `yaml:"skills,omitempty" json:"skills,omitempty"`
+	Bundles     []Ref       `yaml:"bundles,omitempty" json:"bundles,omitempty"`
+	Rules       []Rule      `yaml:"rules,omitempty" json:"rules,omitempty"`
+	Risk        *Risk       `yaml:"risk,omitempty" json:"risk,omitempty"`
+	Approvals   *Approvals  `yaml:"approvals,omitempty" json:"approvals,omitempty"`
+	Workflows   []Workflow  `yaml:"workflows,omitempty" json:"workflows,omitempty"`
 }
 
 // Param is a value the installer supplies.
@@ -111,15 +112,13 @@ type Approvals struct {
 	GrantMaxMinutes int              `yaml:"grantMaxMinutes,omitempty" json:"grantMaxMinutes,omitempty"`
 }
 
-// Automation is a trigger template, created disabled.
-type Automation struct {
-	Key               string         `yaml:"key" json:"key"`
-	Name              string         `yaml:"name" json:"name"`
-	Description       string         `yaml:"description,omitempty" json:"description,omitempty"`
-	RequiresConnector []string       `yaml:"requiresConnectors,omitempty" json:"requiresConnectors,omitempty"`
-	Source            map[string]any `yaml:"source" json:"source"`
-	Filter            map[string]any `yaml:"filter,omitempty" json:"filter,omitempty"`
-	Action            map[string]any `yaml:"action" json:"action"`
+// Workflow is a workflow installed as a draft; a pack never enables it or
+// carries grants, pre-approvals or a run-as.
+type Workflow struct {
+	Key    string         `yaml:"key" json:"key"`
+	Ref    string         `yaml:"ref" json:"ref"`
+	Name   string         `yaml:"name,omitempty" json:"name,omitempty"`
+	Params map[string]any `yaml:"params,omitempty" json:"params,omitempty"`
 }
 
 // Parse decodes a pack.yaml. An unknown field is an error, so a typo is not
@@ -197,15 +196,21 @@ func (m *Manifest) Validate() error {
 			add("rule %q has no body", r.Name)
 		}
 		ruleNames[r.Name] = true
-		checkPlaceholders(r.Body, params, false, "rule "+r.Name, add)
+		checkPlaceholders(r.Body, params, "rule "+r.Name, add)
 	}
-	for _, a := range m.Automations {
-		kind, _ := a.Action["kind"].(string)
-		if !allowedActions[kind] {
-			add("automation %q: action kind %q is not allowed in a pack (skill_run, agent_run, tool_call, n8n)", a.Key, kind)
+	workflowKeys := map[string]bool{}
+	for _, w := range m.Workflows {
+		switch {
+		case !workflowKeyRe.MatchString(w.Key):
+			add("workflow key %q must be kebab-case", w.Key)
+		case workflowKeys[w.Key]:
+			add("workflow %q is defined twice", w.Key)
+		case !workflowRefRe.MatchString(w.Ref):
+			add("workflow %q: ref %q must be handle/slug@range or slug@range", w.Key, w.Ref)
 		}
-		raw, _ := json.Marshal([]any{a.Action, a.Filter})
-		checkPlaceholders(string(raw), params, true, "automation "+a.Key, add)
+		workflowKeys[w.Key] = true
+		raw, _ := json.Marshal(w.Params)
+		checkPlaceholders(string(raw), params, "workflow "+w.Key, add)
 	}
 	if m.Risk != nil {
 		for _, c := range m.Risk.Matrix {
@@ -214,20 +219,16 @@ func (m *Manifest) Validate() error {
 			}
 		}
 		raw, _ := json.Marshal(m.Risk.ToolOverrides)
-		checkPlaceholders(string(raw), params, false, "risk overrides", add)
+		checkPlaceholders(string(raw), params, "risk overrides", add)
 	}
 	return errors.Join(errs...)
 }
 
-// checkPlaceholders accepts {{params.x}} for a declared param and, where the
-// text is passed on to a trigger, {{event.x}}.
-func checkPlaceholders(text string, params map[string]bool, allowEvent bool, where string, add func(string, ...any)) {
+// checkPlaceholders accepts {{params.x}} for a declared param.
+func checkPlaceholders(text string, params map[string]bool, where string, add func(string, ...any)) {
 	for _, m := range placeholderRe.FindAllStringSubmatch(text, -1) {
 		expr := m[1]
 		if k, ok := strings.CutPrefix(expr, "params."); ok && params[k] {
-			continue
-		}
-		if allowEvent && strings.HasPrefix(expr, "event.") {
 			continue
 		}
 		add("%s: unknown placeholder {{%s}}", where, expr)

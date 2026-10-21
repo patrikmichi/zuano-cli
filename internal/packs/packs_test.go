@@ -31,11 +31,11 @@ rules:
 risk:
   matrix:
     - { service: stripe, risk: write, mode: approval }
-automations:
+workflows:
   - key: check
+    ref: acme/invoice-check@^1.2
     name: Check
-    source: { kind: endpoint }
-    action: { kind: skill_run, skill: invoice-reconcile, input: "Check {{event.id}} in {{params.currency}}" }
+    params: { currency: "{{params.currency}}" }
 `
 
 func TestParseAcceptsAValidPack(t *testing.T) {
@@ -72,8 +72,8 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		"from: params.finance_group", "from: params.missing",
 		"invoice-reconcile@2.1.0", "invoice-reconcile",
 		"{{params.currency}}.", "{{params.nope}}.",
-		"kind: skill_run", "kind: run_code",
-		"{{event.id}}", "{{secret.x}}",
+		"acme/invoice-check@^1.2", "Acme Invoice Check",
+		`"{{params.currency}}" }`, `"{{secret.x}}" }`,
 		"{ service: stripe, risk: write, mode: approval }", "{ service: '*', risk: destructive, mode: approval }",
 	).Replace(validPack)
 	m, err := Parse([]byte(bad))
@@ -84,7 +84,7 @@ func TestValidateReportsEachProblem(t *testing.T) {
 	if err == nil {
 		t.Fatal("no error")
 	}
-	for _, want := range []string{"format must be", "kebab-case", "must be semver", "not a param", "exact version", "unknown placeholder {{params.nope}}", "run_code", "unknown placeholder {{secret.x}}", "only cover read and write"} {
+	for _, want := range []string{"format must be", "kebab-case", "must be semver", "not a param", "exact version", "unknown placeholder {{params.nope}}", "must be handle/slug@range", "unknown placeholder {{secret.x}}", "only cover read and write"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error lacks %q:\n%v", want, err)
 		}

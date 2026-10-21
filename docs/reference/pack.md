@@ -1,7 +1,7 @@
 # Starter packs
 
 A starter pack is a versioned, signed set of connectors, skills, plugin bundles,
-rules for coding agents, a risk and approval preset and automation templates
+rules for coding agents, a risk and approval preset and workflow drafts
 that sets an organisation up for one kind of work. Installing is plan, preview,
 apply; members receive the pack's rules, skills and bundles on their next
 `zuano sync`.
@@ -29,7 +29,7 @@ pinned for the gateway before it prints anything; a plan that is unsigned,
 altered or signed by another key exits with status 4 and nothing is applied.
 
 The preview groups the plan by area: connectors, groups, skills and bundles,
-risk and approvals, automations and member rules. Each change shows its value
+risk and approvals, workflows and member rules. Each change shows its value
 now and after, a `[loosens]` mark when it makes a control less strict, and for
 a change the plan does not allow the plan that would. A conflict is a value an
 administrator changed since the pack set it; choose `keep` or `take` for it
@@ -87,7 +87,7 @@ whether a newer revision is waiting.
 ## Authoring
 
 `zuano pack init <dir>` writes a `pack.yaml` to start from. `validate` checks
-the file (format, names, versions, placeholders, rule limits, the automation
-actions a pack may use) and, with a gateway, whether every referenced skill,
+the file (format, names, versions, placeholders, rule limits, the workflow
+references) and, with a gateway, whether every referenced skill,
 bundle and connector exists. `publish` uploads it as a private pack of your
 organisation; a pack that loosens a control waits for an administrator's review.

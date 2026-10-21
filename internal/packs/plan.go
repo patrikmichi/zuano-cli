@@ -102,7 +102,7 @@ var areas = []struct {
 	{"Groups", []string{"group.create", "group.map"}},
 	{"Skills and bundles", []string{"resource.enable", "resource.assign"}},
 	{"Risk and approvals", []string{"risk.cell", "risk.override", "approvals.approver_group", "approvals.grant_max"}},
-	{"Automations", []string{"automation.create"}},
+	{"Workflows", []string{"workflow.create"}},
 	{"Member rules", []string{"sync_profile.upsert"}},
 }
 

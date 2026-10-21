@@ -33,7 +33,7 @@ func PackCmd() *cobra.Command {
 		Use:   "pack",
 		Short: "Install starter packs that set your organisation up for one kind of work",
 		Long: `A starter pack is a versioned, signed set of connectors, skills, plugin bundles,
-rules for coding agents, risk and approval presets and automation templates.
+rules for coding agents, risk and approval presets and workflow drafts.
 
 Installing is plan, preview, apply: 'zuano pack plan' shows exactly what would
 change, and 'zuano pack install' applies that plan after you confirm it. The

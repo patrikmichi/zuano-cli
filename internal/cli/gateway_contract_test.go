@@ -145,10 +145,10 @@ func TestContract_Requirements(t *testing.T) {
 	if err := json.Unmarshal([]byte(contractFixture(t, "skill-requirements.json")), &r); err != nil {
 		t.Fatal(err)
 	}
-	if r.Satisfied || r.SkillID != "res_1" || r.Version != "1.2.0" || len(r.Missing) != 1 || r.Missing[0] != "slack" {
+	if r.Satisfied || r.SkillID != "res_skill" || r.Version != "1.2.0" || len(r.Missing) != 1 || r.Missing[0] != "github" {
 		t.Fatalf("requirements = %+v", r)
 	}
-	if len(r.Requirements) != 2 || !r.Requirements[0].Connected || r.Requirements[1].Connected || r.Requirements[0].Tools[0] != "list_invoices" {
+	if len(r.Requirements) != 2 || !r.Requirements[0].Connected || r.Requirements[1].Connected || r.Requirements[1].Tools[0] != "get_issue" {
 		t.Errorf("statuses = %+v", r.Requirements)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -36,9 +37,9 @@ type jobDoc struct {
 	Attempts   int             `json:"attempts"`
 	Progress   json.RawMessage `json:"progress"`
 	Error      *string         `json:"error"`
-	CreatedAt  string          `json:"created_at"`
-	StartedAt  *string         `json:"started_at"`
-	FinishedAt *string         `json:"finished_at"`
+	CreatedAt  string          `json:"createdAt"`
+	StartedAt  *string         `json:"startedAt"`
+	FinishedAt *string         `json:"finishedAt"`
 }
 
 func (j jobDoc) sanitized() jobDoc {
@@ -126,10 +127,12 @@ func handleStartedJob(parent context.Context, c *client.Client, j *startedJob, j
 	return waitForJob(parent, c, j.pollID(), o.waitFor, out, jsonOut)
 }
 
+const jobsAPI = "/api/v1/jobs"
+
 // jobPath is the route that reports a job or a run.
 func jobPath(id string) string {
 	if strings.HasPrefix(id, jobIDPrefix) {
-		return "/api/jobs/" + url.PathEscape(id)
+		return jobsAPI + "/" + url.PathEscape(id)
 	}
 	return "/api/runtime/runs/" + url.PathEscape(id)
 }
@@ -267,6 +270,7 @@ wait exit status
 func runsListCmd() *cobra.Command {
 	var f approvalFlags
 	var kind, status, cursor string
+	var limit int
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List jobs, newest first",
@@ -282,12 +286,15 @@ func runsListCmd() *cobra.Command {
 					q.Set(k, v)
 				}
 			}
-			path := "/api/jobs"
+			path := jobsAPI
+			if limit > 0 {
+				q.Set("limit", strconv.Itoa(limit))
+			}
 			if len(q) > 0 {
 				path += "?" + q.Encode()
 			}
 			var list struct {
-				Jobs       []jobDoc `json:"jobs"`
+				Jobs       []jobDoc `json:"items"`
 				NextCursor *string  `json:"nextCursor"`
 			}
 			raw, err := gatewayJSON(cmd.Context(), c, http.MethodGet, path, nil, &list)
@@ -322,6 +329,7 @@ func runsListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&kind, "kind", "", "Only this kind, such as agent_run or webhook_delivery")
 	cmd.Flags().StringVar(&status, "status", "", "Only this status: queued, running, succeeded, failed, cancelled or dead")
 	cmd.Flags().StringVar(&cursor, "cursor", "", "Continue after the cursor a previous list printed")
+	cmd.Flags().IntVar(&limit, "limit", 0, "Jobs per page (1 to 200; default 50)")
 	return cmd
 }
 

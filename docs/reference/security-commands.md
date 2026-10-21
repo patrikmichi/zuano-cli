@@ -16,12 +16,9 @@ confirms it.
 logins created, in every organisation you belong to: run `zuano login` again
 afterwards.
 
-The gateway answers these routes to a browser sign-in cookie only. zuano
-authenticates with a bearer token and sends no cookie (so no
-`X-Requested-With`), which the gateway refuses with `401`; the commands report
-that as "browser sign-in only" instead of a revoked token. They work once the
-gateway accepts a bearer token on the route; until then manage browser sessions
-in the console.
+The routes accept your CLI login: zuano authenticates with a bearer token and
+sends no cookie, so no session is marked "this one". A `401` means the token
+expired or was revoked; run `zuano login`.
 
 ## zuano audit
 

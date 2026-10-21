@@ -71,7 +71,7 @@ func TestComplianceControlsAllCovered(t *testing.T) {
 func exportRoutes(job string, bundle []byte, dlSHA string) routeMap {
 	return routeMap{
 		"POST /api/compliance/exports": jsonReply(202, `{"export_id":"exp_1","job_id":"job_1"}`),
-		"GET /api/jobs/job_1":          jsonReply(200, job),
+		"GET /api/v1/jobs/job_1":       jsonReply(200, job),
 		"GET /api/compliance/exports/exp_1/download": func(_ *packServer, w http.ResponseWriter, r *http.Request) {
 			_, _ = io.WriteString(w, `{"url":"http://`+r.Host+`/blob/b.zip","fileName":"../../evil/soc2.zip","sha256":"`+dlSHA+`"}`)
 		},
@@ -114,7 +114,7 @@ func TestComplianceExportWithoutWaitAndExitCodes(t *testing.T) {
 	ps := complianceGateway(t, exportRoutes(`{"job":{"id":"job_1","status":"running"}}`, nil, ""))
 	args := []string{"export", "--pack", "soc2", "--from", "2026-07-01", "--to", "2026-10-01"}
 	out, err := runCommand(t, ComplianceCmd(), args...)
-	if err != nil || !strings.Contains(out, "Export exp_1 started (job_1)") || ps.count("GET /api/jobs/job_1") != 0 {
+	if err != nil || !strings.Contains(out, "Export exp_1 started (job_1)") || ps.count("GET /api/v1/jobs/job_1") != 0 {
 		t.Errorf("no wait: %q %v", out, err)
 	}
 	if out, err := runCommand(t, ComplianceCmd(), append(args, "--json")...); err != nil || !strings.Contains(out, "export_id") {

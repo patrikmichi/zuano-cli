@@ -152,7 +152,7 @@ func applyRoutes() map[string]func(*packServer, http.ResponseWriter, *http.Reque
 	return map[string]func(*packServer, http.ResponseWriter, *http.Request){
 		"POST /api/packs/finance/plans":        signedReply(200, planDoc),
 		"POST /api/packs/plans/ppl_1/apply":    jsonReply(202, `{"installId":"pki_1","jobId":"job_1"}`),
-		"GET /api/jobs/job_1":                  jsonReply(200, jobDone),
+		"GET /api/v1/jobs/job_1":               jsonReply(200, jobDone),
 		"GET /api/packs/installs":              jsonReply(200, `{"installs":[{"id":"pki_1","status":"installed","channel":"stable","updateAvailable":"1.1.0","pack":{"slug":"finance","version":"1.0.0"}}]}`),
 		"POST /api/packs/installs/pki_1/plans": signedReply(200, planDoc),
 	}
@@ -397,7 +397,7 @@ func TestPackInstall_StalePlanStepUpAndFailedJob(t *testing.T) {
 	}
 
 	routes["POST /api/packs/plans/ppl_1/apply"] = jsonReply(202, `{"installId":"pki_1","jobId":"job_1"}`)
-	routes["GET /api/jobs/job_1"] = jsonReply(200, `{"job":{"id":"job_1","status":"failed","error":"boom"}}`)
+	routes["GET /api/v1/jobs/job_1"] = jsonReply(200, `{"job":{"id":"job_1","status":"failed","error":"boom"}}`)
 	packGateway(t, routes)
 	_, err = runCommand(t, PackCmd(), "install", "finance", "--yes", "--keep-conflicts")
 	if err == nil || !strings.Contains(err.Error(), "not fully applied") || !strings.Contains(err.Error(), "zuano pack uninstall finance") {

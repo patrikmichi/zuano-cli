@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -49,12 +50,12 @@ func TestSessions_EndAndEndAllUseDELETEWithTheGatewaysQuery(t *testing.T) {
 	}
 }
 
-func TestSessions_ACLITokenIsExplainedNotCalledRevoked(t *testing.T) {
+func TestSessions_AnExpiredTokenIsReportedAsRevoked(t *testing.T) {
 	approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
 		"GET /api/me/sessions": reply(401, `{"error":"Unauthorized"}`),
 	})
 	_, err := runCommand(t, SessionsCmd(), "list")
-	if err == nil || !strings.Contains(err.Error(), "browser sign-in") {
+	if !errors.Is(err, errTokenRevoked) {
 		t.Fatalf("err = %v", err)
 	}
 }

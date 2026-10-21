@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,20 +26,12 @@ type sessionDoc struct {
 	Current   bool   `json:"current"`
 }
 
-// errSessionsBrowserOnly explains the 401 the gateway answers a CLI token with:
-// the route reads a browser sign-in cookie, not a bearer token.
-var errSessionsBrowserOnly = errors.New("the gateway lists and ends browser sessions only for a browser sign-in, not for a CLI token; manage them in the console (if your CLI token expired, run `" + brand.Cmd("login") + "`)")
-
 func sessionsRequest(cmd *cobra.Command, f approvalFlags, method, path string, out any) ([]byte, error) {
 	c, err := approvalsClient(f.gatewayURL)
 	if err != nil {
 		return nil, err
 	}
-	raw, err := gatewayJSON(cmd.Context(), c, method, path, nil, out)
-	if errors.Is(err, errTokenRevoked) {
-		return nil, errSessionsBrowserOnly
-	}
-	return raw, err
+	return gatewayJSON(cmd.Context(), c, method, path, nil, out)
 }
 
 // SessionsCmd returns `zuano sessions`, the person's browser sessions on the
@@ -50,12 +41,9 @@ func SessionsCmd() *cobra.Command {
 		Use:   "sessions",
 		Short: "List and end your browser sessions on the gateway",
 		Long: `The gateway keeps a server-side session for every browser sign-in. These commands
-list them, end one, or end all of them. Ending all of them also ends your refresh
-tokens, OAuth families and the keys your CLI logins created, in every organisation
-you belong to, so run ` + "`" + brand.Cmd("login") + "`" + ` afterwards.
-
-The gateway answers these routes to a browser sign-in only. A CLI token is refused
-with 401, which these commands report as such.`,
+list them, end one, or end all of them. They work with your CLI login. Ending all
+of them also ends your refresh tokens, OAuth families and the keys your CLI logins
+created, in every organisation you belong to, so run ` + "`" + brand.Cmd("login") + "`" + ` afterwards.`,
 	}
 	cmd.AddCommand(sessionsListCmd(), sessionsEndCmd(), sessionsEndAllCmd())
 	return cmd

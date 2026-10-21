@@ -1,1 +1,1 @@
-{"requirements":[{"slug":"fakturoid","tools":["list_invoices"],"connected":true},{"slug":"slack","connected":false}],"satisfied":false,"missing":["slack"],"skillId":"res_1","version":"1.2.0"}
+{"requirements":[{"slug":"clockify","scopes":["read"],"connected":true},{"slug":"github","tools":["get_issue"],"connected":false}],"satisfied":false,"missing":["github"],"skillId":"res_skill","version":"1.2.0"}

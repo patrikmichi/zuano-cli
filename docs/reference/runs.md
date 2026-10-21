@@ -27,7 +27,7 @@ Started on the gateway: job_01J9ZK3 (queued).
 Follow it with `zuano runs show job_01J9ZK3`, or repeat the call with --wait.
 ```
 
-With `--wait[=SECONDS]` it polls `GET /api/jobs/{id}` (a run id with no job id
+With `--wait[=SECONDS]` it polls `GET /api/v1/jobs/{id}` (a run id with no job id
 polls `GET /api/runtime/runs/{id}`, which carries `job_status`) at one, two,
 three, then every five seconds, and prints the finished job. The exit status is
 0 for `succeeded`, 1 for `failed`, `dead` or `cancelled`, and 12 when the time
@@ -37,11 +37,11 @@ ended with the job still going. `--json` prints only the final document.
 
 | Command | Request |
 |---|---|
-| `zuano runs list [--kind K] [--status S] [--cursor C] [--json]` | `GET /api/jobs?kind=&status=&cursor=` |
-| `zuano runs show <id> [--json]` | `GET /api/jobs/{id}`, or `GET /api/runtime/runs/{id}` for an id that does not start with `job_` |
+| `zuano runs list [--kind K] [--status S] [--cursor C] [--limit N] [--json]` | `GET /api/v1/jobs?kind=&status=&cursor=&limit=` |
+| `zuano runs show <id> [--json]` | `GET /api/v1/jobs/{id}`, or `GET /api/runtime/runs/{id}` for an id that does not start with `job_` |
 | `zuano runs wait <id> [--wait-timeout T] [--json]` | the same route, polled until finished; exit status as above |
-| `zuano runs cancel <id>` | `POST /api/jobs/{id}/cancel`, or `POST /api/runtime/runs/{id}/cancel` for a run id |
-| `zuano runs retry <job-id>` | `POST /api/jobs/{id}/retry` (organisation admins; failed or dead jobs only) |
+| `zuano runs cancel <id>` | `POST /api/v1/jobs/{id}/cancel`, or `POST /api/runtime/runs/{id}/cancel` for a run id |
+| `zuano runs retry <job-id>` | `POST /api/v1/jobs/{id}/retry` (organisation admins; failed or dead jobs only) |
 
 Members see their own jobs; admins see all of the organisation's, metadata
 only. `zuano usage` shows the quotas that bound how many jobs may start; a

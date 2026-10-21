@@ -155,6 +155,10 @@ var builderInvocations = []struct {
 	{name: "accounts import", stdin: `{"refreshToken":"v"}`, cmd: AccountsCmd, args: []string{"import", "--user", "user_1", "--service", "gmail", "--auth-config", "ac_1", "--alias", "imported", "--from-file", "-"}},
 	{name: "links create", cmd: LinksCmd, args: []string{"create", "--user", "u1", "--service", "gmail", "--auth-config", "ac_1", "--alias", "work", "--callback-url", "https://app.example/done", "--scopes", "a,b", "--expires-in", "30m"}},
 	{name: "links show", cmd: LinksCmd, args: []string{"show", "lnk_1"}},
+	{name: "runs list", cmd: RunsCmd, args: []string{"list", "--kind", "agent_run", "--status", "dead", "--cursor", "c1", "--limit", "20"}},
+	{name: "runs show", cmd: RunsCmd, args: []string{"show", "job_1"}},
+	{name: "runs cancel", cmd: RunsCmd, args: []string{"cancel", "job_1"}},
+	{name: "runs retry", cmd: RunsCmd, args: []string{"retry", "job_1"}},
 }
 
 func TestContract_BuilderRequestsMatchTheOpenAPI(t *testing.T) {
@@ -226,6 +230,7 @@ func TestContract_OpenAPIOperationMatching(t *testing.T) {
 		{"POST", "/api/v1/auth-configs/ac_1/secrets:rotate", "/auth-configs/{id}/secrets:rotate", true},
 		{"POST", "/api/v1/connected-accounts:import", "/connected-accounts:import", true},
 		{"DELETE", "/api/v1/connected-accounts/ca_1", "/connected-accounts/{id}", true},
+		{"POST", "/api/v1/jobs/job_1/retry", "/jobs/{id}/retry", true},
 		{"GET", "/api/v1/auth-configs/ac_1:disable", "", false},
 		{"GET", "/api/me/sessions", "", false},
 	} {

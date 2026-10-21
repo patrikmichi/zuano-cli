@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/spf13/cobra"
@@ -63,6 +65,10 @@ func gatewayStatusError(status int, raw []byte) error {
 	var doc struct {
 		Error   string `json:"error"`
 		Message string `json:"message"`
+		Issues  []struct {
+			Pointer string `json:"pointer"`
+			Message string `json:"message"`
+		} `json:"issues"`
 	}
 	_ = json.Unmarshal(raw, &doc)
 	msg := doc.Message
@@ -72,8 +78,61 @@ func gatewayStatusError(status int, raw []byte) error {
 	if msg == "" {
 		msg = http.StatusText(status)
 	}
+	if code, ok := refusalExit[doc.Error]; ok {
+		text := fmt.Sprintf("%s (HTTP %d)%s", textsafe.Clean(msg), status, client.RequestIDNote())
+		for _, i := range doc.Issues {
+			text += fmt.Sprintf("\n  %s: %s", textsafe.Clean(i.Pointer), textsafe.Clean(i.Message))
+		}
+		return &ExitError{Code: code, Msg: text}
+	}
 	if status == http.StatusUnauthorized {
 		return errTokenRevoked
 	}
 	return fmt.Errorf("%s (HTTP %d)%s", textsafe.Clean(msg), status, client.RequestIDNote())
+}
+
+// refusalExit maps the workflow refusals that have a status of their own to
+// their place in the exit-code registry.
+var refusalExit = map[string]int{
+	"manifest_invalid": exitInvalidManifest,
+	"input_invalid":    exitInputInvalid,
+	"draft_conflict":   exitDraftConflict,
+}
+
+// gatewayRequest sends one control request with extra headers and returns the
+// status and body.
+func gatewayRequest(parent context.Context, c *client.Client, method, path string, body any, headers map[string]string) (int, []byte, error) {
+	ctx, cancel, err := requestContext(parent, controlRequest)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer cancel()
+	var payload io.Reader
+	if body != nil {
+		raw, err := json.Marshal(body)
+		if err != nil {
+			return 0, nil, fmt.Errorf("marshal request body: %w", err)
+		}
+		payload = bytes.NewReader(raw)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, c.GatewayURL+path, payload)
+	if err != nil {
+		return 0, nil, fmt.Errorf("create request: %w", err)
+	}
+	if payload != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		return 0, nil, timeoutCause(ctx, fmt.Errorf("%s %s: %w", method, path, err))
+	}
+	defer resp.Body.Close()
+	raw, err := readLimitedResponse(resp.Body, maxApprovalBody)
+	if err != nil {
+		return resp.StatusCode, nil, fmt.Errorf("read response: %w", err)
+	}
+	return resp.StatusCode, raw, nil
 }

@@ -11,10 +11,12 @@ const (
 	exitUsage            = 2
 	exitInvalidManifest  = 16
 	exitWaitTimeout      = 17
+	exitInputInvalid     = 18
 	exitRunFailed        = 20
 	exitEvalRegression   = 21
 	exitEvalInconclusive = 23
 	exitEvalThreshold    = 24
+	exitDraftConflict    = 25
 	exitNetworkOffline   = 34
 	exitToolChanged      = 43
 	exitQuarantined      = 44
@@ -49,11 +51,13 @@ var exitRegistry = []exitCodeEntry{
 	{exitPlanStale, "plan_stale"},
 	{exitInvalidManifest, "invalid_manifest"},
 	{exitWaitTimeout, "wait_timeout"},
+	{exitInputInvalid, "input_invalid"},
 	{exitRunFailed, "run_failed"},
 	{exitEvalRegression, "eval_regression"},
 	{exitSessionTooLarge, "session_too_large"},
 	{exitEvalInconclusive, "eval_inconclusive"},
 	{exitEvalThreshold, "eval_threshold_not_met"},
+	{exitDraftConflict, "draft_conflict"},
 	{client.ExitPlanRequired, "plan_required"},
 	{client.ExitUsageExhausted, "quota_exceeded"},
 	{client.ExitBillingDown, "billing_unavailable"},

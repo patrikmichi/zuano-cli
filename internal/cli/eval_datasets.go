@@ -500,7 +500,7 @@ happens in the browser. This lists the open queues and opens the first one.`,
 				fmt.Fprintln(out, "No review queue is open.")
 				return nil
 			}
-			return openAutomationPage(cmd, f.gatewayURL, "/evals/review/"+url.PathEscape(first), noBrowser, "Review the items there")
+			return openDecisionPage(cmd, f.gatewayURL, "/evals/review/"+url.PathEscape(first), noBrowser, "Review the items there")
 		},
 	}
 	f.bind(cmd, "Print the queues as JSON")

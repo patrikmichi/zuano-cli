@@ -162,10 +162,10 @@ func reviewsDecideCmd() *cobra.Command {
 		Short: "Open the page where you confirm or reduce access, with your passkey",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := refuseAutomationInAgent(brand.Cmd("reviews decide")); err != nil {
+			if err := refuseAgentDecision(brand.Cmd("reviews decide")); err != nil {
 				return err
 			}
-			return openAutomationPage(cmd, f.gatewayURL, "/reviews?campaign="+url.QueryEscape(args[0]), noBrowser, "Decide there")
+			return openDecisionPage(cmd, f.gatewayURL, "/reviews?campaign="+url.QueryEscape(args[0]), noBrowser, "Decide there")
 		},
 	}
 	f.bind(cmd, "Unused: the command only opens a page")

@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -40,7 +41,7 @@ func TriggersCmd() *cobra.Command {
 		Use:   "triggers",
 		Short: "Find trigger types, create triggers and watch their events",
 		Long: `A trigger type is an event a connector can send, such as github.issue_opened.
-A trigger is an instance of a type with its config, bound to an automation, a
+A trigger is an instance of a type with its config, bound to a waiting workflow, a
 webhook URL, an agent prompt or (for a project key) the project's subscriptions.
 The gateway registers the hook with the provider when it can; otherwise it
 prints the steps to do by hand.
@@ -247,25 +248,29 @@ func triggersInfoCmd() *cobra.Command {
 func triggersCreateCmd() *cobra.Command {
 	var f approvalFlags
 	var configPairs []string
-	var configFile, account, user, automation, webhook, prompt, agentResource, description string
+	var configFile, account, user, signalWorkflow, signalName, correlate, webhook, prompt, agentResource, description string
 	var deliver bool
 	cmd := &cobra.Command{
 		Use:   "create <type>",
-		Short: "Listen for an event and send it to an automation, a URL, an agent or your project",
+		Short: "Listen for an event and send it to a waiting workflow, a URL, an agent or your project",
 		Long: `Creates a trigger of a type and, where the provider has an API, registers the
 hook with it using the connected account. Choose exactly one destination:
 
-  --automation atm_...   starts the draft automation (a person still turns it on)
-  --webhook URL          posts each event to the URL as a signed delivery
-  --agent-prompt TEXT    starts an agent run with the prompt on each event
-  --deliver              sends it to the project's webhook subscriptions (project keys)
+  --signal-workflow WORKFLOW  sends each event as a signal to the runs of WORKFLOW that
+                              wait for it; needs --signal and --correlate
+  --webhook URL               posts each event to the URL as a signed delivery
+  --agent-prompt TEXT         starts an agent run with the prompt on each event
+  --deliver                   sends it to the project's webhook subscriptions (project keys)
+
+--correlate is a {path} template over the event that names the waiting run, such as
+{deal.id}. A workflow that starts from an event declares that in its manifest.
 
 If registration cannot be done for you, the steps to do by hand are printed.`,
-		Example: `  zuano triggers create github.issue_opened --config owner=acme --config repo=web --automation atm_k3j2h1
+		Example: `  zuano triggers create hubspot.deal_updated --signal-workflow approve_deal --signal approved --correlate '{deal.id}'
   zuano triggers create stripe.payment_failed --webhook https://example.com/hooks/stripe`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			binding, err := triggerBinding(automation, webhook, prompt, agentResource, deliver, description)
+			binding, err := triggerBinding(signalWorkflow, signalName, correlate, webhook, prompt, agentResource, deliver, description)
 			if err != nil {
 				return err
 			}
@@ -330,7 +335,9 @@ If registration cannot be done for you, the steps to do by hand are printed.`,
 	cmd.Flags().StringVar(&configFile, "config-file", "", "JSON file with the config")
 	cmd.Flags().StringVar(&account, "account", "", "Connected account (ca_...) the trigger uses")
 	cmd.Flags().StringVar(&user, "user", "", "End user's external id, for project keys")
-	cmd.Flags().StringVar(&automation, "automation", "", "Start this automation (atm_...)")
+	cmd.Flags().StringVar(&signalWorkflow, "signal-workflow", "", "Signal the waiting runs of this workflow")
+	cmd.Flags().StringVar(&signalName, "signal", "", "With --signal-workflow: the signal name")
+	cmd.Flags().StringVar(&correlate, "correlate", "", "With --signal-workflow: a {path} template naming the waiting run")
 	cmd.Flags().StringVar(&webhook, "webhook", "", "Post each event to this URL")
 	cmd.Flags().StringVar(&prompt, "agent-prompt", "", "Start an agent run with this prompt")
 	cmd.Flags().StringVar(&agentResource, "agent", "", "Agent (resource id) for --agent-prompt")
@@ -339,23 +346,33 @@ If registration cannot be done for you, the steps to do by hand are printed.`,
 	return cmd
 }
 
-func triggerBinding(automation, webhook, prompt, agent string, deliver bool, description string) (map[string]any, error) {
+var signalNamePattern = regexp.MustCompile(`^[a-z][a-z0-9_.-]{0,59}$`)
+
+func triggerBinding(workflow, signalName, correlate, webhook, prompt, agent string, deliver bool, description string) (map[string]any, error) {
 	n := 0
-	for _, set := range []bool{automation != "", webhook != "", prompt != "", deliver} {
+	for _, set := range []bool{workflow != "", webhook != "", prompt != "", deliver} {
 		if set {
 			n++
 		}
 	}
 	if n != 1 {
-		return nil, errors.New("choose exactly one destination: --automation, --webhook, --agent-prompt or --deliver")
+		return nil, errors.New("choose exactly one destination: --signal-workflow, --webhook, --agent-prompt or --deliver")
+	}
+	if workflow == "" && (signalName != "" || correlate != "") {
+		return nil, errors.New("--signal and --correlate belong to --signal-workflow")
 	}
 	switch {
-	case automation != "":
-		id, err := automationID(automation)
-		if err != nil {
-			return nil, err
+	case workflow != "":
+		if !workflowRefPattern.MatchString(workflow) {
+			return nil, fmt.Errorf("--signal-workflow %q is not a workflow", textsafe.Clean(workflow))
 		}
-		return map[string]any{"kind": "automation", "automationId": id}, nil
+		if !signalNamePattern.MatchString(signalName) {
+			return nil, errors.New("--signal must be a lower-case name such as approved")
+		}
+		if correlate == "" {
+			return nil, errors.New("--correlate is required with --signal-workflow")
+		}
+		return map[string]any{"kind": "workflow_signal", "workflow": workflow, "signal": signalName, "correlate": correlate}, nil
 	case webhook != "":
 		u, err := url.Parse(webhook)
 		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.User != nil {

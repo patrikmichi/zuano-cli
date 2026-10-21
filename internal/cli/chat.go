@@ -150,7 +150,7 @@ prints the link and a QR code for your phone.`,
 			if config.AgentMode() {
 				return &ExitError{Code: client.ExitStepUp, Msg: "linking a chat account is confirmed by a person with a passkey; it is refused while ZUANO_AGENT is set"}
 			}
-			return openAutomationPage(cmd, f.gatewayURL, "/api/chat/link/"+provider+"/start", noBrowser, "Link your "+chatName(provider)+" account there")
+			return openDecisionPage(cmd, f.gatewayURL, "/api/chat/link/"+provider+"/start", noBrowser, "Link your "+chatName(provider)+" account there")
 		},
 	}
 	f.bind(cmd, "Unused: the command only opens a page")

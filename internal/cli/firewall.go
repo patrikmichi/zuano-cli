@@ -137,10 +137,10 @@ func firewallChangeDecideCmd() *cobra.Command {
 		Short: "Open the page where you approve or reject a change with your passkey",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := refuseAutomationInAgent(brand.Cmd("firewall changes decide")); err != nil {
+			if err := refuseAgentDecision(brand.Cmd("firewall changes decide")); err != nil {
 				return err
 			}
-			return openAutomationPage(cmd, f.gatewayURL, "/firewall/changes/"+url.PathEscape(args[0]), noBrowser, "Review the change and decide there")
+			return openDecisionPage(cmd, f.gatewayURL, "/firewall/changes/"+url.PathEscape(args[0]), noBrowser, "Review the change and decide there")
 		},
 	}
 	f.bind(cmd, "Unused: the command only opens a page")
@@ -158,10 +158,10 @@ func firewallConnectCmd() *cobra.Command {
 		Long:  `A remote server's credentials stay with the gateway, never in an agent's config. This opens the server's sign-in page; zuano never sees the token.`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := refuseAutomationInAgent(brand.Cmd("firewall connect")); err != nil {
+			if err := refuseAgentDecision(brand.Cmd("firewall connect")); err != nil {
 				return err
 			}
-			return openAutomationPage(cmd, f.gatewayURL, "/api/fw/oauth/start?upstream="+url.QueryEscape(upstreamSlug(args[0])), noBrowser, "Sign in to the server there")
+			return openDecisionPage(cmd, f.gatewayURL, "/api/fw/oauth/start?upstream="+url.QueryEscape(upstreamSlug(args[0])), noBrowser, "Sign in to the server there")
 		},
 	}
 	f.bind(cmd, "Unused: the command only opens a page")

@@ -356,14 +356,14 @@ func a2aAgentsReviewCmd() *cobra.Command {
 		Short: "Open the page where a card or a card change is approved with a passkey",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := refuseAutomationInAgent(brand.Cmd("a2a agents review")); err != nil {
+			if err := refuseAgentDecision(brand.Cmd("a2a agents review")); err != nil {
 				return err
 			}
 			slug, err := a2aSlug(args[0])
 			if err != nil {
 				return err
 			}
-			return openAutomationPage(cmd, f.gatewayURL, "/agents/a2a/"+slug, noBrowser, "Review the card there")
+			return openDecisionPage(cmd, f.gatewayURL, "/agents/a2a/"+slug, noBrowser, "Review the card there")
 		},
 	}
 	f.bind(cmd, "Unused: the command only opens a page")

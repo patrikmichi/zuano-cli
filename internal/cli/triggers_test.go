@@ -76,7 +76,7 @@ func TestTriggersCreateEachDestination(t *testing.T) {
 		args []string
 		want map[string]any
 	}{
-		{[]string{"--automation", "atm_k3j2h1"}, map[string]any{"kind": "automation", "automationId": "atm_k3j2h1"}},
+		{[]string{"--signal-workflow", "approve_deal", "--signal", "approved", "--correlate", "{deal.id}"}, map[string]any{"kind": "workflow_signal", "workflow": "approve_deal", "signal": "approved", "correlate": "{deal.id}"}},
 		{[]string{"--webhook", "https://example.com/hook", "--description", "mine"}, map[string]any{"kind": "subscription", "url": "https://example.com/hook", "description": "mine"}},
 		{[]string{"--agent-prompt", "Triage it", "--agent", "res_1"}, map[string]any{"kind": "agent_run", "prompt": "Triage it", "agentResourceId": "res_1"}},
 		{[]string{"--deliver"}, map[string]any{"kind": "deliver"}},
@@ -140,7 +140,10 @@ func TestTriggersCreateChecksItsInput(t *testing.T) {
 	for name, args := range map[string][]string{
 		"no destination":   {"create", "github.push"},
 		"two destinations": {"create", "github.push", "--deliver", "--webhook", "https://example.com"},
-		"bad automation":   {"create", "github.push", "--automation", "x"},
+		"bad workflow":     {"create", "github.push", "--signal-workflow", "a b", "--signal", "go", "--correlate", "{id}"},
+		"no signal":        {"create", "github.push", "--signal-workflow", "approve_deal", "--correlate", "{id}"},
+		"no correlate":     {"create", "github.push", "--signal-workflow", "approve_deal", "--signal", "go"},
+		"stray signal":     {"create", "github.push", "--deliver", "--signal", "go"},
 		"webhook scheme":   {"create", "github.push", "--webhook", "ftp://example.com"},
 		"webhook creds":    {"create", "github.push", "--webhook", "https://u:p@example.com"},
 		"bad config":       {"create", "github.push", "--deliver", "--config", "novalue"},

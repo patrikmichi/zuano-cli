@@ -77,13 +77,15 @@ the constants in the code, both ways.
 | 13 | `rate_limited` | `429` only; never a quota |
 | 14 | `step_up_required` | non-interactive session |
 | 15 | `plan_stale` | the organisation changed since the plan was made |
-| 16 | `invalid_manifest` | `422` `invalid_manifest` |
+| 16 | `invalid_manifest` | `422` `invalid_manifest` or `manifest_invalid` |
 | 17 | `wait_timeout` | a `--wait` or request time limit passed |
-| 20 | `run_failed` | an eval, export or automation run ended failed |
+| 18 | `input_invalid` | `422` `input_invalid`: a workflow run's input does not match its input schema |
+| 20 | `run_failed` | an eval, export or workflow run ended failed |
 | 21 | `eval_regression` | |
 | 22 | `session_too_large` | `413` on capture |
 | 23 | `eval_inconclusive` | |
 | 24 | `eval_threshold_not_met` | |
+| 25 | `draft_conflict` | `409` `draft_conflict`: the workflow draft changed since the revision the edit was made on |
 | 30 | `plan_required` | also `limit_reached`, `verification_required` |
 | 31 | `quota_exceeded` | also `spend_cap_reached`, daily caps |
 | 32 | `billing_unavailable` | |
@@ -688,44 +690,54 @@ The plan names the routes and the CLI commands; the `{"routes": ...}` wrappers,
 the shape of `notified`, `reachability`, the identities list and the link start
 path are this client's decisions.
 
-## Automations
+## Workflows
+
+Everything is under `/api/v1/workflows`. `{installation}` is a `wfi_` id or the
+installation's MCP tool name.
 
 | Route | Request and response |
 |---|---|
-| `GET /api/automations?owner=me` | `{"automations": [AUTOMATION]}`; `owner=me` limits the list to the caller's, for `doctor` |
-| `GET /api/automations/{id}` | `{"automation": AUTOMATION}` |
-| `POST /api/automations` | `{"template": slug, "version"?, "name", "params": {}, "bindings": {service: "org\|personal"}, "runAsEmail"?}` answers `201` `{"automation", "wizardUrl": "/automations/{id}/wizard?step=preapprove"}`; a path on the gateway's own origin |
-| `POST /api/automations/draft` | `{"goal"?, "manifest"?, "name"?, "params"?, "bindings"?, "automationId"?}`, at least one of goal and manifest; `201` `{"automationId", "customManifestId", "wizardUrl", "analysis": {"trigger", "steps", "derivedPermissions", "maxRisk", "preapprovableSteps", "missingConnections", "minimumPlan"}}`; `422` `{"error": "invalid_manifest", "issues": [{"path", "code", "message"}]}` (exit 16); an agent's draft may be held (`202`, exit 12) |
-| `GET /api/automations/templates?category=&service=` | `{"templates": [{"slug", "title", "summary", "category", "version", "ready"}]}` |
-| `GET /api/automations/templates/{slug}[/versions/{v}]` | `{"template": {...the list entry, "connectors": [slug], "minimumPlan", "permissions": [{"service", "tool", "risk"}], "preapprovableSteps": [path]}}` |
-| `POST /api/automations/templates/validate` | `{"manifest"}` answers `{"errors": [{"path", "message"}], "analysis": {"permissions", "minimumPlan", "preapprovableSteps"}}` |
-| `POST /api/automations/{id}/run` | `{"mode": "dry_run\|test\|live", "sample"?, "eventId"?, "input"?}` answers `202` `{"run_id", "job_id"}`; an agent session's run may be held like any call (exit 12) |
-| `GET /api/automations/{id}/runs` | `{"runs": [{"id", ...}]}` newest first |
-| `GET /api/automations/runs/{run}?after=<seq>` | `{"run": RUN}` with only the steps that changed after `seq` |
-| `POST /api/automations/{id}/pause`, `/disable` | `200` |
-| `GET /api/automations/{id}/preapprovals` | `{"preapprovals": [{"id", "stepPath", "status": "active\|void\|revoked\|expired", "voidReason"?, "expiresAt", "approver", "callsToday", "maxCallsPerDay"}]}` |
-| `GET /api/automations/{id}/upgrade?to=` | `{"diff": {"from", "to", "class": "patch\|minor\|major", "permissionsAdded", "permissionsRemoved", "connectorsAdded", "preapprovalsVoided", "stepsChanged"}}`; an empty diff means already current |
-| `POST /api/automations/{id}/upgrade`, `DELETE /api/automations/{id}` | `{"to"}`; `200` |
+| `GET /installations` | `{"installations": [INSTALLATION]}` |
+| `GET /installations/{id}` | `INSTALLATION` |
+| `POST /installations` | `{"name", "resourceId"?, "version"?, "customManifestId"?, "params"?, "runAs"?: "fixed\|caller", "runAsUserId"?, "invocations"?, "invokers"?, "mcpToolName"?, "listing"?: "handle/slug", "channel"?}` answers `201` `INSTALLATION`, a draft; a listing excludes `resourceId` and `version`; an agent's request may be held (`202`, exit 12) |
+| `PATCH /installations/{id}`, `DELETE /installations/{id}` | change fields; `204` |
+| `POST /installations/{id}/pause`, `/disable` | `INSTALLATION` |
+| `POST /installations/{id}/upgrade` | `{"version"?, "acknowledgeMajor"?}` answers `{"installation", "classification": "patch\|minor\|major", "from", "to"}`; a major change needs a browser session |
+| `GET /installations/{id}/preapprovals` | `{"preapprovals": [{"id", "step_path", "service", "tool", "per_day_limit", "approved_by", "expires_at"}]}` |
+| `GET /templates?q=&category=&service=&ready=&cursor=&limit=` | `{"templates": [TEMPLATE], "next_cursor": null\|text}` |
+| `GET /templates/{resourceId}[?version=]` | `TEMPLATE` plus `"manifest"`, `"analysis": {"permissions": [{"service", "tool", "risk"}], "preapprovableSteps"}`, `"input_schema"`, `"output_schema"` (`null` when there is none) |
+| `POST /validate` | `{"manifest"}` answers `200` `{"valid": true, "manifest_digest", "analysis": ANALYSIS}` or `{"valid": false, "issues": [{"pointer", "message", "stepId"?}]}`; nothing is stored |
+| `POST /draft` | `{"manifest", "install"?: {"name", "params"?}}` answers `201` `{"custom_manifest_id", "manifest_digest", "analysis", "installation": null\|INSTALLATION}`; `422` `manifest_invalid` with `issues` (exit 16) |
+| `POST /{installation}/runs[?wait=N]` | header `Idempotency-Key` (required, else `400`); `{"input", "mode"?: "live\|test\|dry_run"}`; `200` `{"run": RUN}` when it finished within `wait` seconds (at most 55), `202` `{"run_id", "status", "links"}` otherwise; `422` `input_invalid` with `issues` (exit 18) |
+| `GET /{installation}/runs?status=&invocation=&cursor=` | `{"runs": [RUN], "next_cursor"}` newest first |
+| `GET /runs/{run}?after=<seq>` | `{"run": RUN, "steps": [STEP], "next_after": null\|seq}`; only steps with `seq` greater than `after` |
+| `POST /runs/{run}/cancel` | `RUN` |
 
-Pages the CLI opens (no API call): `/automations/{id}/enable`,
-`/automations/{id}/preapprove?step=`, `/automations/{id}/upgrade?to=`.
+Pages the CLI opens (no API call): `/workflows/{id}` (turn on, pre-approve),
+`/approvals/{id}` for a held step.
 
 ```json
-AUTOMATION = {"id": "atm_...", "name", "status": "draft|enabled|paused|disabled", "pausedReason"?,
-              "autoUpdate"?, "template": {"slug", "version"}, "lastRun"?: {"id", "status", "startedAt"},
-              "reapprovalNeeded"?: int}
-RUN = {"id": "atr_...", "status": "queued|running|succeeded|failed|cancelled|skipped", "mode", "error"?, "seq",
-       "steps": [{"seq", "path", "kind", "status": "running|succeeded|failed|held|denied|expired|skipped",
-                  "error"?, "approvalId"?, "approvalUrl"?: path, "preapprovalId"?}]}
+INSTALLATION = {"id": "wfi_...", "name", "status": "draft|enabled|paused|disabled", "paused_reason": null|text,
+                "resource_id": null|text, "version": null|text, "custom_manifest_id": null|text,
+                "mcp_tool_name": null|text, "consecutive_failures", "failure_threshold", "last_run_at": null|time}
+TEMPLATE = {"resource_id", "slug", "name", "summary", "category", "version", "versions": [v], "services": [slug],
+            "required_connectors": [{"service", "purpose", "optional"}], "max_risk", "missing_connections"?: [slug]}
+RUN = {"id": "wfr_...", "installation_id", "status": "queued|running|held|succeeded|failed|cancelled|dead|skipped",
+       "mode", "outcome", "output"?, "error_code"?, "error"?, "finished_at": null|time}
+STEP = {"path", "seq", "step_id", "kind", "status": "running|succeeded|failed|held|denied|expired|skipped",
+        "attempt", "approval_id": null|text, "error_code", "error"}
+ANALYSIS = {"maxRisk", "permissions": [{"service", "tool", "risk"}], "preapprovableSteps": [step id],
+            "requiredFeatures": [key]}
 ```
 
-A run with a step in `held` is waiting for an approval at its `approvalUrl`.
-A `failed` run with a `denied` or `expired` step exits 10 or 11.
+A step in `held` waits for the approval at `/approvals/{approval_id}`. A `failed`
+or `dead` run with a `denied` or `expired` step exits 10 or 11.
 
-Source: automation templates plan (REST routes, CLI commands, exit codes). The
-plan names the routes, ids and exit codes; the response wrappers, `seq`
-cursor, the `template`/`runAsEmail` request fields, `owner=me` and the browser
-page paths are this client's decisions.
+Trigger bindings that reach a workflow are `{"kind": "workflow_signal", "workflow", "signal",
+"correlate", "data"?}`; a workflow that starts from an event declares it in its manifest.
+
+Source: the gateway's `/api/v1/workflows` routes and `docs/reference/` on the
+integration branch.
 
 ## Private networks
 

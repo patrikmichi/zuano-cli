@@ -9,7 +9,7 @@ it cannot, it gives the steps to do by hand.
 |---|---|
 | `zuano triggers types [--service S] [--kind webhook\|poll] [--search Q]` | the catalog, with whether delivery is realtime or polling (and how often) |
 | `zuano triggers info <type>` | description, role needed, config fields, event data fields and a sample |
-| `zuano triggers create <type> [--config k=v] [--config-file F] [--account ca_...] [--user ID] (--automation atm_... \| --webhook URL \| --agent-prompt TEXT [--agent res_...] \| --deliver) [--description T]` | create a trigger |
+| `zuano triggers create <type> [--config k=v] [--config-file F] [--account ca_...] [--user ID] (--signal-workflow WORKFLOW --signal NAME --correlate TEMPLATE \| --webhook URL \| --agent-prompt TEXT [--agent res_...] \| --deliver) [--description T]` | create a trigger |
 | `zuano triggers list [--user IDS] [--account IDS] [--type TYPES] [--auth-config IDS] [--trigger-id IDS] [--show-disabled] [--cursor C]` | list triggers; ids are comma-separated |
 | `zuano triggers retry <wtr_id>` | register the hook at the provider again after a failure |
 | `zuano triggers delete <wtr_id> [--yes]` | delete a trigger and remove its hook |
@@ -21,7 +21,10 @@ All of them take `--gateway-url`; the ones that print data take `--json`.
 
 ## Destinations
 
-`--automation` starts a draft automation (a person still turns it on),
+`--signal-workflow` sends each event as a signal to the runs of a workflow that
+wait for it (`--correlate` is a `{path}` template over the event, such as
+`{deal.id}`, that names the waiting run; a workflow that starts from an event
+declares that in its manifest instead),
 `--webhook` posts each event to a URL as a signed delivery, `--agent-prompt`
 starts an agent run, and `--deliver` hands events to the project's webhook
 subscriptions (the only one a project key may use). Exactly one is required.

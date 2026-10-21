@@ -161,7 +161,7 @@ func doctorChecks(ctx context.Context) []doctorCheck {
 	add("gateway", true, "gateway reachable and session authenticated")
 	doctorPluginFeed(ctx, c, pluginLedger, add)
 	doctorPacks(ctx, c, add)
-	doctorAutomations(ctx, c, add)
+	doctorWorkflows(ctx, c, add)
 	doctorChat(ctx, c, add)
 	doctorPasskeys(ctx, c, add)
 	doctorFirewallRequired(ctx, c, gateway, add)

@@ -377,14 +377,14 @@ func fedReviewCmd() *cobra.Command {
 		Long:  "Accepting a vendor's tools and what risk each carries is decided in the browser with a passkey; this only opens the page. Refused in an agent session.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := refuseAutomationInAgent(brand.Cmd("catalog federated review")); err != nil {
+			if err := refuseAgentDecision(brand.Cmd("catalog federated review")); err != nil {
 				return err
 			}
 			id, err := connectorSlug(args[0])
 			if err != nil {
 				return err
 			}
-			return openAutomationPage(cmd, f.gatewayURL, "/catalog/federated/"+url.PathEscape(id), noBrowser, "Review and accept the tools there")
+			return openDecisionPage(cmd, f.gatewayURL, "/catalog/federated/"+url.PathEscape(id), noBrowser, "Review and accept the tools there")
 		},
 	}
 	f.bind(cmd, "Unused: the command only opens a page")

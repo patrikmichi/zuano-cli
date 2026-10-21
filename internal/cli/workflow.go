@@ -63,7 +63,8 @@ run and logs exit status
 	cmd.AddCommand(workflowListCmd(), workflowShowCmd(), workflowInstallCmd(), workflowRunCmd(), workflowRunsCmd(), workflowLogsCmd(), workflowCancelCmd(),
 		workflowEnableCmd(), workflowPreapproveCmd(), workflowPauseCmd("pause"), workflowPauseCmd("disable"),
 		workflowUpgradeCmd(), workflowUninstallCmd(), workflowValidateCmd(), workflowDraftCmd(), workflowSchemaCmd(),
-		workflowPullCmd(), workflowPushCmd(), workflowDiffCmd(), workflowSimulateCmd(), workflowPublishCmd())
+		workflowPullCmd(), workflowPushCmd(), workflowDiffCmd(), workflowSimulateCmd(), workflowPublishCmd(),
+		workflowQualityCmd(), workflowOutcomeCmd(), workflowCompareCmd(), workflowEvalCmd(), workflowReplayCmd(), workflowResumeCmd())
 	return cmd
 }
 

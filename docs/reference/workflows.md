@@ -61,6 +61,26 @@ dry-runs the draft, waits, and reports each run and the branches taken.
 `publish <workflow> --version 1.3.0` publishes a revision; it never changes an
 installation.
 
+## Quality and outcomes
+
+`quality <installation> [--window 7d] [--version V] [--group-by version|invocation|day]`
+prints execution success (runs that finished), outcome success (runs verified to
+have done the right thing, with the share of runs that could be decided), quality,
+intervention, cost and active time. `outcome <run> [--wait 10m]` shows a run's
+outcome and the checks behind it: verified exits 0, `failed_verification` 20,
+a run that could not be verified 1, and a wait that ran out 17.
+
+`compare <installation> --baseline 1.2.0 --candidate 1.3.0` judges one version
+against another on live runs; `--fail-on-breach` exits 21 when a guardrail is
+breached. `eval ci <installation> [--manifest dir]` runs the evaluation gate on the
+manifest in the working tree, as publishing would, and exits with the gateway's
+verdict: 0 passed, 20 failed, 21 regressed.
+
+`replay <run>` plays a finished run again from its recording in eval mode, and
+`replay <run> --from-step path --version V` (or `--draft id`) continues it on
+another version; nothing outside the gateway changes. `resume <run>` opens the page
+where an administrator resumes a failed run for real with a passkey.
+
 ## Pre-approvals
 
 A pre-approval lets one outward step, such as a message to a Slack channel, run

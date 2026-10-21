@@ -722,6 +722,23 @@ installation's MCP tool name.
 | `GET /studio/drafts/{workflow}/simulate?runs=a,b` | `{"runs": [{"id", "status", "steps"}], "coverage": null\|{"edges": [{"step_id", "label", "exercised"}], "exercised", "total"}}` |
 | `POST /studio/drafts/{workflow}/publish` | `{"revision", "version", "channel"?: "stable\|beta", "notes"?, "override_eval_gate"?}` answers `201` `{"version", "upgrade_class", "gates": [{"gate", "status"}]}` |
 
+| `GET /{installation}/metrics?days=&group_by=version\|invocation\|day&version=&invocation=` | `{"window": {"from", "to"}, "total": SUMMARY, "groups": [{"key", "summary": SUMMARY}], "truncated"}`; needs a plan with workflow metrics |
+| `GET /{installation}/compare?baseline=&candidate=&days=&invocation=` | `{"breached": [GUARDRAIL], "satisfied": [GUARDRAIL], "insufficient": [GUARDRAIL], "comparison": {"verdict": "better\|no_difference\|worse\|insufficient_data", "metrics": {KEY: {"baseline", "candidate", "delta", "ci95", "samples": [n, n]}}}}`; `GUARDRAIL = {"metric", "maxDegradation"}` |
+| `POST /{installation}/eval-gate` | `{"manifest", "suite_ids"?}` answers `{"status", "exit_code": 0\|20\|21, "baseline", "suites": [{"id", "name", "verdict", "pass_rate", "run_id", "report"}]}`; `422` `manifest_invalid` with `issues` |
+| `POST /runs/{run}/replay` | `{"reuse_model_outputs"?, "live_reads"?, "model_map"?: {old: new}}` answers `201` `{"id", "kind", "run_id", "status"}` |
+| `POST /runs/{run}/rerun-from-step` | `{"from_step_path", "version"?\|"draft"?, ...replay options}` answers `201` as a replay; `409` `replay_incompatible` with the steps that differ in `issues` |
+
+A run read on its own (`GET /runs/{run}`) carries `run.outcome` (`verified`, `failed_verification`,
+`unverified`, `pending`) and `run.verification`: `{"required", "passed", "failed", "pending",
+"skipped", "expired", "checks": [{"id", "kind", "required", "status", "score"}]}`. Resuming a failed run
+(`POST /runs/{run}/resume`) is refused to keys and agents (`403` `browser_required`) and confirmed with a
+passkey, so the CLI only opens `/workflows/runs/{run}`.
+
+`SUMMARY` holds `runs`, `succeeded`, `failed`, `dead`, `cancelled`, `executionSuccess` `{rate, low, high, n}`,
+`outcome` `{verified, failedVerification, unverified, pending, success, coverage}`, `cost` `{totalNano,
+meanNano, p95Nano}`, `activeMs` `{p50, p95}`, `intervention` `{runs, rate}` and `quality` `{score}`; a rate
+with no data is `null`.
+
 `DRAFT = {"workflow_id", "revision", "manifest", "validation": {"valid", "issues"?, "analysis"?}}`.
 An `OP` is one of the gateway's edit operations (`setMeta`, `setInput`, `setOutput`,
 `setVerify`, `setLimits`, `setParam`, `removeParam`, `setInvocation`,

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -78,17 +79,17 @@ func gatewayStatusError(status int, raw []byte) error {
 	if msg == "" {
 		msg = http.StatusText(status)
 	}
+	text := fmt.Sprintf("%s (HTTP %d)%s", textsafe.Clean(msg), status, client.RequestIDNote())
+	for _, i := range doc.Issues {
+		text += fmt.Sprintf("\n  %s: %s", textsafe.Clean(i.Pointer), textsafe.Clean(i.Message))
+	}
 	if code, ok := refusalExit[doc.Error]; ok {
-		text := fmt.Sprintf("%s (HTTP %d)%s", textsafe.Clean(msg), status, client.RequestIDNote())
-		for _, i := range doc.Issues {
-			text += fmt.Sprintf("\n  %s: %s", textsafe.Clean(i.Pointer), textsafe.Clean(i.Message))
-		}
 		return &ExitError{Code: code, Msg: text}
 	}
 	if status == http.StatusUnauthorized {
 		return errTokenRevoked
 	}
-	return fmt.Errorf("%s (HTTP %d)%s", textsafe.Clean(msg), status, client.RequestIDNote())
+	return errors.New(text)
 }
 
 // refusalExit maps the workflow refusals that have a status of their own to

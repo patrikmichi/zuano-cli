@@ -39,34 +39,63 @@ func signingOption(gatewayURL string, require bool) (catalog.Option, error) {
 	return catalog.WithSigning(policy, os.Stderr), nil
 }
 
-// pinSigningKeys records the gateway's signing keys the first time they are
-// seen (trust on first use). A gateway that signs nothing yet leaves nothing
-// pinned. Keys that differ from the pinned ones are never adopted here: that
-// is a decision for `zuano config trust-key`.
+// keyRing is one set of keys a gateway publishes and the client pins: the
+// keys that sign downloads, or the ones that sign firewall documents.
+type keyRing struct {
+	// what names the ring in messages, such as "signing" or "firewall".
+	what   string
+	path   string
+	pinned func(origin string) ([]signing.Key, error)
+	pin    func(origin string, keys []signing.Key) error
+	// refused says what is refused while the published keys differ.
+	refused string
+	// flags is the trust-key invocation that reviews the ring.
+	flags string
+}
+
+var (
+	downloadKeys = keyRing{
+		what: "signing", path: signing.KeysPath, pinned: config.PinnedSigningKeys, pin: config.PinSigningKeys,
+		refused: "Downloads signed with the new keys are refused", flags: "config trust-key",
+	}
+	firewallKeys = keyRing{
+		what: "firewall", path: signing.PolicyKeysPath, pinned: config.PinnedFirewallKeys, pin: config.PinFirewallKeys,
+		refused: "Firewall sessions and snapshots signed with the new keys are refused", flags: "config trust-key --firewall",
+	}
+)
+
 func pinSigningKeys(ctx context.Context, origin string, out io.Writer) {
-	keys, err := signing.FetchKeys(ctx, origin)
+	downloadKeys.pinOnFirstUse(ctx, origin, out)
+}
+
+// pinOnFirstUse records the gateway's keys the first time they are seen (trust
+// on first use). A gateway that publishes none yet leaves nothing pinned. Keys
+// that differ from the pinned ones are never adopted here: that is a decision
+// for `zuano config trust-key`.
+func (r keyRing) pinOnFirstUse(ctx context.Context, origin string, out io.Writer) {
+	keys, err := signing.FetchKeysAt(ctx, origin, r.path)
 	if errors.Is(err, signing.ErrNoKeys) {
 		return
 	}
 	if err != nil {
-		fmt.Fprintf(out, "warning: could not read the gateway's signing keys (%v)\n", err)
+		fmt.Fprintf(out, "warning: could not read the gateway's %s keys (%v)\n", r.what, err)
 		return
 	}
-	pinned, err := config.PinnedSigningKeys(origin)
+	pinned, err := r.pinned(origin)
 	if err != nil {
-		fmt.Fprintf(out, "warning: could not read the pinned signing keys (%v)\n", err)
+		fmt.Fprintf(out, "warning: could not read the pinned %s keys (%v)\n", r.what, err)
 		return
 	}
 	switch {
 	case len(pinned) == 0:
-		if err := config.PinSigningKeys(origin, keys); err != nil {
-			fmt.Fprintf(out, "warning: could not pin the gateway's signing keys (%v)\n", err)
+		if err := r.pin(origin, keys); err != nil {
+			fmt.Fprintf(out, "warning: could not pin the gateway's %s keys (%v)\n", r.what, err)
 			return
 		}
-		fmt.Fprintf(out, "Pinned %d signing key(s) for %s on first use:\n", len(keys), origin)
+		fmt.Fprintf(out, "Pinned %d %s key(s) for %s on first use:\n", len(keys), r.what, origin)
 		printKeys(out, keys)
 	case !signing.Same(pinned, keys):
-		fmt.Fprintf(out, "warning: the signing keys %s publishes differ from the ones pinned. Downloads signed with the new keys are refused until you review them with `zuano config trust-key`.\n", origin)
+		fmt.Fprintf(out, "warning: the %s keys %s publishes differ from the ones pinned. %s until you review them with `zuano %s`.\n", r.what, origin, r.refused, r.flags)
 	}
 }
 
@@ -84,7 +113,7 @@ func printKeys(out io.Writer, keys []signing.Key) {
 
 func configTrustKeyCmd() *cobra.Command {
 	var gatewayURL string
-	var yes bool
+	var yes, firewall bool
 	cmd := &cobra.Command{
 		Use:   "trust-key",
 		Short: "Review and pin the gateway's download-signing keys",
@@ -107,14 +136,18 @@ Compare the fingerprints with the ones your gateway's operator publishes.`,
 			if err != nil {
 				return err
 			}
-			keys, err := signing.FetchKeys(cmd.Context(), origin)
+			ring := downloadKeys
+			if firewall {
+				ring = firewallKeys
+			}
+			keys, err := signing.FetchKeysAt(cmd.Context(), origin, ring.path)
 			if errors.Is(err, signing.ErrNoKeys) {
-				return fmt.Errorf("%s publishes no signing keys, so there is nothing to pin", origin)
+				return fmt.Errorf("%s publishes no %s keys, so there is nothing to pin", origin, ring.what)
 			}
 			if err != nil {
 				return err
 			}
-			pinned, err := config.PinnedSigningKeys(origin)
+			pinned, err := ring.pinned(origin)
 			if err != nil {
 				return err
 			}
@@ -139,7 +172,7 @@ Compare the fingerprints with the ones your gateway's operator publishes.`,
 					return errors.New("not confirmed; the pinned keys are unchanged")
 				}
 			}
-			if err := config.PinSigningKeys(origin, keys); err != nil {
+			if err := ring.pin(origin, keys); err != nil {
 				return fmt.Errorf("save config: %w", err)
 			}
 			fmt.Fprintf(out, "Pinned %d key(s) for %s.\n", len(keys), origin)
@@ -148,5 +181,6 @@ Compare the fingerprints with the ones your gateway's operator publishes.`,
 	}
 	cmd.Flags().StringVar(&gatewayURL, "gateway-url", "", "Gateway URL (default: $ZUANO_URL, then the config file)")
 	cmd.Flags().BoolVar(&yes, "yes", false, "Pin without asking (refused when ZUANO_AGENT is set)")
+	cmd.Flags().BoolVar(&firewall, "firewall", false, "Pin the keys that sign firewall sessions and snapshots (/.well-known/zuano-policy-keys)")
 	return cmd
 }

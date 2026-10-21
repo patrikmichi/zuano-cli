@@ -27,6 +27,26 @@ func (e *ContentError) Error() string { return "signature check failed: " + e.Re
 // ExitCode is the process exit status for the failure.
 func (*ContentError) ExitCode() int { return ExitContentSignature }
 
+// PolicyKeysPath is where a gateway publishes the keys that sign firewall
+// sessions and snapshots, a ring separate from the download-signing keys.
+const PolicyKeysPath = "/.well-known/zuano-policy-keys"
+
+// VerifyPurpose is VerifyContent for a document that carries the purpose it
+// was signed for: the purpose is inside the signed body, and a document made
+// for another use is refused.
+func VerifyPurpose(keys []Key, h http.Header, body []byte, purpose string) error {
+	if err := VerifyContent(keys, h, body); err != nil {
+		return err
+	}
+	var doc struct {
+		Purpose string `json:"purpose"`
+	}
+	if json.Unmarshal(body, &doc) != nil || doc.Purpose != purpose {
+		return &ContentError{Reason: fmt.Sprintf("the document is not signed for %s", purpose)}
+	}
+	return nil
+}
+
 // VerifyContent checks the signature a gateway puts on a JSON response: an
 // ed25519 signature over the canonical JSON of the body, by a pinned key. An
 // unsigned body is refused, since the caller is about to act on it.

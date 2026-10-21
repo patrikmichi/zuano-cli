@@ -87,22 +87,43 @@ func (r gatewayReply) code() string {
 // verify checks the content signature of the body against the keys pinned
 // for the gateway, pinning them on first use.
 func (r gatewayReply) verify(ctx context.Context, c *client.Client) error {
-	origin, err := config.NormalizeGatewayURL(c.GatewayURL)
+	keys, err := pinnedKeys(ctx, c, downloadKeys)
 	if err != nil {
 		return err
 	}
-	keys, err := config.PinnedSigningKeys(origin)
+	return signing.VerifyContent(keys, r.Header, r.Body)
+}
+
+// verifyPurpose checks a firewall document against the firewall keys pinned for
+// the gateway (a ring of their own, pinned on first use) and that it was signed
+// for the use it is put to.
+func (r gatewayReply) verifyPurpose(ctx context.Context, c *client.Client, purpose string) error {
+	keys, err := pinnedKeys(ctx, c, firewallKeys)
 	if err != nil {
-		return fmt.Errorf("load config: %w", err)
+		return err
+	}
+	return signing.VerifyPurpose(keys, r.Header, r.Body, purpose)
+}
+
+// pinnedKeys returns the keys pinned for the gateway in a ring, pinning the
+// published ones first when none are.
+func pinnedKeys(ctx context.Context, c *client.Client, ring keyRing) ([]signing.Key, error) {
+	origin, err := config.NormalizeGatewayURL(c.GatewayURL)
+	if err != nil {
+		return nil, err
+	}
+	keys, err := ring.pinned(origin)
+	if err != nil {
+		return nil, fmt.Errorf("load config: %w", err)
 	}
 	if len(keys) == 0 {
-		pinSigningKeys(ctx, origin, io.Discard)
-		if keys, err = config.PinnedSigningKeys(origin); err != nil {
-			return fmt.Errorf("load config: %w", err)
+		ring.pinOnFirstUse(ctx, origin, io.Discard)
+		if keys, err = ring.pinned(origin); err != nil {
+			return nil, fmt.Errorf("load config: %w", err)
 		}
 	}
 	if len(keys) == 0 {
-		return fmt.Errorf("no signing key is pinned for this gateway, so a signed answer cannot be checked; run `%s`", brand.Cmd("config trust-key"))
+		return nil, fmt.Errorf("no %s key is pinned for this gateway, so a signed answer cannot be checked; run `%s`", ring.what, brand.Cmd(ring.flags))
 	}
-	return signing.VerifyContent(keys, r.Header, r.Body)
+	return keys, nil
 }

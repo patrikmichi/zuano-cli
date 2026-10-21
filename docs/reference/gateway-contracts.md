@@ -919,9 +919,15 @@ WINDOW 10. Stream 0 carries HELLO, HELLO_ACK, STATUS and DRAIN.
 
 ## MCP firewall
 
-Bearer auth. The session document is signed (`X-Content-Signature`) and checked
-against the pinned keys; a session that does not verify ends the command
-before any tool is served.
+Bearer auth. The session and snapshot documents are signed (`X-Content-Signature`,
+`X-Content-Signature-Key-Id`) with the firewall's own key ring, published at
+`GET /.well-known/zuano-policy-keys` as `{"keys": [{"kid", "alg": "ed25519",
+"publicKey"}]}` (separate from `/.well-known/zuano-signing-keys`). The CLI pins that
+ring on first use, apart from the download keys, and `zuano config trust-key
+--firewall` reviews a change. Each signed body carries `"purpose"`: `fw-session` for
+the session and `fw-snapshot` for the snapshot, and a document whose purpose is not
+the one it is used for is refused. A session that does not verify ends the command
+before any tool is served (exit 4); a snapshot that does not verify is ignored.
 
 | Request | Carries / answers |
 |---|---|

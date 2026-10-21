@@ -744,7 +744,7 @@ func TestOnlineGovernorStartRefusals(t *testing.T) {
 		t.Error("a network error was swallowed")
 	}
 	verifyErr := errors.New("bad signature")
-	if err := run(session(sessionDoc("active"), 200), func(g *OnlineGovernor) { g.Verify = func(Reply) error { return verifyErr } }); !errors.Is(err, verifyErr) {
+	if err := run(session(sessionDoc("active"), 200), func(g *OnlineGovernor) { g.Verify = func(Reply, string) error { return verifyErr } }); !errors.Is(err, verifyErr) {
 		t.Errorf("verify = %v", err)
 	}
 

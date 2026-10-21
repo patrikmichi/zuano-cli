@@ -249,7 +249,7 @@ func TestWrapOnlineThroughTheGateway(t *testing.T) {
 	hash := func(d map[string]any) string { h, _ := mcpwrap.DefHash(d); return h }
 	session := func(status string) string {
 		raw, _ := json.Marshal(map[string]any{
-			"upstream": map[string]any{"id": "ups_1", "slug": "fake"}, "status": status, "adminUrl": "https://gw.example/admin/firewall",
+			"purpose": "fw-session", "upstream": map[string]any{"id": "ups_1", "slug": "fake"}, "status": status, "adminUrl": "https://gw.example/admin/firewall",
 			"settings": map[string]any{"onDefinitionChange": "block", "offline": "deny", "unknown": "allow"},
 			"pins": []any{
 				map[string]any{"kind": "tool", "name": "read", "hash": hash(readTool), "state": "active", "risk": "read", "definition": readTool},
@@ -260,7 +260,7 @@ func TestWrapOnlineThroughTheGateway(t *testing.T) {
 	}
 	status := "active"
 	gw := packGateway(t, map[string]func(*packServer, http.ResponseWriter, *http.Request){
-		"POST /api/fw/local/session": func(s *packServer, w http.ResponseWriter, r *http.Request) { s.signed(w, 200, session(status)) },
+		"POST /api/fw/local/session": func(s *packServer, w http.ResponseWriter, r *http.Request) { s.signedFirewall(w, 200, session(status)) },
 		"POST /api/fw/local/changes": jsonReply(200, `{}`),
 		"POST /api/fw/local/calls":   jsonReply(200, `{"decision":"allow","callId":"c1"}`),
 		"POST /api/fw/local/calls/c1/result": func(s *packServer, w http.ResponseWriter, r *http.Request) {

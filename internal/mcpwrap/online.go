@@ -60,11 +60,20 @@ type Refusal struct{ Reason, Message string }
 
 func (r *Refusal) Error() string { return r.Message }
 
+// What a signed firewall document is for. The gateway signs the purpose inside
+// the body, so a document made for one use does not verify as another.
+const (
+	PurposeSession  = "fw-session"
+	PurposeSnapshot = "fw-snapshot"
+)
+
 // OnlineGovernor governs a server through the gateway: pins, policy,
 // approvals, DLP and audit are the gateway's.
 type OnlineGovernor struct {
-	API    API
-	Verify func(Reply) error
+	API API
+	// Verify checks that a reply is signed by a pinned firewall key for the
+	// purpose it is used for (PurposeSession or PurposeSnapshot).
+	Verify func(r Reply, purpose string) error
 	// Upstream is the server's slug in the gateway, when the agent's config
 	// names one.
 	Upstream    string
@@ -120,7 +129,7 @@ func (g *OnlineGovernor) Start(ctx context.Context) error {
 		return fmt.Errorf("the gateway refused the firewall session (HTTP %d)", r.Status)
 	}
 	if g.Verify != nil {
-		if err := g.Verify(r); err != nil {
+		if err := g.Verify(r, PurposeSession); err != nil {
 			return err
 		}
 	}

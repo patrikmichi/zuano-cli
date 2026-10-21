@@ -184,7 +184,9 @@ func runMcpWrap(cmd *cobra.Command, command []string, o wrapOptions) error {
 		installID, _ := config.InstallID()
 		gov = &mcpwrap.OnlineGovernor{
 			API: gatewayWrapAPI{c}, Screen: o.screen, Logf: logf,
-			Verify:      func(r mcpwrap.Reply) error { return gatewayReply{r.Status, r.Header, r.Body}.verify(cmd.Context(), c) },
+			Verify: func(r mcpwrap.Reply, purpose string) error {
+				return gatewayReply{r.Status, r.Header, r.Body}.verifyPurpose(cmd.Context(), c, purpose)
+			},
 			Fingerprint: commandFingerprint(command), PackageSpec: packageSpec(command), InstallID: installID,
 			AgentID: os.Getenv("ZUANO_AGENT_ID"), Upstream: o.upstream,
 		}

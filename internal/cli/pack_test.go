@@ -24,9 +24,11 @@ import (
 type packServer struct {
 	*httptest.Server
 	signer *signingtest.Signer
-	mu     sync.Mutex
-	bodies map[string][]map[string]any
-	hits   map[string]int
+	// fwSigner signs firewall sessions and snapshots, a ring of its own.
+	fwSigner *signingtest.Signer
+	mu       sync.Mutex
+	bodies   map[string][]map[string]any
+	hits     map[string]int
 	// override, when set, answers every request instead of the routes.
 	override atomic.Pointer[http.HandlerFunc]
 	// lenient lets a request to an unknown route end in 404 without failing the test.
@@ -55,6 +57,14 @@ func (s *packServer) signed(w http.ResponseWriter, status int, body string) {
 	_, _ = io.WriteString(w, body)
 }
 
+// signedFirewall answers with a JSON body signed by the firewall keys.
+func (s *packServer) signedFirewall(w http.ResponseWriter, status int, body string) {
+	s.fwSigner.Sign(w.Header(), []byte(body))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = io.WriteString(w, body)
+}
+
 // packGateway serves routes keyed by "METHOD path", pins the signing key the
 // way a first login does and points the CLI at it.
 func packGateway(t *testing.T, routes map[string]func(s *packServer, w http.ResponseWriter, r *http.Request)) *packServer {
@@ -66,7 +76,7 @@ func packGateway(t *testing.T, routes map[string]func(s *packServer, w http.Resp
 // config file of the HOME the test already prepared instead of a new one.
 func packGatewayAt(t *testing.T, routes map[string]func(s *packServer, w http.ResponseWriter, r *http.Request), saved bool) *packServer {
 	t.Helper()
-	ps := &packServer{signer: signingtest.New("kid1"), bodies: map[string][]map[string]any{}, hits: map[string]int{}}
+	ps := &packServer{signer: signingtest.New("kid1"), fwSigner: signingtest.New("fwkid1"), bodies: map[string][]map[string]any{}, hits: map[string]int{}}
 	ps.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route := r.Method + " " + r.URL.Path
 		var body map[string]any
@@ -104,6 +114,9 @@ func packGatewayAt(t *testing.T, routes map[string]func(s *packServer, w http.Re
 		t.Fatal(err)
 	}
 	if err := config.PinSigningKeys(origin, []config.SigningKey{ps.signer.Key}); err != nil {
+		t.Fatal(err)
+	}
+	if err := config.PinFirewallKeys(origin, []config.SigningKey{ps.fwSigner.Key}); err != nil {
 		t.Fatal(err)
 	}
 	old := jobPollDelay

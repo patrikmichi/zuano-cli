@@ -35,6 +35,10 @@ type Config struct {
 	// gateway origin the first time they are seen (see `zuano config
 	// trust-key`).
 	SigningKeys map[string][]SigningKey `json:"signingKeys,omitempty"`
+	// FirewallKeys are the keys that sign firewall sessions and snapshots, a
+	// ring of their own, pinned the same way (`zuano config trust-key
+	// --firewall`).
+	FirewallKeys map[string][]SigningKey `json:"firewallKeys,omitempty"`
 	// Sync holds the saved routes `zuano sync` follows.
 	Sync *SyncSettings `json:"sync,omitempty"`
 }
@@ -100,6 +104,25 @@ type SigningKey struct {
 	KID       string `json:"kid"`
 	Alg       string `json:"alg"`
 	PublicKey string `json:"publicKey"`
+}
+
+// PinnedFirewallKeys returns the firewall keys pinned for a gateway origin.
+func PinnedFirewallKeys(origin string) ([]SigningKey, error) {
+	cfg, err := Load()
+	if err != nil {
+		return nil, err
+	}
+	return cfg.FirewallKeys[origin], nil
+}
+
+// PinFirewallKeys replaces the firewall keys pinned for a gateway origin.
+func PinFirewallKeys(origin string, keys []SigningKey) error {
+	return modify(func(cfg *Config) {
+		if cfg.FirewallKeys == nil {
+			cfg.FirewallKeys = map[string][]SigningKey{}
+		}
+		cfg.FirewallKeys[origin] = keys
+	}, true)
 }
 
 // PinnedSigningKeys returns the keys pinned for a gateway origin.

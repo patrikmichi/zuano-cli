@@ -54,7 +54,7 @@ func (g *OnlineGovernor) snapshotFor(ctx context.Context) *policySnapshot {
 	if err != nil || r.Status < 200 || r.Status > 299 {
 		return nil
 	}
-	if g.Verify != nil && g.Verify(r) != nil {
+	if g.Verify != nil && g.Verify(r, PurposeSnapshot) != nil {
 		return nil
 	}
 	var s policySnapshot

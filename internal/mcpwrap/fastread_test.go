@@ -140,7 +140,7 @@ func TestFastReadFallsBackWhenTheSnapshotDoesNotVouchForTheTool(t *testing.T) {
 
 func TestFastReadHonoursTheSnapshotSignatureAndTheSetting(t *testing.T) {
 	f := newFast(t)
-	f.gov.Verify = func(Reply) error { return errors.New("bad signature") }
+	f.gov.Verify = func(Reply, string) error { return errors.New("bad signature") }
 	if d, _ := f.gov.Call(context.Background(), "read", nil); d.CallID != "call_1" {
 		t.Errorf("an unverified snapshot decided a call: %+v", d)
 	}

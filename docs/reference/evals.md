@@ -141,7 +141,21 @@ counted but not held against the model.
 The grader and statistics results are checked against conformance vectors in
 `internal/evals/testdata/conformance`; `make gen-evals-fixtures` copies the
 gateway's vectors over them and records their hashes, and
-`make gen-evals-schema` does the same for the config schema.
+`make gen-evals-schema` does the same for the config schema. The assertion
+vectors the gateway's graders share with this client are
+`conformance/assertions.json`, copied by `make gen-evals-assertions`. They are
+written in the gateway's spelling of an assertion; the test maps each onto the
+one above and skips the few the client cannot tell apart (a cost, latency or
+choice that was not reported, `json_path` `exists`, and a tool count limited to
+one tool). `no_pii` and `no_secret` meet them with the redaction classes of
+`internal/redact`.
+
+`refusal_classifier` grades an answer that declines in words no phrase list
+holds: it weighs what the opening of the answer says it will not do, why, and
+whether it goes on to do it, with the gateway's signals and threshold. It has no
+parameters. The config schema above does not list it yet, so a config file
+cannot name it until the gateway's schema does. A tool name in `tool_sequence`
+and `forbidden_tools` may end in `.*` to accept any tool of a service.
 
 ## Gates and exit status
 

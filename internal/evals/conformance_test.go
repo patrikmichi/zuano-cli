@@ -33,8 +33,8 @@ func TestConformanceVectorsMatchTheirRecordedHashes(t *testing.T) {
 		}
 		listed++
 	}
-	if listed != 2 {
-		t.Errorf("%d vector files are hashed, want 2", listed)
+	if listed != 3 {
+		t.Errorf("%d vector files are hashed, want 3", listed)
 	}
 }
 

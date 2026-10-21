@@ -40,6 +40,13 @@ gen-evals-schema:
 gen-evals-fixtures:
 	@test -n "$(GATEWAY_EVALS_FIXTURES)" || { echo "set GATEWAY_EVALS_FIXTURES to the gateway's evals fixture directory" >&2; exit 2; }
 	cp "$(GATEWAY_EVALS_FIXTURES)/stats.json" "$(GATEWAY_EVALS_FIXTURES)/graders.json" internal/evals/testdata/conformance/
-	cd internal/evals/testdata/conformance && (sha256sum graders.json stats.json || shasum -a 256 graders.json stats.json) > SHA256SUMS
+	cd internal/evals/testdata/conformance && (sha256sum assertions.json graders.json stats.json || shasum -a 256 assertions.json graders.json stats.json) > SHA256SUMS
 
-.PHONY: build install test vet clean gen-policy-schema gen-evals-schema gen-evals-fixtures
+# Copies the assertion vectors the gateway's graders and this client share:
+# make gen-evals-assertions GATEWAY_ASSERTIONS=/path/to/lib/evals/graders/__fixtures__/assertions.json
+gen-evals-assertions:
+	@test -n "$(GATEWAY_ASSERTIONS)" || { echo "set GATEWAY_ASSERTIONS to the gateway's assertions.json" >&2; exit 2; }
+	cp "$(GATEWAY_ASSERTIONS)" internal/evals/testdata/conformance/assertions.json
+	cd internal/evals/testdata/conformance && (sha256sum assertions.json graders.json stats.json || shasum -a 256 assertions.json graders.json stats.json) > SHA256SUMS
+
+.PHONY: build install test vet clean gen-policy-schema gen-evals-schema gen-evals-fixtures gen-evals-assertions

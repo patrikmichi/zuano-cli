@@ -185,6 +185,7 @@ func newRootCmd() *cobra.Command {
 	// install) never consult it.
 	root.PersistentFlags().Bool("offline", false, "Refuse any command that would dial the gateway, even if one is configured")
 	root.PersistentFlags().Bool("debug", false, "Print the gateway's request id for every request, to quote to support or pass to '"+brand.Name+" trace'")
+	root.PersistentFlags().String("client", "", "Act inside this client organisation of your agency (env ZUANO_CLIENT); see 'zuano clients'")
 	root.PersistentFlags().Duration("timeout", 0, "Limit for each gateway request, e.g. 90s or 10m; 0 means no limit (default: 30s, 150s for tool calls and uploads; env ZUANO_TIMEOUT)")
 
 	// Register static commands.
@@ -244,6 +245,8 @@ func newRootCmd() *cobra.Command {
 		cli.BuilderCmd(),
 		cli.DevCmd(),
 		cli.GenerateCmd(),
+		cli.ClientsCmd(),
+		cli.FleetCmd(),
 	)
 
 	// PersistentPreRunE only needs to record --offline for every catalog
@@ -258,6 +261,13 @@ func newRootCmd() *cobra.Command {
 		cli.SetOffline(offline)
 		if debug, _ := cmd.Flags().GetBool("debug"); debug {
 			client.SetDebug(os.Stderr)
+		}
+		acting, _ := cmd.Flags().GetString("client")
+		if acting == "" {
+			acting = os.Getenv("ZUANO_CLIENT")
+		}
+		if err := client.SetActingClient(acting); err != nil {
+			return err
 		}
 		if f := cmd.Root().PersistentFlags().Lookup("timeout"); f != nil && f.Changed {
 			d, err := cmd.Root().PersistentFlags().GetDuration("timeout")

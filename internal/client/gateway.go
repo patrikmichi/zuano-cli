@@ -475,6 +475,7 @@ func (c *Client) authorize(req *http.Request, token string) error {
 // (EntitlementError, QuotaExceededError, StepUpRequiredError) instead of a
 // response, so every command reports it the same way.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
+	addActingClient(req)
 	resp, err := c.doAuthorized(req)
 	if err != nil {
 		return resp, err

@@ -1147,6 +1147,25 @@ decision. Revoking only tightens, so a bearer token may do it.
 | `DELETE /api/approvals/session-grants/{id}` | `200` |
 | `POST /api/approvals/session-grants/revoke-all[?scope=org]` | `{}`; answers `{"revoked": N}` |
 
+## Agencies
+
+Bearer auth; every route needs an agency plan (402 otherwise). `--client <org>`
+(env `ZUANO_CLIENT`) sends `X-Zuano-Client-Org: <org>` on every request so an
+ordinary client-scoped route runs inside that client; the gateway allows it only
+with an active link, a delegation and the link's scope (403 `agency_scope_required`,
+`agency_link_inactive`, `delegated_access_forbidden`), and an API key needs the
+`agency:fleet` scope. Collection routes page with `limit` and `next_cursor`
+(sent back as `cursor`; alerts use `before`).
+
+| Request | Answers |
+|---|---|
+| `GET /api/v1/agency/clients` | `{"clients": [{"id", "client_org_id", "client_name", "status", "scopes", "billing_mode", "offboarding", "consented_at", ...}]}` |
+| `GET /api/v1/agency/fleet?days=&limit=&cursor=` | `{"clients": [{"clientOrgId", "clientName", "installations", "setupPending", "runs", "runsFailed", "outcomeSuccess", "outcomeFailed", "interventions", "costNano"?}], "next_cursor"}` |
+| `GET /api/v1/agency/fleet/clients/{clientOrgId}` | `{"installations": [{"installationId", "name", "status", "runs", "runsFailed", "outcomeSuccess", "outcomeFailed", "p95Ms", "costNano"?}], "next_cursor"}` |
+| `GET /api/v1/agency/fleet/products` | `{"products": [{"slug", "title", "status", "versions": [{"version", "installations", "enabled", "pending"}], "worstClients"}], "next_cursor"}` |
+| `GET /api/v1/agency/fleet/failures` | `{"failures": [{"clientOrgId", "clientName", "installationId", "runsFailed", "runs"}], "next_cursor"}` |
+| `GET /api/v1/agency/alerts?limit=&before=` | `{"alerts": [{"id", "clientOrgId", "kind", "detail", "openedAt"}], "next_cursor"}` |
+
 ## Shadow MCP quarantine
 
 Bearer auth. The plan names the policy action (`shadow_mcp.action: report |

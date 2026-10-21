@@ -1166,6 +1166,25 @@ with an active link, a delegation and the link's scope (403 `agency_scope_requir
 | `GET /api/v1/agency/fleet/failures` | `{"failures": [{"clientOrgId", "clientName", "installationId", "runsFailed", "runs"}], "next_cursor"}` |
 | `GET /api/v1/agency/alerts?limit=&before=` | `{"alerts": [{"id", "clientOrgId", "kind", "detail", "openedAt"}], "next_cursor"}` |
 
+## Models, marketplace and app requests
+
+Bearer auth; the gateway's `models.md`, `workflow-market.md` and `app-requests.md`
+are the contract.
+
+| Request | Carries / answers |
+|---|---|
+| `GET /api/v1/models?surface=` | `{"mode": {"allowed", "default"}, "defaults": {"model", "source"}, "balanceNano": N\|null, "models": [{"id", "label", "status", "sources": {"platform": {"available", "reason"?, "price"?: {"inputPerMTokNano", "outputPerMTokNano"}}, "byo": {"available", "reason"?, "account"?}}}]}`; `surface` is `studio_ai`, `workflow_step`, `agent`, `eval_subject`, `eval_judge` or `internal` |
+| `GET /api/v1/market/listings?q&category&connectors&invocation&max_risk&badge&sort&ready&limit&offset` | `{"listings": [{"handle", "slug", "title", "publisherName", "maxRisk", "badges", "missing"?}], "total"}` |
+| `GET /api/v1/market/listings/{handle}/{slug}` and `.../cost-estimate` | the listing page; the cost and its breakdown by meter (printed as the gateway sends them) |
+| `GET /api/v1/market/installations/{id}/update` | the newer version, what it adds, whether it needs consent |
+| `PUT /api/v1/market/installations/{id}/update-policy` | `{"policy": "auto_compatible\|manual", "channel"?: "stable\|beta"}`; answers `{"settings"}`; automatic needs the `workflows.auto_update` plan feature |
+| `POST /api/v1/apps/requests` | `{"name", "url"?}`; answers `{"request": {"id", "name", "status", "votes"}, "voted"}` (201 new, 200 existing); 409 `already_available` |
+| `POST /api/v1/apps/requests/{id}/vote` | same answer; 409 `request_closed` |
+| `GET /api/v1/apps/requests?status&limit&cursor` | `{"requests": [...], "next_cursor"}` |
+
+Install a listing with `POST /api/v1/workflows/installations` and `listing`; the
+rollback route needs a browser session and is not offered.
+
 ## Shadow MCP quarantine
 
 Bearer auth. The plan names the policy action (`shadow_mcp.action: report |

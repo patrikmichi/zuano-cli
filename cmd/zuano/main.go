@@ -247,6 +247,9 @@ func newRootCmd() *cobra.Command {
 		cli.GenerateCmd(),
 		cli.ClientsCmd(),
 		cli.FleetCmd(),
+		cli.ModelsCmd(),
+		cli.MarketCmd(),
+		cli.AppsCmd(),
 	)
 
 	// PersistentPreRunE only needs to record --offline for every catalog

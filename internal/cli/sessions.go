@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,32 +14,50 @@ import (
 	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
+const sessionsAPI = "/api/me/sessions"
+
 // sessionDoc mirrors one entry of GET /api/me/sessions.
 type sessionDoc struct {
-	ID                string `json:"id"`
-	Kind              string `json:"kind"`
-	AuthMethod        string `json:"auth_method"`
-	CreatedAt         string `json:"created_at"`
-	LastSeenAt        string `json:"last_seen_at"`
-	IdleExpiresAt     string `json:"idle_expires_at"`
-	AbsoluteExpiresAt string `json:"absolute_expires_at"`
-	IPPrefix          string `json:"ip_prefix"`
-	UserAgent         string `json:"user_agent"`
-	Current           bool   `json:"current"`
+	ID        string `json:"id"`
+	Kind      string `json:"kind"`
+	CreatedAt string `json:"createdAt"`
+	ExpiresAt string `json:"expiresAt"`
+	IPPrefix  string `json:"ipPrefix"`
+	UserAgent string `json:"userAgent"`
+	Current   bool   `json:"current"`
 }
 
-// SessionsCmd returns `zuano sessions`, the person's browser and CLI sessions
-// on the gateway.
+// errSessionsBrowserOnly explains the 401 the gateway answers a CLI token with:
+// the route reads a browser sign-in cookie, not a bearer token.
+var errSessionsBrowserOnly = errors.New("the gateway lists and ends browser sessions only for a browser sign-in, not for a CLI token; manage them in the console (if your CLI token expired, run `" + brand.Cmd("login") + "`)")
+
+func sessionsRequest(cmd *cobra.Command, f approvalFlags, method, path string, out any) ([]byte, error) {
+	c, err := approvalsClient(f.gatewayURL)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := gatewayJSON(cmd.Context(), c, method, path, nil, out)
+	if errors.Is(err, errTokenRevoked) {
+		return nil, errSessionsBrowserOnly
+	}
+	return raw, err
+}
+
+// SessionsCmd returns `zuano sessions`, the person's browser sessions on the
+// gateway.
 func SessionsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sessions",
-		Short: "List and revoke your browser and CLI sessions on the gateway",
-		Long: `The gateway keeps a server-side session for every browser sign-in and every
-CLI login. These commands list them, revoke one, or sign you out everywhere.
-Signing out everywhere also revokes your CLI and OAuth refresh tokens, this
-session included, and needs a passkey confirmation: zuano opens the page for it.`,
+		Short: "List and end your browser sessions on the gateway",
+		Long: `The gateway keeps a server-side session for every browser sign-in. These commands
+list them, end one, or end all of them. Ending all of them also ends your refresh
+tokens, OAuth families and the keys your CLI logins created, in every organisation
+you belong to, so run ` + "`" + brand.Cmd("login") + "`" + ` afterwards.
+
+The gateway answers these routes to a browser sign-in only. A CLI token is refused
+with 401, which these commands report as such.`,
 	}
-	cmd.AddCommand(sessionsListCmd(), sessionsRevokeCmd(), sessionsRevokeAllCmd())
+	cmd.AddCommand(sessionsListCmd(), sessionsEndCmd(), sessionsEndAllCmd())
 	return cmd
 }
 
@@ -46,17 +65,13 @@ func sessionsListCmd() *cobra.Command {
 	var f approvalFlags
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List your sessions, newest activity first",
+		Short: "List your sessions",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			c, err := approvalsClient(f.gatewayURL)
-			if err != nil {
-				return err
-			}
 			var list struct {
 				Sessions []sessionDoc `json:"sessions"`
 			}
-			raw, err := gatewayJSON(cmd.Context(), c, http.MethodGet, "/api/me/sessions", nil, &list)
+			raw, err := sessionsRequest(cmd, f, http.MethodGet, sessionsAPI, &list)
 			if err != nil {
 				return err
 			}
@@ -79,7 +94,7 @@ func printSessions(out io.Writer, sessions []sessionDoc) {
 		return
 	}
 	tw := tabwriter.NewWriter(out, 0, 2, 2, ' ', 0)
-	fmt.Fprintln(tw, "ID\tKIND\tSIGNED IN\tLAST SEEN\tIDLE EXPIRY\tFROM")
+	fmt.Fprintln(tw, "ID\tKIND\tSIGNED IN\tEXPIRES\tFROM")
 	for _, s := range sessions {
 		id := textsafe.Clean(s.ID)
 		if s.Current {
@@ -89,23 +104,20 @@ func printSessions(out io.Writer, sessions []sessionDoc) {
 		if s.IPPrefix != "" {
 			from += " " + textsafe.Clean(s.IPPrefix)
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", id, textsafe.Clean(s.Kind), textsafe.Clean(s.CreatedAt), textsafe.Clean(s.LastSeenAt), textsafe.Clean(s.IdleExpiresAt), from)
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", id, textsafe.Clean(s.Kind), textsafe.Clean(s.CreatedAt), textsafe.Clean(s.ExpiresAt), from)
 	}
 	_ = tw.Flush()
 }
 
-func sessionsRevokeCmd() *cobra.Command {
+func sessionsEndCmd() *cobra.Command {
 	var f approvalFlags
 	cmd := &cobra.Command{
-		Use:   "revoke <id>",
-		Short: "Revoke one session",
-		Args:  cobra.ExactArgs(1),
+		Use:     "end <id>",
+		Aliases: []string{"revoke"},
+		Short:   "End one session",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := approvalsClient(f.gatewayURL)
-			if err != nil {
-				return err
-			}
-			raw, err := gatewayJSON(cmd.Context(), c, http.MethodDelete, "/api/me/sessions/"+url.PathEscape(args[0]), nil, nil)
+			raw, err := sessionsRequest(cmd, f, http.MethodDelete, sessionsAPI+"?"+url.Values{"id": {args[0]}}.Encode(), nil)
 			if err != nil {
 				return err
 			}
@@ -113,7 +125,7 @@ func sessionsRevokeCmd() *cobra.Command {
 				printRaw(cmd.OutOrStdout(), raw)
 				return nil
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Revoked %s\n", textsafe.Clean(args[0]))
+			fmt.Fprintf(cmd.OutOrStdout(), "Ended %s\n", textsafe.Clean(args[0]))
 			return nil
 		},
 	}
@@ -121,18 +133,20 @@ func sessionsRevokeCmd() *cobra.Command {
 	return cmd
 }
 
-func sessionsRevokeAllCmd() *cobra.Command {
+func sessionsEndAllCmd() *cobra.Command {
 	var f approvalFlags
 	cmd := &cobra.Command{
-		Use:   "revoke-all",
-		Short: "Sign out everywhere: revoke every session, CLI token and OAuth family (needs a passkey confirmation)",
-		Args:  cobra.NoArgs,
+		Use:     "end-all",
+		Aliases: []string{"revoke-all"},
+		Short:   "Sign out everywhere: end every session, refresh token, OAuth family and CLI key, this one included",
+		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			c, err := approvalsClient(f.gatewayURL)
-			if err != nil {
-				return err
+			var done struct {
+				Sessions int `json:"sessions"`
+				Families int `json:"families"`
+				Keys     int `json:"keys"`
 			}
-			raw, err := gatewayJSON(cmd.Context(), c, http.MethodPost, "/api/me/sessions/revoke-all", map[string]any{}, nil)
+			raw, err := sessionsRequest(cmd, f, http.MethodDelete, sessionsAPI+"?include=current", &done)
 			if err != nil {
 				return err
 			}
@@ -140,7 +154,7 @@ func sessionsRevokeAllCmd() *cobra.Command {
 				printRaw(cmd.OutOrStdout(), raw)
 				return nil
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "Signed out everywhere. Run `"+brand.Cmd("login")+"` to sign in again.")
+			fmt.Fprintf(cmd.OutOrStdout(), "Signed out everywhere: %d sessions, %d refresh families and %d CLI keys ended. Run `%s` to sign in again.\n", done.Sessions, done.Families, done.Keys, brand.Cmd("login"))
 			return nil
 		},
 	}

@@ -1,11 +1,8 @@
 package cli
 
 import (
-	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
-	"sync/atomic"
 	"testing"
 )
 
@@ -18,7 +15,7 @@ func TestSessions_ListMarksTheCurrentSessionAndPrintsJSONUnchanged(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"ses_browser1", "dashboard", "ses_cli1 (this one)", "cli_personal", "zuano/0.3.0 (linux/amd64) 203.0.113.0/24"} {
+	for _, want := range []string{"ses_browser1 (this one)", "admin", "ses_viewer1", "viewer", "2026-10-23T08:00:00.000Z", "Firefox on Linux 203.0.113.0/24"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
@@ -29,50 +26,36 @@ func TestSessions_ListMarksTheCurrentSessionAndPrintsJSONUnchanged(t *testing.T)
 	}
 }
 
-func TestSessions_RevokeUsesDELETEAndRevokeAllUsesPOST(t *testing.T) {
+// The gateway ends one session with DELETE ?id= and every session, refresh
+// family and CLI key with a bare DELETE (?include=current also ends this one).
+func TestSessions_EndAndEndAllUseDELETEWithTheGatewaysQuery(t *testing.T) {
 	_, bodies := approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
-		"DELETE /api/me/sessions/ses_browser1": reply(200, `{"ok":true}`),
-		"POST /api/me/sessions/revoke-all":     reply(200, `{"ok":true,"revoked":3}`),
+		"DELETE /api/me/sessions?id=ses_browser1": reply(200, `{"ended":1}`),
+		"DELETE /api/me/sessions?include=current": reply(200, `{"sessions":2,"families":1,"keys":3}`),
 	})
-	out, err := runCommand(t, SessionsCmd(), "revoke", "ses_browser1")
-	if err != nil || !strings.Contains(out, "Revoked ses_browser1") {
-		t.Fatalf("revoke: %q, %v", out, err)
+	out, err := runCommand(t, SessionsCmd(), "end", "ses_browser1")
+	if err != nil || !strings.Contains(out, "Ended ses_browser1") {
+		t.Fatalf("end: %q, %v", out, err)
 	}
-	out, err = runCommand(t, SessionsCmd(), "revoke-all")
-	if err != nil || !strings.Contains(out, "Signed out everywhere") {
-		t.Fatalf("revoke-all: %q, %v", out, err)
+	out, err = runCommand(t, SessionsCmd(), "end-all")
+	if err != nil || !strings.Contains(out, "2 sessions, 1 refresh families and 3 CLI keys ended") {
+		t.Fatalf("end-all: %q, %v", out, err)
 	}
-	if len(*bodies) != 1 {
-		t.Errorf("posts = %d, want only the revoke-all", len(*bodies))
+	if len(*bodies) != 0 {
+		t.Errorf("posts = %d, want none", len(*bodies))
+	}
+	if _, err := runCommand(t, SessionsCmd(), "revoke-all"); err != nil {
+		t.Errorf("the old name no longer works: %v", err)
 	}
 }
 
-func TestSessions_RevokeAllCompletesAStepUpAndRetries(t *testing.T) {
-	var posts atomic.Int32
-	var confirmed atomic.Bool
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/me/sessions/revoke-all" {
-			t.Errorf("unexpected %s", r.URL.Path)
-			return
-		}
-		posts.Add(1)
-		if confirmed.Load() {
-			_, _ = io.WriteString(w, `{"ok":true}`)
-			return
-		}
-		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = io.WriteString(w, `{"error":"step_up_required","step_up":{"action":"sessions_revoke_all","digest":"d7"}}`)
-	}))
-	t.Cleanup(srv.Close)
-	withAPIKeyGateway(t, srv)
-	_, opened := stepUpEnv(t, true, personConfirms(func() { confirmed.Store(true) }))
-
-	out, err := runCommand(t, SessionsCmd(), "revoke-all")
-	if err != nil || !strings.Contains(out, "Signed out everywhere") {
-		t.Fatalf("revoke-all: %q, %v", out, err)
-	}
-	if posts.Load() != 2 || len(*opened) != 1 || (*opened)[0] != srv.URL+"/" {
-		t.Errorf("posts %d, opened %v", posts.Load(), *opened)
+func TestSessions_ACLITokenIsExplainedNotCalledRevoked(t *testing.T) {
+	approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
+		"GET /api/me/sessions": reply(401, `{"error":"Unauthorized"}`),
+	})
+	_, err := runCommand(t, SessionsCmd(), "list")
+	if err == nil || !strings.Contains(err.Error(), "browser sign-in") {
+		t.Fatalf("err = %v", err)
 	}
 }
 

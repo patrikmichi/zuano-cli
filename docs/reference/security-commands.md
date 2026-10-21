@@ -8,13 +8,20 @@ confirms it.
 
 | Command | Request |
 |---|---|
-| `zuano sessions list [--json]` | `GET /api/me/sessions`: your browser and CLI sessions; the one this CLI uses is marked |
-| `zuano sessions revoke <id>` | `DELETE /api/me/sessions/{id}` |
-| `zuano sessions revoke-all` | `POST /api/me/sessions/revoke-all`: every session, CLI refresh token and OAuth family, this one included |
+| `zuano sessions list [--json]` | `GET /api/me/sessions`: your browser sessions |
+| `zuano sessions end <id>` (alias `revoke`) | `DELETE /api/me/sessions?id={id}` |
+| `zuano sessions end-all` (alias `revoke-all`) | `DELETE /api/me/sessions?include=current`: every browser session, refresh family and CLI key, this one included; no passkey |
 
-`revoke-all` needs a passkey confirmation. The gateway asks for it with a
-step-up (see [step-up.md](step-up.md)); zuano opens the page, waits and retries,
-or exits 14 without a person at the keyboard.
+`end-all` also ends your refresh tokens, OAuth families and the keys your CLI
+logins created, in every organisation you belong to: run `zuano login` again
+afterwards.
+
+The gateway answers these routes to a browser sign-in cookie only. zuano
+authenticates with a bearer token and sends no cookie (so no
+`X-Requested-With`), which the gateway refuses with `401`; the commands report
+that as "browser sign-in only" instead of a revoked token. They work once the
+gateway accepts a bearer token on the route; until then manage browser sessions
+in the console.
 
 ## zuano audit
 

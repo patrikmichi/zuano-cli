@@ -152,25 +152,33 @@ func TestOtherResponsesPassThroughWithTheirBodies(t *testing.T) {
 	}
 }
 
+const stepUpRefusal = `{"error":"step_up_required","message":"Confirm this change with your passkey.","step_up":{"action":"policy_change","digest":"d1"},"issues":[{"pointer":"/step_up/action","message":"policy_change"}]}`
+
 func TestStepUpRequiredWithoutAHandlerIsExit14(t *testing.T) {
-	c := refusalServer(t, 401, nil, `{"error":"step_up_required","step_up_url":"https://gw.example/stepup/su_1","step_up_id":"su_1"}`)
-	_, err := c.Get("/x")
-	var su *StepUpRequiredError
-	if !errors.As(err, &su) || su.ExitCode() != ExitStepUp || su.ID != "su_1" || su.URL != "https://gw.example/stepup/su_1" {
-		t.Fatalf("err = %v", err)
+	for _, status := range []int{401, 403} {
+		c := refusalServer(t, status, nil, stepUpRefusal)
+		_, err := c.Get("/x")
+		var su *StepUpRequiredError
+		if !errors.As(err, &su) || su.ExitCode() != ExitStepUp || su.Action != "policy_change" || su.Digest != "d1" {
+			t.Fatalf("%d: err = %v", status, err)
+		}
+		if !strings.Contains(err.Error(), "policy_change") || !strings.Contains(err.Error(), "console") {
+			t.Errorf("%d: message %q names neither the action nor the console", status, err)
+		}
 	}
 }
 
-func TestStepUpHandlerCompletesTheChallengeAndTheRequestIsRetriedOnce(t *testing.T) {
+func TestStepUpHandlerConfirmsAndTheSameRequestIsRetriedOnce(t *testing.T) {
 	var calls atomic.Int32
-	var retryHeader, retryBody string
+	var retryBody string
+	var retryHeaders http.Header
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if calls.Add(1) == 1 {
-			w.WriteHeader(http.StatusUnauthorized)
-			_, _ = io.WriteString(w, `{"error":"step_up_required","step_up_url":"https://gw.example/stepup/su_1","step_up_id":"su_1"}`)
+			w.WriteHeader(http.StatusForbidden)
+			_, _ = io.WriteString(w, stepUpRefusal)
 			return
 		}
-		retryHeader = r.Header.Get("X-Step-Up")
+		retryHeaders = r.Header.Clone()
 		b, _ := io.ReadAll(r.Body)
 		retryBody = string(b)
 		_, _ = io.WriteString(w, "done")
@@ -178,9 +186,9 @@ func TestStepUpHandlerCompletesTheChallengeAndTheRequestIsRetriedOnce(t *testing
 	t.Cleanup(srv.Close)
 	c := New(srv.URL, "tok")
 	var seen StepUpChallenge
-	c.SetStepUpHandler(func(_ context.Context, ch StepUpChallenge, _ *Client) (string, error) {
+	c.SetStepUpHandler(func(_ context.Context, ch StepUpChallenge, _ *Client) error {
 		seen = ch
-		return "su_1", nil
+		return nil
 	})
 
 	resp, err := c.Post("/act", "application/json", strings.NewReader(`{"a":1}`))
@@ -189,10 +197,13 @@ func TestStepUpHandlerCompletesTheChallengeAndTheRequestIsRetriedOnce(t *testing
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
-	if string(body) != "done" || retryHeader != "su_1" || retryBody != `{"a":1}` || calls.Load() != 2 {
-		t.Errorf("body %q header %q retry body %q calls %d", body, retryHeader, retryBody, calls.Load())
+	if string(body) != "done" || retryBody != `{"a":1}` || calls.Load() != 2 {
+		t.Errorf("body %q retry body %q calls %d", body, retryBody, calls.Load())
 	}
-	if seen.ID != "su_1" || seen.URL != "https://gw.example/stepup/su_1" || seen.Gateway != srv.URL {
+	if retryHeaders.Get("X-Step-Up") != "" || retryHeaders.Get("Authorization") != "Bearer tok" {
+		t.Errorf("retry headers = %v", retryHeaders)
+	}
+	if seen.Action != "policy_change" || seen.Digest != "d1" || seen.Gateway != srv.URL {
 		t.Errorf("challenge = %+v", seen)
 	}
 }
@@ -202,12 +213,12 @@ func TestStepUpHandlerFailureStopsWithoutARetry(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		calls.Add(1)
 		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = io.WriteString(w, `{"error":"step_up_required","step_up_id":"su_1"}`)
+		_, _ = io.WriteString(w, stepUpRefusal)
 	}))
 	t.Cleanup(srv.Close)
 	c := New(srv.URL, "tok")
 	boom := errors.New("declined")
-	c.SetStepUpHandler(func(context.Context, StepUpChallenge, *Client) (string, error) { return "", boom })
+	c.SetStepUpHandler(func(context.Context, StepUpChallenge, *Client) error { return boom })
 	if _, err := c.Get("/x"); !errors.Is(err, boom) || calls.Load() != 1 {
 		t.Fatalf("err = %v after %d calls", err, calls.Load())
 	}
@@ -218,11 +229,11 @@ func TestStepUpIsRetriedOnlyOnce(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		calls.Add(1)
 		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = io.WriteString(w, `{"error":"step_up_required","step_up_id":"su_1"}`)
+		_, _ = io.WriteString(w, stepUpRefusal)
 	}))
 	t.Cleanup(srv.Close)
 	c := New(srv.URL, "tok")
-	c.SetStepUpHandler(func(context.Context, StepUpChallenge, *Client) (string, error) { return "su_1", nil })
+	c.SetStepUpHandler(func(context.Context, StepUpChallenge, *Client) error { return nil })
 	_, err := c.Get("/x")
 	var su *StepUpRequiredError
 	if !errors.As(err, &su) || calls.Load() != 2 {

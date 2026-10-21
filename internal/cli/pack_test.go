@@ -375,7 +375,7 @@ func TestPackInstall_StalePlanStepUpAndFailedJob(t *testing.T) {
 
 	routes["POST /api/packs/plans/ppl_1/apply"] = func(_ *packServer, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
-		_, _ = io.WriteString(w, `{"error":"step_up_required","step_up_id":"su_1","step_up_url":"http://`+r.Host+`/stepup/su_1"}`)
+		_, _ = io.WriteString(w, `{"error":"step_up_required","step_up":{"action":"pack_apply","digest":"d1"}}`)
 	}
 	packGateway(t, routes)
 	_, err = runCommand(t, PackCmd(), "install", "finance", "--yes", "--keep-conflicts")

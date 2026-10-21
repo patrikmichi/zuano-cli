@@ -43,7 +43,7 @@ its HTTP client, so no route needs to handle them separately.
 | `403` `{"error": "org_suspended" \| "seat_suspended", "message"}` | prints the message | 33 |
 | `429` `{"error": "rate_limited", "message"}` with `Retry-After` | prints the message and the wait | 13 |
 | `429` `{"error": "quota_exceeded", "message", "metric", "limit", "resets_at"}` | prints metric, limit and reset | 31 |
-| `401` `{"error": "step_up_required", "step_up_id", "step_up_url"}` | completes the step-up, see below | 14 when nobody can |
+| `401` or `403` `{"error": "step_up_required", "step_up": {"action", "digest"}}` | names the action, points to the console and sends the same request again once, see below | 14 when nobody can |
 | `401` `{"error": "reauth_required"}` | treated like an expired token: `zuano login` | 1 |
 | `200`/`403` body or MCP `structuredContent` `{"reason": "policy_off", "message"}` | prints the message | 10 |
 
@@ -305,14 +305,17 @@ decisions; the plan names the endpoint and the two targets.
 
 ## Step-up
 
-| Route | Use |
-|---|---|
-| `GET /api/stepup/{id}` | `{"status": "pending" \| "approved" \| "denied" \| "expired"}`; Bearer allowed |
-| page `GET {step_up_url}` | on the gateway's origin; the person confirms with a passkey |
-| request header `X-Step-Up: {id}` | on the retried request; single use, bound to the request's digest |
+The gateway refuses a change that needs a passkey with `401` (or `403` from the
+workflow routes) `step_up_required` and `step_up: {"action", "digest"}`, the digest
+covering this exact change. The passkey is used only in a signed-in browser
+(`POST /api/v1/step-up/options` and `/verify` need a browser session), and the
+confirmation it produces is spent by the next request for the same change from the
+same member, so the CLI sends nothing extra: it asks the person to confirm in the
+console, then sends the same request again once. There is no polling route, no
+confirmation id and no `X-Step-Up` header.
 
-Source: risk policy plan 5.4 and 5.14. The status document is this client's
-decision; the plan names the route and the three states.
+Source: the gateway's `lib/auth/step-up-route.ts` and `docs/reference/` on the
+integration branch.
 
 ## Sessions
 

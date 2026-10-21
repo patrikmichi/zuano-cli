@@ -170,11 +170,13 @@ func (e *QuotaExceededError) Error() string {
 	return msg + requestIDSuffix(textsafe.Clean(e.RequestID))
 }
 
-// StepUpRequiredError is the 401 a gateway answers with when an action needs
-// a passkey confirmation from a person first.
+// StepUpRequiredError is the 401 or 403 a gateway answers with when an action
+// needs a passkey confirmation from a person first. The passkey is used in a
+// signed-in browser, never by the CLI: Action names what is confirmed and
+// Digest binds the confirmation to this exact change.
 type StepUpRequiredError struct {
-	ID        string
-	URL       string
+	Action    string
+	Digest    string
 	RequestID string
 }
 
@@ -182,9 +184,9 @@ type StepUpRequiredError struct {
 func (e *StepUpRequiredError) ExitCode() int { return ExitStepUp }
 
 func (e *StepUpRequiredError) Error() string {
-	msg := "this action needs a passkey confirmation from a person"
-	if e.URL != "" {
-		msg += ": open " + textsafe.Clean(e.URL)
+	msg := "this action needs a passkey confirmation from a person in the console"
+	if e.Action != "" {
+		msg = "this action (" + textsafe.Clean(e.Action) + ") needs a passkey confirmation from a person in the console"
 	}
 	return msg + requestIDSuffix(textsafe.Clean(e.RequestID))
 }
@@ -215,8 +217,10 @@ type refusalBody struct {
 	UpgradeURL   string          `json:"upgrade_url"`
 	Reason       string          `json:"reason"`
 	ResetsAt     string          `json:"resets_at"`
-	StepUpURL    string          `json:"step_up_url"`
-	StepUpID     string          `json:"step_up_id"`
+	StepUp       struct {
+		Action string `json:"action"`
+		Digest string `json:"digest"`
+	} `json:"step_up"`
 }
 
 func rawText(raw json.RawMessage) string {
@@ -266,8 +270,8 @@ func refusalOf(resp *http.Response) error {
 	}
 	id := resp.Header.Get(RequestIDHeader)
 	switch {
-	case resp.StatusCode == http.StatusUnauthorized && b.Error == codeStepUpRequired:
-		return &StepUpRequiredError{ID: b.StepUpID, URL: b.StepUpURL, RequestID: id}
+	case (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) && b.Error == codeStepUpRequired:
+		return &StepUpRequiredError{Action: b.StepUp.Action, Digest: b.StepUp.Digest, RequestID: id}
 	case resp.StatusCode == http.StatusUnauthorized && b.Error == codeReauthRequired:
 		return &ReauthRequiredError{}
 	case resp.StatusCode == http.StatusTooManyRequests && b.Error == CodeQuotaExceeded:

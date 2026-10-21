@@ -2,60 +2,62 @@
 
 Some gateway actions need a person to confirm them with a passkey before they
 run, even though the CLI session is signed in: connecting an account,
-publishing or promoting, changing a policy, and a destructive call from a
-non-browser credential. Organisation admin actions and, in a strict
-organisation, more of them, ask the same way. The gateway decides which; zuano
-only completes the confirmation.
+publishing or promoting, changing a policy, resuming a failed run, and a
+destructive call from a non-browser credential. Organisation admin actions and,
+in a strict organisation, more of them, ask the same way. The gateway decides
+which.
+
+A passkey works only in a signed-in browser. The CLI cannot give the
+confirmation and does not try: it tells the person what needs confirming and
+where, then sends the same request again.
 
 ## The flow
 
-1. The request is refused with `401` and a body naming the confirmation:
+1. The request is refused with `401` (or `403`) and a body naming the action:
 
    ```json
-   {"error":"step_up_required","step_up_id":"su_8f2c","step_up_url":"https://app.zuano.ai/stepup/su_8f2c"}
+   {"error":"step_up_required","message":"Confirm this change with your passkey.","step_up":{"action":"policy_change","digest":"9c1f..."}}
    ```
 
-2. zuano opens `step_up_url` in the browser. With no browser, it prints the
-   link and a QR code to stderr so a phone with the person's passkey can open
-   it. The page shows the action and its details and asks for the passkey.
-3. zuano polls `GET /api/stepup/{step_up_id}` every two seconds, for at most
-   five minutes. The response is `{"status":"pending|approved|denied|expired"}`.
-4. On `approved` zuano sends the original request again, unchanged, with
-   `X-Step-Up: <step_up_id>`. The gateway accepts the id once, for that
-   request's digest only. A second `step_up_required` is returned as an
-   error; zuano never loops.
+   The digest covers this exact change, so a confirmation made for another
+   change cannot be spent on it.
 
-Only the request that was refused is retried. A `denied` or `expired`
-confirmation, and a timeout, end the command with exit status 1 and nothing
-done.
+2. zuano names the action and points to the console (it opens the gateway in
+   the browser, or prints the link and a QR code):
+
+   ```
+   The action "policy_change" needs your confirmation with a passkey, which only a signed-in browser can give.
+   Confirm it in the console: https://app.zuano.ai/
+   Press Enter once you have confirmed it to try again, or Ctrl-C to cancel:
+   ```
+
+3. The person makes the same change in the console, which asks for the passkey.
+   When they press Enter, zuano sends the original request again, unchanged. The
+   gateway spends the confirmation for that change if it finds one. A second
+   `step_up_required` ends the command with exit status 14; zuano never asks
+   twice.
+
+Only the request that was refused is retried.
 
 ## Without a person at the keyboard
 
 When `ZUANO_AGENT` is set or stdin is not a terminal, zuano does not open
-anything and does not poll. The command ends with exit status **14** and
-prints the link for a human to open:
+anything and does not ask. The command ends with exit status **14** and names the
+action:
 
 ```
-this action needs a passkey confirmation from a person: open https://app.zuano.ai/stepup/su_8f2c
+this action (policy_change) needs a passkey confirmation from a person in the console
 ```
 
-Run the command again after the person has confirmed; a confirmation is bound
-to the action it was issued for and is used up by the retry, so the second
-run asks again unless the gateway's freshness window covers it.
-
-## The link
-
-zuano opens the link only when it is a page on the gateway that refused the
-request: same scheme and host, no user information. Any other link is refused
-with an error and nothing is opened or polled, because the page asks for a
-passkey and a look-alike page must not be trusted by a link a response
-supplied.
+A person confirms the change in the console and the command is run again; a
+confirmation is used up by the request that spends it and expires after a few
+minutes.
 
 ## Exit status
 
 | Status | Meaning |
 |---|---|
-| 14 | a step-up confirmation is needed and nobody could give it (agent session, no terminal) |
+| 14 | a step-up confirmation is needed and nobody could give it (agent session, no terminal, no confirmation by the retry) |
 
 Every command inherits this: the mapping is in the gateway client, not in the
 commands. The other exit statuses are in

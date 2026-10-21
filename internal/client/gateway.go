@@ -422,17 +422,18 @@ func cloneRequest(req *http.Request) (*http.Request, error) {
 // StepUpChallenge is a confirmation the gateway wants a person to give
 // before it runs an action.
 type StepUpChallenge struct {
-	ID  string
-	URL string
-	// Gateway is the origin the challenge came from; the handler opens URL
-	// only when it is on that origin.
+	// Action names what is being confirmed; Digest binds the confirmation to
+	// this exact change.
+	Action string
+	Digest string
+	// Gateway is the origin the challenge came from, where the console is.
 	Gateway string
 }
 
-// StepUpHandler gets a person to complete a StepUpChallenge and returns the
-// id to send in the X-Step-Up header of the retried request. It may use the
-// client to poll the gateway for the outcome.
-type StepUpHandler func(ctx context.Context, challenge StepUpChallenge, c *Client) (string, error)
+// StepUpHandler gets a person to confirm a StepUpChallenge in the console. A
+// nil error means the person says they did, and the same request is sent
+// again once; an error ends the request with that error.
+type StepUpHandler func(ctx context.Context, challenge StepUpChallenge, c *Client) error
 
 var defaultStepUp StepUpHandler
 
@@ -441,7 +442,7 @@ var defaultStepUp StepUpHandler
 func SetDefaultStepUpHandler(h StepUpHandler) { defaultStepUp = h }
 
 // SetStepUpHandler makes Do complete a step-up and retry once when the
-// gateway answers 401 step_up_required. Without a handler the refusal is
+// gateway answers 401 or 403 step_up_required. Without a handler the refusal is
 // returned as a *StepUpRequiredError.
 func (c *Client) SetStepUpHandler(h StepUpHandler) { c.stepUp = h }
 
@@ -487,15 +488,13 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	if !errors.As(refusal, &challenge) || c.stepUp == nil {
 		return nil, refusal
 	}
-	id, err := c.stepUp(req.Context(), StepUpChallenge{ID: challenge.ID, URL: challenge.URL, Gateway: c.GatewayURL}, c)
-	if err != nil {
+	if err := c.stepUp(req.Context(), StepUpChallenge{Action: challenge.Action, Digest: challenge.Digest, Gateway: c.GatewayURL}, c); err != nil {
 		return nil, err
 	}
 	retry, err := cloneRequest(req)
 	if err != nil {
 		return nil, err
 	}
-	retry.Header.Set("X-Step-Up", id)
 	resp, err = c.doAuthorized(retry)
 	if err != nil {
 		return resp, err

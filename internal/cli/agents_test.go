@@ -128,7 +128,7 @@ func TestAgentsStepUpAndSuspendedIdentity(t *testing.T) {
 	packGateway(t, routeMap{
 		"POST /api/agents/agt_1/resume": func(_ *packServer, w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(401)
-			_, _ = io.WriteString(w, `{"error":"step_up_required","step_up_id":"su_1","step_up_url":"http://`+r.Host+`/stepup/su_1"}`)
+			_, _ = io.WriteString(w, `{"error":"step_up_required","step_up":{"action":"agent_resume","digest":"d1"}}`)
 		},
 		"GET /api/agents": jsonReply(403, `{"error":"identity_suspended","message":"this agent is suspended"}`),
 	})

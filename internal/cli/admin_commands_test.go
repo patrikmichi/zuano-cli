@@ -49,34 +49,30 @@ func TestSessions_RevokeUsesDELETEAndRevokeAllUsesPOST(t *testing.T) {
 
 func TestSessions_RevokeAllCompletesAStepUpAndRetries(t *testing.T) {
 	var posts atomic.Int32
-	var retryHeader atomic.Value
+	var confirmed atomic.Bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/api/me/sessions/revoke-all":
-			posts.Add(1)
-			if id := r.Header.Get("X-Step-Up"); id != "" {
-				retryHeader.Store(id)
-				_, _ = io.WriteString(w, `{"ok":true}`)
-				return
-			}
-			w.WriteHeader(http.StatusUnauthorized)
-			_, _ = io.WriteString(w, `{"error":"step_up_required","step_up_id":"su_7","step_up_url":"http://`+r.Host+`/stepup/su_7"}`)
-		case "/api/stepup/su_7":
-			_, _ = io.WriteString(w, `{"status":"approved"}`)
-		default:
+		if r.URL.Path != "/api/me/sessions/revoke-all" {
 			t.Errorf("unexpected %s", r.URL.Path)
+			return
 		}
+		posts.Add(1)
+		if confirmed.Load() {
+			_, _ = io.WriteString(w, `{"ok":true}`)
+			return
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = io.WriteString(w, `{"error":"step_up_required","step_up":{"action":"sessions_revoke_all","digest":"d7"}}`)
 	}))
 	t.Cleanup(srv.Close)
 	withAPIKeyGateway(t, srv)
-	_, opened := stepUpEnv(t, true)
+	_, opened := stepUpEnv(t, true, personConfirms(func() { confirmed.Store(true) }))
 
 	out, err := runCommand(t, SessionsCmd(), "revoke-all")
 	if err != nil || !strings.Contains(out, "Signed out everywhere") {
 		t.Fatalf("revoke-all: %q, %v", out, err)
 	}
-	if posts.Load() != 2 || retryHeader.Load() != "su_7" || len(*opened) != 1 || (*opened)[0] != srv.URL+"/stepup/su_7" {
-		t.Errorf("posts %d, retry header %v, opened %v", posts.Load(), retryHeader.Load(), *opened)
+	if posts.Load() != 2 || len(*opened) != 1 || (*opened)[0] != srv.URL+"/" {
+		t.Errorf("posts %d, opened %v", posts.Load(), *opened)
 	}
 }
 

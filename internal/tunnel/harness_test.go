@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -314,7 +315,7 @@ func newRig(t *testing.T, targets string, mod func(*AgentOptions)) *agentRig {
 	}
 	r.cfgPth = filepath.Join(r.dir, "config.yaml")
 	writeFile(t, r.cfgPth, "version: 1\nnetwork: net_1\nname: test-agent\nstate_dir: "+state+"\nshutdown_grace: 1s\nlog: { upload: errors }\ntargets:\n"+targets)
-	opts := AgentOptions{ConfigPath: r.cfgPth, StateDir: state, Stdout: r.out, Backoff: func(int) time.Duration { return 30 * time.Millisecond }, ReloadPoll: 50 * time.Millisecond, StatusEvery: 200 * time.Millisecond, HTTP: &http.Client{Timeout: 5 * time.Second}}
+	opts := AgentOptions{ConfigPath: r.cfgPth, StateDir: state, Stdout: r.out, Backoff: func(int) time.Duration { return 30 * time.Millisecond }, ReloadPoll: 50 * time.Millisecond, StatusEvery: 200 * time.Millisecond, HTTP: &http.Client{Timeout: 5 * time.Second, Transport: loopbackOnly{}}}
 	if mod != nil {
 		mod(&opts)
 	}
@@ -381,3 +382,15 @@ func (r *agentRig) waitFor(what string, cond func() bool) {
 }
 
 func b64url(b []byte) string { return base64.RawURLEncoding.EncodeToString(b) }
+
+// loopbackOnly lets an agent under test reach the fake broker and gateway on
+// loopback and refuses every other host, such as the placeholder app address in
+// the identity, so a test never touches the network.
+type loopbackOnly struct{}
+
+func (loopbackOnly) RoundTrip(r *http.Request) (*http.Response, error) {
+	if h := r.URL.Hostname(); h != "127.0.0.1" && h != "localhost" && h != "::1" {
+		return nil, fmt.Errorf("test transport: %s is not a loopback host", h)
+	}
+	return http.DefaultTransport.RoundTrip(r)
+}

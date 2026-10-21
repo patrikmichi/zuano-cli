@@ -1,0 +1,62 @@
+{
+  "seed_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+  "handle": "acme",
+  "slug": "invoice-check",
+  "version": "1.2.0",
+  "content_hash": "3463bdea99c86d990745f3810b396bfa9eecfe13eb37b3c080c4950118faacb2",
+  "manifest": {
+    "schema": "zuano.workflow/v1",
+    "title": "Invoice check <é> & more",
+    "summary": "Checks \"invoices\" ✓",
+    "version": "1.2.0",
+    "category": "finance",
+    "limits": {
+      "maxSteps": 12,
+      "timeoutSeconds": 30.5
+    },
+    "input": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "number"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount"
+      ]
+    },
+    "steps": [
+      {
+        "id": "fetch",
+        "kind": "tool",
+        "description": "authoring only",
+        "tool": "gmail.search",
+        "params": {
+          "q": "invoice",
+          "n": 3
+        }
+      },
+      {
+        "id": "notify",
+        "kind": "tool",
+        "tool": "slack.post",
+        "params": {
+          "text": "done   line"
+        },
+        "x-studio": {
+          "x": 1,
+          "y": 2
+        }
+      }
+    ],
+    "x-studio": {
+      "zoom": 1
+    }
+  },
+  "payload": "{\"content_hash\":\"3463bdea99c86d990745f3810b396bfa9eecfe13eb37b3c080c4950118faacb2\",\"handle\":\"acme\",\"manifest\":{\"category\":\"finance\",\"input\":{\"properties\":{\"amount\":{\"type\":\"number\"},\"note\":{\"type\":\"string\"}},\"required\":[\"amount\"],\"type\":\"object\"},\"limits\":{\"maxSteps\":12,\"timeoutSeconds\":30.5},\"schema\":\"zuano.workflow/v1\",\"steps\":[{\"description\":\"authoring only\",\"id\":\"fetch\",\"kind\":\"tool\",\"params\":{\"n\":3,\"q\":\"invoice\"},\"tool\":\"gmail.search\"},{\"id\":\"notify\",\"kind\":\"tool\",\"params\":{\"text\":\"done   line\"},\"tool\":\"slack.post\",\"x-studio\":{\"x\":1,\"y\":2}}],\"summary\":\"Checks \\\"invoices\\\" ✓\",\"title\":\"Invoice check <é> & more\",\"version\":\"1.2.0\",\"x-studio\":{\"zoom\":1}},\"slug\":\"invoice-check\",\"version\":\"1.2.0\"}",
+  "signature": "cEoYlQ5FRxnbOYgkUP/7lMWRtMcHPl+OtFFvdUhiLDiT9rBz6Y1tNbHOn6Jb3B6j1O3qhUCtfuDqkZW6Tus3BQ=="
+}

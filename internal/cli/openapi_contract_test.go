@@ -129,8 +129,8 @@ func (op openAPIOperation) problems(query url.Values, body map[string]any) []str
 	return out
 }
 
-// builderInvocations runs every route the builder commands call that the
-// gateway's OpenAPI document describes.
+// builderInvocations runs every route the builder, jobs and market commands
+// call that the gateway's OpenAPI document describes.
 var builderInvocations = []struct {
 	name  string
 	stdin string
@@ -159,6 +159,25 @@ var builderInvocations = []struct {
 	{name: "runs show", cmd: RunsCmd, args: []string{"show", "job_1"}},
 	{name: "runs cancel", cmd: RunsCmd, args: []string{"cancel", "job_1"}},
 	{name: "runs retry", cmd: RunsCmd, args: []string{"retry", "job_1"}},
+	{name: "market search", cmd: MarketCmd, args: []string{"search", "invoice"}},
+	{name: "market update", cmd: MarketCmd, args: []string{"update", "ins_1"}},
+	{name: "market update-policy", cmd: MarketCmd, args: []string{"update-policy", "ins_1", "manual"}},
+	{name: "market deprecate", cmd: MarketCmd, args: []string{"deprecate", "acme/invoice@1.2.0", "--note", "use 1.3.0"}},
+	{name: "market yank", cmd: MarketCmd, args: []string{"yank", "acme/invoice@1.1.0", "--reason", "security", "--note", "leaks ids"}},
+	{name: "market end-of-life", cmd: MarketCmd, args: []string{"end-of-life", "acme/invoice", "--at", "2030-01-01"}},
+	{name: "market reviews list", cmd: MarketCmd, args: []string{"reviews", "list", "acme/invoice", "--limit", "10", "--cursor", "c1"}},
+	{name: "market reviews post", cmd: MarketCmd, args: []string{"reviews", "post", "acme/invoice", "--rating", "5", "--text", "works"}},
+	{name: "market reviews edit", cmd: MarketCmd, args: []string{"reviews", "edit", "acme/invoice", "--rating", "4"}},
+	{name: "market reviews reply", cmd: MarketCmd, args: []string{"reviews", "reply", "rvw_1", "--reply", "thanks"}},
+	{name: "market reports list", cmd: MarketCmd, args: []string{"reports", "list", "--status", "open"}},
+	{name: "market reports file", cmd: MarketCmd, args: []string{"reports", "file", "acme/invoice", "--kind", "broken", "--text", "it stops after the first step"}},
+	{name: "market reports respond", cmd: MarketCmd, args: []string{"reports", "respond", "wlr_1", "--message", "fixed in 1.2.1"}},
+	{name: "market publisher init", cmd: MarketCmd, args: []string{"publisher", "init", "--handle", "acme", "--name", "Acme", "--support-email", "a@acme.test", "--country", "CZ"}},
+	{name: "market publisher status", cmd: MarketCmd, args: []string{"publisher", "status"}},
+	{name: "market publisher verify email", cmd: MarketCmd, args: []string{"publisher", "verify", "email"}},
+	{name: "market publisher verify email code", cmd: MarketCmd, args: []string{"publisher", "verify", "email", "--code", "abcdefghijklmnopqrst"}},
+	{name: "market publisher verify domain", cmd: MarketCmd, args: []string{"publisher", "verify", "domain", "acme.test"}},
+	{name: "market publisher verify domain check", cmd: MarketCmd, args: []string{"publisher", "verify", "domain", "--check"}},
 }
 
 func TestContract_BuilderRequestsMatchTheOpenAPI(t *testing.T) {

@@ -45,7 +45,7 @@ func TestRuns_ListPrintsATableAndTheNextCursor(t *testing.T) {
 func TestRuns_ShowAJobAndARun(t *testing.T) {
 	approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
 		"GET /api/v1/jobs/job_01J9ZK3": reply(200, contractFixture(t, "job.json")),
-		"GET /api/runtime/runs/run_42": reply(200, `{"run":{"id":"run_42","status":"succeeded"},"job_status":"retrying"}`),
+		"GET /api/runtime/runs/run_42": reply(200, `{"run":{"id":"run_42","status":"running","kind":"agent","job_id":"job_9","job_status":"dead","createdAt":"2026-10-22T08:00:00.000Z","endedAt":null,"durationMs":null,"userEmail":"a@b.test","error":null,"contentHidden":false,"transcript":null,"calls":[]},"job_id":"job_9","job_status":"dead"}`),
 	})
 	out, err := runCommand(t, RunsCmd(), "show", "job_01J9ZK3")
 	if err != nil {
@@ -57,8 +57,8 @@ func TestRuns_ShowAJobAndARun(t *testing.T) {
 		}
 	}
 	out, err = runCommand(t, RunsCmd(), "show", "run_42")
-	if err != nil || !strings.Contains(out, "run_42 (retrying)") {
-		t.Fatalf("a run reports its job status: %q, %v", out, err)
+	if err != nil || !strings.Contains(out, "run_42 (dead)") || !strings.Contains(out, "Job:      job_9 (dead)") {
+		t.Fatalf("a run whose job died is dead: %q, %v", out, err)
 	}
 }
 
@@ -96,7 +96,7 @@ func TestRuns_CancelAndRetryUseTheJobRoutes(t *testing.T) {
 	_, bodies := approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
 		"POST /api/v1/jobs/job_01J9ZK3/cancel": reply(200, `{"job":{"id":"job_01J9ZK3","status":"cancelled"}}`),
 		"POST /api/v1/jobs/job_01J9ZK3/retry":  reply(200, `{"job":{"id":"job_01J9ZK3","status":"queued"}}`),
-		"POST /api/runtime/runs/run_42/cancel": reply(200, `{"ok":true,"job_status":"cancelled"}`),
+		"POST /api/runtime/runs/run_42/cancel": reply(200, `{"cancelled":true}`),
 	})
 	for _, tc := range []struct {
 		args []string
@@ -104,7 +104,7 @@ func TestRuns_CancelAndRetryUseTheJobRoutes(t *testing.T) {
 	}{
 		{[]string{"cancel", "job_01J9ZK3"}, "Cancel requested: job_01J9ZK3 (cancelled)"},
 		{[]string{"retry", "job_01J9ZK3"}, "Retry started: job_01J9ZK3 (queued)"},
-		{[]string{"cancel", "run_42"}, "Cancel requested: run_42"},
+		{[]string{"cancel", "run_42"}, "Cancel requested: run_42\n"},
 	} {
 		out, err := runCommand(t, RunsCmd(), tc.args...)
 		if err != nil || !strings.Contains(out, tc.want) {

@@ -28,7 +28,12 @@ type openAPISchema struct {
 }
 
 type openAPIOperation struct {
-	ID         string `json:"operationId"`
+	ID string `json:"operationId"`
+	// Servers replaces the document's server for one operation: the runtime
+	// run routes live under /api/runtime and the firewall routes under /api.
+	Servers []struct {
+		URL string `json:"url"`
+	} `json:"servers"`
 	Parameters []struct {
 		Name string `json:"name"`
 		In   string `json:"in"`
@@ -81,13 +86,20 @@ func templateRegexp(template string) *regexp.Regexp {
 
 // operationFor finds the operation a request addresses.
 func (d openAPIDocument) operationFor(method, requestPath string) (openAPIOperation, string, bool) {
-	base, err := url.Parse(d.Servers[0].URL)
-	if err != nil || !strings.HasPrefix(requestPath, base.Path+"/") {
-		return openAPIOperation{}, "", false
-	}
-	rel := strings.TrimPrefix(requestPath, base.Path)
 	for template, ops := range d.Paths {
-		if op, ok := ops[strings.ToLower(method)]; ok && templateRegexp(template).MatchString(rel) {
+		op, ok := ops[strings.ToLower(method)]
+		if !ok {
+			continue
+		}
+		serverURL := d.Servers[0].URL
+		if len(op.Servers) > 0 {
+			serverURL = op.Servers[0].URL
+		}
+		base, err := url.Parse(serverURL)
+		if err != nil || !strings.HasPrefix(requestPath, base.Path+"/") {
+			continue
+		}
+		if templateRegexp(template).MatchString(strings.TrimPrefix(requestPath, base.Path)) {
 			return op, template, true
 		}
 	}
@@ -159,6 +171,11 @@ var builderInvocations = []struct {
 	{name: "runs show", cmd: RunsCmd, args: []string{"show", "job_1"}},
 	{name: "runs cancel", cmd: RunsCmd, args: []string{"cancel", "job_1"}},
 	{name: "runs retry", cmd: RunsCmd, args: []string{"retry", "job_1"}},
+	{name: "runs show run", cmd: RunsCmd, args: []string{"show", "crn_1"}},
+	{name: "runs wait run", cmd: RunsCmd, args: []string{"wait", "crn_1", "--wait-timeout", "0"}},
+	{name: "runs cancel run", cmd: RunsCmd, args: []string{"cancel", "crn_1"}},
+	{name: "runs message steer", cmd: RunsCmd, args: []string{"message", "crn_1", "--steer", "focus on October"}},
+	{name: "runs message follow-up", cmd: RunsCmd, args: []string{"message", "crn_1", "--follow-up", "then email it"}},
 	{name: "market search", cmd: MarketCmd, args: []string{"search", "invoice"}},
 	{name: "market update", cmd: MarketCmd, args: []string{"update", "ins_1"}},
 	{name: "market update-policy", cmd: MarketCmd, args: []string{"update-policy", "ins_1", "manual"}},
@@ -250,6 +267,11 @@ func TestContract_OpenAPIOperationMatching(t *testing.T) {
 		{"POST", "/api/v1/connected-accounts:import", "/connected-accounts:import", true},
 		{"DELETE", "/api/v1/connected-accounts/ca_1", "/connected-accounts/{id}", true},
 		{"POST", "/api/v1/jobs/job_1/retry", "/jobs/{id}/retry", true},
+		{"POST", "/api/runtime/runs/crn_1/messages", "/runs/{id}/messages", true},
+		{"GET", "/api/runtime/runs/crn_1", "/runs/{id}", true},
+		{"GET", "/api/v1/runs/crn_1", "", false},
+		{"POST", "/api/firewall/upstreams/ups_1/definitions/decide", "/firewall/upstreams/{id}/definitions/decide", true},
+		{"GET", "/api/v1/firewall/upstreams", "", false},
 		{"GET", "/api/v1/auth-configs/ac_1:disable", "", false},
 		{"GET", "/api/me/sessions", "", false},
 	} {

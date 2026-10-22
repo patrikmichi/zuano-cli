@@ -58,11 +58,13 @@ func (j jobDoc) errorText() string {
 	return *j.Error
 }
 
-// jobTerminal reports whether a job can no longer change. queued, running
-// and retrying are still going; dead is a job that failed every retry.
+// jobTerminal reports whether a job or run can no longer change. queued,
+// running and retrying are still going; dead is a job that failed every retry;
+// timed_out and killed end a run, and pending_approval ends one that stopped
+// at a call nobody had decided.
 func jobTerminal(status string) bool {
 	switch status {
-	case "succeeded", "failed", "cancelled", "dead":
+	case "succeeded", "failed", "cancelled", "dead", "timed_out", "killed", "pending_approval":
 		return true
 	}
 	return false
@@ -138,7 +140,7 @@ func jobPath(id string) string {
 }
 
 // jobStatusOf reads the state of a job or run from either route: a job
-// document ({"job": {...}}) or a run document with a job_status.
+// document ({"job": {...}}) or a run document ({"run": {...}, "job_status"}).
 func jobStatusOf(raw []byte) (jobDoc, error) {
 	var doc struct {
 		Job       *jobDoc `json:"job"`
@@ -153,11 +155,10 @@ func jobStatusOf(raw []byte) (jobDoc, error) {
 	case doc.Job != nil:
 		return *doc.Job, nil
 	case doc.Run != nil:
-		j := *doc.Run
-		if j.Status == "" || doc.JobStatus != "" {
-			j.Status = firstNonEmptyString(doc.JobStatus, j.Status)
+		if run, ok := parseRuntimeRun(raw); ok {
+			return run.asJob(), nil
 		}
-		return j, nil
+		return jobDoc{Status: firstNonEmptyString(doc.JobStatus, doc.Run.Status)}, nil
 	}
 	return jobDoc{Status: firstNonEmptyString(doc.JobStatus, doc.Status)}, nil
 }
@@ -172,8 +173,9 @@ func firstNonEmptyString(values ...string) string {
 }
 
 // waitForJob polls a job or run until it finishes or total passes, prints it
-// and returns the matching exit status: 0 succeeded, 1 failed, dead or
-// cancelled, 12 still going when the time ended.
+// and returns the matching exit status: 0 succeeded, 1 failed, dead, timed
+// out, stopped or cancelled, 12 still going when the time ended or a run
+// stopped at a call waiting for approval.
 func waitForJob(ctx context.Context, c *client.Client, id string, total time.Duration, out io.Writer, jsonOut bool) error {
 	deadline := time.Now().Add(total)
 	for attempt := 0; ; attempt++ {
@@ -200,13 +202,15 @@ func reportJob(out io.Writer, jsonOut bool, id string, raw []byte, doc jobDoc) e
 	doc = doc.sanitized()
 	if jsonOut {
 		printRaw(out, raw)
+	} else if run, ok := parseRuntimeRun(raw); ok {
+		printRun(out, id, run)
 	} else {
 		printJob(out, id, doc)
 	}
 	switch doc.Status {
 	case "succeeded":
 		return nil
-	case "failed", "dead", "cancelled":
+	case "failed", "dead", "cancelled", "timed_out", "killed":
 		msg := fmt.Sprintf("%s %s", textsafe.Clean(id), doc.Status)
 		if e := doc.errorText(); e != "" {
 			msg += ": " + e
@@ -256,14 +260,17 @@ func RunsCmd() *cobra.Command {
 jobs that survive restarts. A job is queued, running, or finished: succeeded,
 failed, cancelled, or dead (it failed every retry).
 
-An id that starts with job_ is a job; any other id is looked up as a run.
+An id that starts with job_ is a job; any other id is looked up as a run. A run
+is running, then succeeded, failed, timed_out, killed, cancelled, or
+pending_approval (it stopped at a call nobody had decided). An agent run that
+ends at its output or cost limit is a failed run.
 
 wait exit status
   0   succeeded
-  1   failed, dead or cancelled
-  12  still going when the timeout ended`,
+  1   failed, dead, timed out, stopped or cancelled
+  12  still going when the timeout ended, or stopped at a call waiting for approval`,
 	}
-	cmd.AddCommand(runsListCmd(), runsShowCmd(), runsWaitCmd(), runsCancelCmd(), runsRetryCmd())
+	cmd.AddCommand(runsListCmd(), runsShowCmd(), runsWaitCmd(), runsCancelCmd(), runsRetryCmd(), runsMessageCmd())
 	return cmd
 }
 
@@ -353,6 +360,10 @@ func runsShowCmd() *cobra.Command {
 				printRaw(out, raw)
 				return nil
 			}
+			if run, ok := parseRuntimeRun(raw); ok {
+				printRun(out, args[0], run)
+				return nil
+			}
 			doc, err := jobStatusOf(raw)
 			if err != nil {
 				return err
@@ -402,7 +413,7 @@ func runsCancelCmd() *cobra.Command {
 			}
 			raw, err := gatewayJSON(cmd.Context(), c, http.MethodPost, jobPath(args[0])+"/cancel", map[string]any{}, nil)
 			if err != nil {
-				return err
+				return withRunHints(err, args[0])
 			}
 			return printJobAction(cmd.OutOrStdout(), f.jsonOut, args[0], raw, "Cancel requested")
 		},
@@ -448,6 +459,10 @@ func printJobAction(out io.Writer, jsonOut bool, id string, raw []byte, done str
 	doc = doc.sanitized()
 	if doc.ID == "" {
 		doc.ID = textsafe.Clean(id)
+	}
+	if doc.Status == "" {
+		fmt.Fprintf(out, "%s: %s\n", done, doc.ID)
+		return nil
 	}
 	fmt.Fprintf(out, "%s: %s (%s)\n", done, doc.ID, doc.Status)
 	return nil

@@ -434,7 +434,7 @@ a gateway.
 | `zuano audit verify\|export` | gateway | Verify the audit log's hash chain and checkpoints, or export events as JSON lines or CSV, resumable with `--resume` (org admins; [docs/reference/observability.md](docs/reference/observability.md)) |
 | `zuano trace <request_id\|trace_id\|approval_id>` | gateway | Show the spans, audit entries and errors the gateway recorded for a request (org admins) |
 | `zuano policy explain <service> <tool> [--arg k=v]` | gateway | Show whether the organisation's risk policy turns a call off, needs an approval, or lets it run, and who can change that |
-| `zuano runs list\|show\|wait\|cancel\|retry` | gateway | Follow the gateway's background jobs (agent runs, evals, deliveries); a call that starts one prints its id, and `--wait` follows it ([docs/reference/runs.md](docs/reference/runs.md)) |
+| `zuano runs list\|show\|wait\|cancel\|retry\|message` | gateway | Follow the gateway's background jobs and agent runs (deliveries, evals); a call that starts one prints its id, `--wait` follows it, and `message` steers a run that is going ([docs/reference/runs.md](docs/reference/runs.md)) |
 
 ### Syncing coding agents
 

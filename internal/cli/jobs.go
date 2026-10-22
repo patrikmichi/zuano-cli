@@ -253,8 +253,8 @@ func RunsCmd() *cobra.Command {
 		Use:   "runs",
 		Short: "List, inspect, wait for, cancel and retry the gateway's background runs",
 		Long: `Agent runs, evals, webhook deliveries and host builds run on the gateway as
-jobs that survive restarts. A job is queued, running, retrying, or finished:
-succeeded, failed, cancelled, or dead (it failed every retry).
+jobs that survive restarts. A job is queued, running, or finished: succeeded,
+failed, cancelled, or dead (it failed every retry).
 
 An id that starts with job_ is a job; any other id is looked up as a run.
 

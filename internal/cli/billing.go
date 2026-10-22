@@ -89,7 +89,7 @@ link to upgrade, on every zuano command:
   32  billing could not be read; try again
   33  the organisation or your seat is suspended`,
 	}
-	cmd.AddCommand(billingStatusCmd(), billingUsageCmd(), billingOpenCmd())
+	cmd.AddCommand(billingStatusCmd(), billingUsageCmd(), billingCreditsCmd(), billingOpenCmd())
 	return cmd
 }
 

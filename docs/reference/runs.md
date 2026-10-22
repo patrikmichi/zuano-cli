@@ -5,16 +5,16 @@ deliveries and host builds run on the gateway as durable jobs. A job survives
 a crash or a deploy, keeps a status, and can be cancelled or, once it failed
 every retry, started again.
 
-Job status: `queued`, `running`, `retrying`, then one of `succeeded`,
-`failed`, `cancelled` or `dead` (it failed every retry and was
-dead-lettered). `queued` and `retrying` are not the end: every `--wait` keeps
-polling through them, and `dead` ends it as a failure.
+Job status: `queued`, `running`, then one of `succeeded`, `failed`,
+`cancelled` or `dead` (it failed every retry and was dead-lettered). A job
+that will be tried again is `queued` once more. `queued` is not the end: every
+`--wait` keeps polling through it, and `dead` ends it as a failure.
 
 ## Calls that start a job
 
 A tool that starts background work answers before it finishes. zuano
 recognises two shapes of the answer, both with a `job_id` or a `run_id` and a
-status of `queued`, `running` or `retrying`:
+status of `queued` or `running`:
 
 - HTTP `202` with `{"run_id", "job_id", "status"}`;
 - an MCP tool result whose `structuredContent` has that shape.
@@ -50,5 +50,5 @@ start refused by a quota exits 31 (see [billing.md](billing.md#exit-statuses)).
 ## Evaluations
 
 `zuano eval run` and `zuano eval optimize` wait for the job and follow `queued` and
-`retrying` and stop at `succeeded`, `failed`, `cancelled` or `dead`; the last
+`running` and stop at `succeeded`, `failed`, `cancelled` or `dead`; the last
 three exit with the eval failure status.

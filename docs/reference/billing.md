@@ -11,10 +11,11 @@ no billing credential and cannot spend money.
 |---|---|
 | `zuano billing status [--json]` | `GET /api/billing/status` |
 | `zuano billing usage [--meter KEY] [--period current\|previous] [--by member\|service\|tool] [--json]` | `GET /api/billing/usage?meter=&period=&by=` |
+| `zuano billing credits [--json]` | `GET /api/v1/billing/credits` |
 | `zuano billing open [--no-browser]` | none: opens `<gateway>/settings/billing` |
 | `zuano usage [--from DAY] [--to DAY] [--json]` | `GET /api/org/usage?from=&to=` |
 
-All of them accept the personal and the agent session (they only read), and
+All of them accept the personal and the agent session (they only read), except `billing credits`, which needs a personal session, and
 `--json` prints the response body unchanged. The request and response shapes
 are in [gateway-contracts.md](gateway-contracts.md).
 
@@ -32,6 +33,13 @@ percent of the allowance, the projection to the end of the period and its cost
 meter for the member, service or tool that used it. `usage` is the quota view:
 each metric with its soft limit (a warning) and hard limit (a block) and when
 the window resets.
+
+`billing credits` prints the prepaid model credit balance in euros, what calls
+in flight hold back, each top-up or grant that still has credit (remaining,
+granted, expiry) and the latest top-ups, grants, refunds and expiries. It is for
+owners and administrators on a personal session: a member or an agent session
+gets the gateway's `403`. Buying credit, promo codes and the auto top-up are in
+the billing page.
 
 `billing open` opens the page in the default browser. Without a terminal, in an
 agent session or with `--no-browser` it prints the link only.

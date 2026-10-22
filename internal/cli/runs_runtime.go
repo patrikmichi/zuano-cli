@@ -102,8 +102,8 @@ type runtimeRun struct {
 func parseRuntimeRun(raw []byte) (runtimeRun, bool) {
 	var doc struct {
 		Run       *runtimeRun `json:"run"`
-		JobID     *string `json:"job_id"`
-		JobStatus *string `json:"job_status"`
+		JobID     *string     `json:"job_id"`
+		JobStatus *string     `json:"job_status"`
 	}
 	if json.Unmarshal(raw, &doc) != nil || doc.Run == nil || doc.Run.Status == "" {
 		return runtimeRun{}, false

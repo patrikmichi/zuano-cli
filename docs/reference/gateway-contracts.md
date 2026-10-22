@@ -26,15 +26,21 @@ so a fixture changes only when a route's shape does.
 
 The gateway's OpenAPI document (`gateway/openapi/v1.json`) is vendored as
 `internal/cli/testdata/contracts/openapi-v1.json`; `ZUANO_GATEWAY_OPENAPI`
-names the gateway's own copy. The vendored copy is the document of the
-workflow-market branch (c39bbde: the market and the 12 platform market operations)
-with the three `/jobs` paths of the core branch (547f201) added, because
-neither branch has the other's operations yet; regenerate it from the merged
-document once they meet. The contract test sends every auth-config,
-connected-account, connect-link, `zuano runs` and `zuano market` command to a recording server and checks
-each request's method and path against the document, its query parameters
-against the declared ones, and its body against the request schema (unknown
-fields where the schema is closed, missing required fields).
+names the gateway's own copy. The vendored copy is the integration branch's
+document (eaf90e3) with two sets of operations added because the integration
+branch does not have them yet: the four `/runs` operations under the
+`/api/runtime` server from the workflows branch (ae0cbec), and the 17
+`/firewall` operations under the `/api` server from the events and plugins
+branch (78722ba), with their refusal codes added to `RefusalPlain`. Regenerate
+it from the integration document once those branches are merged into it; it
+then needs no merging. An operation names its own `servers` entry when it is
+not under `/api/v1`, and the test follows it. The contract test sends every
+auth-config, connected-account, connect-link, `zuano runs`, `zuano market` and
+`zuano firewall` command to a recording server and checks each request's
+method and path against the document, its query parameters against the
+declared ones, and its body against the request schema (unknown fields where
+the schema is closed, missing required fields), and that every refusal code the
+CLI gives a hint is in the document's refusal codes.
 
 A signing vector for the publisher signature is written by the gateway's own
 signing code: `scripts/publisher-signing-vector.ts` regenerates
@@ -137,7 +143,13 @@ the constants in the code, both ways.
 
 SDK builder and catalog refusal codes map onto these by class: `400`, `409` and
 `422` end with 1 and keep the code in the JSON, `403` with 10, `402` with 30
-or 31.
+or 31. The run refusals `not_running` and `message_limit_reached` (`409`) and
+the 15 firewall refusals (see [firewall.md](firewall.md#refusals)) are of that
+class and take no number of their own: `member_requests_off` (`403`) ends with
+10, the others with 1. An agent run that stops at `output_limit` or
+`cost_budget` is a failed run and ends `zuano runs wait` with 1. A
+passkey step-up, including `firewall_pin_approve` and `firewall_release`, ends
+with 14 when nobody can give it.
 
 ## Login
 
@@ -484,7 +496,9 @@ types; `micros` are millionths of the currency unit.
 | `GET /api/v1/jobs?kind=&status=&cursor=&limit=` | `{"items": [JOB], "nextCursor"?: text}`; `limit` is 1 to 200; the key is absent on the last page. Fixture: `jobs.json` |
 | `GET /api/v1/jobs/{id}` | `{"job": JOB}`. Fixture: `job.json` |
 | `POST /api/v1/jobs/{id}/cancel`, `POST /api/v1/jobs/{id}/retry` | `{"job": JOB}`; cancel of a finished job returns it unchanged; retry is admin-only and for `failed` or `dead` jobs (`409` `conflict` otherwise) |
-| `GET /api/runtime/runs/{id}` | a run document that gains `job_status` (a top-level field, or under `run`); `POST /api/runtime/runs/{id}/cancel` is the existing cooperative cancel |
+| `GET /api/runtime/runs/{id}` | `{"run": RUN, "job_id", "job_status"}`; `RUN` is `{"id", "status": "running\|succeeded\|failed\|timed_out\|killed\|cancelled\|pending_approval", "kind": "script\|agent\|prompt", "origin", "userEmail", "durationMs", "createdAt", "endedAt", "error", "exitCode", "contentHidden", "job_id", "job_status", "transcript": null\|{"model", "steps": [{"n", "cutOff"?, "calls": [{"tool", "args", "outcome", "result"}]}], "compactions"?: [{"beforeStep", "summary"}], "messages"?: [{"afterStep", "mode", "author", "text", "delivered"}], "usage": {"inputTokens", "outputTokens"}, "stop": null\|"completed\|max_steps\|timeout\|token_budget\|cancelled\|pending_approval\|model_error\|approval_denied\|approval_expired\|output_limit", "pending": [{"approvalId", "tool"}]}, "calls"}`. A run's own status wins over its job's, except a run still `running` whose job is finished; a failure stop (everything but `completed`, `cancelled`, `timeout` and `pending_approval`; also `cost_budget`, which the gateway does not send yet) makes the run failed. Another member's run is `contentHidden` for an administrator |
+| `POST /api/runtime/runs/{id}/cancel` | `{"cancelled": true}`; `409` `not_running` when it ended |
+| `POST /api/runtime/runs/{id}/messages` | `{"mode": "steer\|follow_up", "text"}` (at most 4 KB); `201` `{"message": {"id", "mode"}}`; `409` `not_running` or `message_limit_reached` (20 per run); `403` for an agent credential; `429` above 30 a minute |
 
 ```json
 JOB = {"id": "job_<ulid>", "kind", "status": "queued|running|succeeded|failed|cancelled|dead",
@@ -499,6 +513,10 @@ are the gateway's six: a job that will be retried is `queued` again, not
 `retrying`. The job routes take a CLI login as well as a browser session;
 a member sees the jobs they started, an administrator all of them, and no job
 input is returned. zuano treats an id that starts with `job_` as a job.
+
+The run routes are read against the workflows branch at ae0cbec
+(`lib/api/contract/runs.ts`, `lib/runtime/run-view.ts`,
+`lib/agent-runs/transcript.ts`); they answer with the v1 refusal documents.
 
 ## Quota usage
 

@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/spf13/cobra"
 
@@ -22,48 +24,75 @@ func FirewallCmd() *cobra.Command {
 the tool definitions your organisation approved, holds back a tool that
 changed until it is reviewed, and checks each call and result.
 
-Changes to a server's tools, and anything that lets a server through, are
-decided in the browser with a passkey; these commands only open the page.
+Approving what a server offers, lifting a hold, adding a server and setting a
+hosted package's variables need your passkey: zuano names the action, points to
+the console and sends the same request again once you have confirmed it.
+Without a person at the keyboard those commands stop with exit status 14.
 
 Exit status
-  10  a call was denied
+  10  a call was denied, or members may not request servers
   12  a call is held for approval
+  14  a passkey confirmation is needed and nobody could give it
   43  a server changed a tool it was approved with
   44  the server is quarantined`,
 	}
-	cmd.AddCommand(firewallUpstreamsCmd(), firewallChangesCmd(), firewallConnectCmd(), firewallImportLocalCmd())
+	cmd.AddCommand(firewallUpstreamsCmd(), firewallChangesCmd(), firewallDefinitionsCmd(), firewallShadowCmd(), firewallConnectCmd(), firewallImportLocalCmd())
 	return cmd
 }
 
 func firewallUpstreamsCmd() *cobra.Command {
-	cmd := &cobra.Command{Use: "upstreams", Short: "List, show, add and request MCP servers"}
-	list := listCommand("list", "List the MCP servers the firewall knows", "/api/firewall/upstreams", "upstreams", "No MCP servers yet.",
-		[]column{{"SLUG", "slug"}, {"NAME", "name"}, {"TRANSPORT", "transport"}, {"STATUS", "status"}, {"TOOLS", "toolCount"}, {"PENDING", "pendingChanges"}}, nil)
-	show := showCommand("show <slug>", "Show one server, its settings and its tools", "/api/firewall/upstreams", "upstream")
+	cmd := &cobra.Command{Use: "upstreams", Short: "List, show, add, request and manage MCP servers", Long: `A <server> is a server's slug or id. The slugs local, oauth, mcp, new, changes
+and shadow are reserved.`}
+	list := listCommand("list", "List the MCP servers the firewall knows", firewallAPI+"/upstreams", "upstreams", "No MCP servers yet.",
+		[]column{{"SLUG", "slug"}, {"NAME", "name"}, {"SOURCE", "source"}, {"TRANSPORT", "transport"}, {"STATUS", "status"}, {"TOOLS", "toolCount"}, {"PENDING", "pendingChanges"}}, func(cmd *cobra.Command) func() string {
+			var status string
+			cmd.Flags().StringVar(&status, "status", "", "Only servers in this state (pending, active, quarantined, disabled)")
+			return func() string {
+				if status == "" {
+					return ""
+				}
+				return "?" + url.Values{"status": {status}}.Encode()
+			}
+		})
+	show := showCommand("show <server>", "Show one server, its settings, endpoints and hosting", firewallAPI+"/upstreams", "upstream")
 	cmd.AddCommand(list, show, firewallUpstreamAddCmd(false), firewallUpstreamAddCmd(true))
+	cmd.AddCommand(firewallAdminCmds()...)
 	return cmd
 }
 
 func firewallUpstreamAddCmd(request bool) *cobra.Command {
 	var f approvalFlags
-	var urlFlag, pkg, reason, name string
-	use, short := "add <slug>", "Add an MCP server (administrators)"
+	var urlFlag, pkg, reason, name, auth string
+	var tags []string
+	var wait string
+	use, short := "add <slug>", "Add a remote MCP server or a hosted package and approve it (administrators)"
 	if request {
 		use, short = "request <slug>", "Ask your administrators to add an MCP server"
 	}
 	cmd := &cobra.Command{
 		Use:   use,
 		Short: short,
-		Args:  cobra.ExactArgs(1),
+		Long: `With --package the gateway builds and runs the package itself (a stdio server
+from npm or PyPI) and the build runs as a job; --wait follows it. Adding a
+server needs your passkey. A member's request waits for an administrator.`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if (urlFlag == "") == (pkg == "") {
-				return errors.New("give the server with either --url (a remote server) or --package (a local one, such as @acme/files-mcp)")
+				return errors.New("give the server with either --url (a remote server) or --package (a hosted one, such as @acme/files-mcp)")
+			}
+			slug := upstreamSlug(args[0])
+			if err := checkUpstreamSlug(slug); err != nil {
+				return err
+			}
+			o, err := callOptsFor(cmd, wait)
+			if err != nil {
+				return err
 			}
 			c, err := approvalsClient(f.gatewayURL)
 			if err != nil {
 				return err
 			}
-			body := map[string]any{"slug": upstreamSlug(args[0]), "name": name}
+			body := map[string]any{"slug": slug, "name": name}
 			if name == "" {
 				body["name"] = args[0]
 			}
@@ -72,44 +101,61 @@ func firewallUpstreamAddCmd(request bool) *cobra.Command {
 			} else {
 				body["package"] = pkg
 			}
-			path := "/api/firewall/upstreams"
+			if auth != "" {
+				body["authMode"] = auth
+			}
+			if len(tags) > 0 {
+				body["tags"] = tags
+			}
+			path := firewallAPI + "/upstreams"
 			if request {
-				path = "/api/firewall/upstream-requests"
+				path = firewallAPI + "/upstream-requests"
 				body["reason"] = reason
 			}
 			raw, err := gatewayWrite(cmd, c, f.jsonOut, http.MethodPost, path, body, nil)
 			if err != nil {
-				return err
+				return withFirewallHints(err)
 			}
-			if f.jsonOut {
+			var ans upstreamAnswer
+			_ = json.Unmarshal(raw, &ans)
+			if f.jsonOut && (!o.wait || ans.JobID == "") {
 				printRaw(cmd.OutOrStdout(), raw)
 				return nil
 			}
-			if request {
-				fmt.Fprintln(cmd.OutOrStdout(), "Requested. An administrator reviews it in the browser.")
-			} else {
-				fmt.Fprintf(cmd.OutOrStdout(), "Added %s. Its tools wait for review: `%s`.\n", textsafe.Clean(upstreamSlug(args[0])), brand.Cmd("firewall changes list"))
+			if !f.jsonOut {
+				if request {
+					fmt.Fprintln(cmd.OutOrStdout(), "Requested. An administrator reviews it in the browser.")
+				} else {
+					fmt.Fprintf(cmd.OutOrStdout(), "Added %s. Its tools wait for review: `%s`.\n", textsafe.Clean(slug), brand.Cmd("firewall definitions list "+slug+" --state pending"))
+				}
 			}
-			return nil
+			return followBuild(cmd, c, ans.JobID, f.jsonOut, o)
 		},
 	}
 	f.bind(cmd, "Print the response body unchanged")
 	cmd.Flags().StringVar(&urlFlag, "url", "", "Remote MCP server URL")
-	cmd.Flags().StringVar(&pkg, "package", "", "Package a local server runs from (npm or PyPI name)")
+	cmd.Flags().StringVar(&pkg, "package", "", "Package the gateway hosts (npm or PyPI name, such as @acme/files-mcp)")
 	cmd.Flags().StringVar(&name, "name", "", "Display name (default: the slug)")
+	cmd.Flags().StringVar(&auth, "auth", "", "How the server is signed in to: none (default), stored (one credential) or per_user (each person connects their own)")
+	cmd.Flags().StringArrayVar(&tags, "tag", nil, "Tag the server (repeatable; up to 10)")
 	if request {
 		cmd.Flags().StringVar(&reason, "reason", "", "Why you need it")
+	} else {
+		addWaitFlag(cmd, &wait)
 	}
 	return cmd
 }
 
 func firewallChangesCmd() *cobra.Command {
-	cmd := &cobra.Command{Use: "changes", Short: "Review the tool changes the firewall holds back"}
-	list := listCommand("list", "List tool changes that wait for a decision", "/api/firewall/changes", "changes", "No changes wait for a decision.",
-		[]column{{"ID", "id"}, {"SERVER", "upstream"}, {"TOOL", "name"}, {"CHANGE", "change"}, {"RISK", "risk"}, {"STATUS", "status"}}, func(cmd *cobra.Command) func() string {
+	cmd := &cobra.Command{Use: "changes", Short: "Review the changes servers made to what they offer", Long: `A change is decided per definition with ` + "`" + `zuano firewall definitions decide` + "`" + `, which asks for
+your passkey; ` + "`" + `changes decide <id>` + "`" + ` opens the change's page instead.`}
+	list := listCommand("list", "List the changes servers made to what they offer", firewallAPI+"/changes", "changes", "No changes.",
+		[]column{{"ID", "id"}, {"SERVER", "upstream"}, {"NAME", "name"}, {"CHANGE", "change"}, {"SEVERITY", "severity"}, {"RISK", "risk"}, {"STATUS", "status"}}, func(cmd *cobra.Command) func() string {
 			var status, upstream string
-			cmd.Flags().StringVar(&status, "status", "", "Only changes in this state (pending, approved, rejected)")
+			var limit int
+			cmd.Flags().StringVar(&status, "status", "", "Only changes in this state (open, approved, rejected, auto_resolved)")
 			cmd.Flags().StringVar(&upstream, "server", "", "Only changes of this server")
+			cmd.Flags().IntVar(&limit, "limit", 0, "Changes to list (1 to 200)")
 			return func() string {
 				q := url.Values{}
 				if status != "" {
@@ -118,13 +164,16 @@ func firewallChangesCmd() *cobra.Command {
 				if upstream != "" {
 					q.Set("upstream", upstream)
 				}
+				if limit > 0 {
+					q.Set("limit", strconv.Itoa(limit))
+				}
 				if len(q) == 0 {
 					return ""
 				}
 				return "?" + q.Encode()
 			}
 		})
-	show := showCommand("show <id>", "Show a change with its old and new definition and the findings", "/api/firewall/changes", "change")
+	show := showCommand("show <id>", "Show a change with its diff and what the screening found", firewallAPI+"/changes", "change")
 	cmd.AddCommand(list, show, firewallChangeDecideCmd())
 	return cmd
 }

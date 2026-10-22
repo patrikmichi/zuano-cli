@@ -106,17 +106,71 @@ digests and local findings. A result that cannot be checked is withheld.
 |---|---|
 | `zuano mcp wrap [--upstream s] [--offline] [--screen local\|gateway] [--env-from-keychain A,B] -- cmd args` | run a server behind the firewall |
 | `zuano mcp pins list\|approve\|reject`, `zuano mcp changes` | offline pins; `list --check` exits 43 when a tool changed |
-| `zuano firewall upstreams list\|show\|add\|request` | servers the gateway knows |
-| `zuano firewall changes list\|show\|decide` | `decide` opens the page where a person approves or rejects with a passkey |
+| `zuano firewall upstreams list [--status S]`<br>`zuano firewall upstreams show <server>` | servers the gateway knows; a `<server>` is a slug or an id |
+| `zuano firewall upstreams add <slug> --url U \| --package P [--name N] [--auth none\|stored\|per_user] [--tag T]... [--wait]` | add a remote server, or a package the gateway hosts; a package builds as a job (`--wait` follows it). Needs your passkey |
+| `zuano firewall upstreams request <slug> --url U \| --package P [--reason R]` | ask an administrator to add a server (members) |
+| `zuano firewall upstreams approve <server> [--wait]` | approve a requested server; builds a hosted package. Needs your passkey |
+| `zuano firewall upstreams discover <server>` | ask the server what it offers now and compare it with what is pinned |
+| `zuano firewall upstreams quarantine <server>`<br>`zuano firewall upstreams release <server>` | hold every call to a server; lift the hold (needs your passkey) |
+| `zuano firewall upstreams deploy <server> [--wait]` | build and start a hosted package again |
+| `zuano firewall upstreams env list <server>`<br>`zuano firewall upstreams env set <server> [--from-file F]`<br>`zuano firewall upstreams env clear <server> --yes` | the variables a hosted package starts with: names are readable, values are write-only and come from a JSON object on standard input or a file, never from flags; setting them needs your passkey |
+| `zuano firewall changes list [--status S] [--server S] [--limit N]`<br>`zuano firewall changes show <id>` | the changes servers made to what they offer, with the diff and what the screening found |
+| `zuano firewall changes decide <id>` | opens the page where a person approves or rejects with a passkey |
+| `zuano firewall definitions list <server> [--state S] [--kind K]` | what a server offers, with each definition's state, risk and hash |
+| `zuano firewall definitions decide <server> [--approve NAME]... [--reject NAME]... [--approve-all\|--reject-all]` | approve or reject waiting definitions at the hash each has now; approving needs your passkey |
+| `zuano firewall definitions accept <server>...` | accept the pending definitions of several servers in one passkey decision (up to 500) |
+| `zuano firewall shadow` | servers configured on devices that the firewall does not govern |
 | `zuano firewall connect <slug>` | opens the page that signs the gateway in to a remote server |
 | `zuano firewall import-local <name>` | bring a server from an agent's config under the firewall |
+
+The administration routes are served under `/api/firewall`, not `/api/v1`, and
+answer with the v1 refusal documents. The slugs `local`, `oauth`, `mcp`, `new`,
+`changes` and `shadow` are reserved; `add` and `request` refuse them, and any
+slug that is not 1 to 63 lowercase letters, digits and hyphens, before a
+request.
+
+## Passkey confirmations
+
+Approving definitions (`firewall_pin_approve`), lifting a hold
+(`firewall_release`), adding a server (`mcp_server_register`) and setting a
+package's variables (`credential_write`) are refused with `step_up_required`
+until a person confirms that exact change with a passkey. The commands use the
+usual [step-up flow](step-up.md): zuano names the action, opens the firewall
+page of the console for the two firewall actions (the front page for the others),
+waits for you to confirm and sends the same request again once. Without a
+person at the keyboard they end with exit status 14. `approve`, `release`,
+`decide --approve`, `accept` and `env set\|clear` are refused up front while
+`ZUANO_AGENT` is set. Rejecting a definition needs no passkey.
+
+## Refusals
+
+| Code | Status | Meaning | Exit |
+|---|---|---|---|
+| `member_requests_off` | 403 | members may not ask for servers; ask an administrator | 10 |
+| `upstream_not_found`, `change_not_found`, `definition_not_found` | 404 | no such server, change or definition | 1 |
+| `upstream_exists` | 409 | the slug is taken | 1 |
+| `upstream_not_active` | 409 | only an active server can be quarantined | 1 |
+| `upstream_not_pending` | 409 | only a requested server is approved | 1 |
+| `upstream_not_quarantined` | 409 | the server is not held | 1 |
+| `definition_not_decidable` | 409 | only a waiting definition can be decided | 1 |
+| `deploy_running` | 409 | a build of the package is already running | 1 |
+| `env_name_invalid` | 422 | a variable name the package cannot take | 1 |
+| `federation_refused` | 422 | a vendor server cannot be added with these settings | 1 |
+| `tool_list_too_large` | 422 | the server offers more tools than the firewall pins | 1 |
+| `upstream_source_invalid` | 422 | the address or package name is not acceptable | 1 |
+| `hosting_unavailable` | 503 | hosting packages is not available | 1 |
+
+The gateway's sentence is printed with the code's hint. These are errors of
+their class, so they take no number of their own in the exit-code registry
+(400, 409 and 422 end with 1, a 403 denial with 10).
 
 ## Exit status
 
 | Code | |
 |---|---|
-| 10 | a call was denied |
+| 10 | a call was denied, or members may not request servers |
 | 12 | a call is held for approval |
+| 14 | a passkey confirmation is needed and nobody could give it |
 | 43 | a server changed a tool it was approved with |
 | 44 | the server is quarantined |
 

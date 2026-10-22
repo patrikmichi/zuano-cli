@@ -1002,10 +1002,32 @@ before any tool is served (exit 4); a snapshot that does not verify is ignored.
 | `POST /api/fw/local/snapshot` | `{"upstream"}`; signed `{"upstream", "digest", "expiresAt", "tools": [{"name", "hash", "risk"}], "deny": [glob]}`. Asked for only when the session has `fastReads`; the shim reuses it for 60 s or until `expiresAt`, whichever is first |
 | `POST /api/fw/local/audit-batch` | `{"upstream", "sessionRef", "entries": [{"event": "call\|result", "callId", "tool", "at", "risk"?, "decision"?, "argumentsDigest"?, "snapshot"?, "findings"?, "severity"?, "digest"?, "error"?}]}`; `200`. Sent every 10 s, at 50 entries and on exit; a failed send is retried with the next batch (at most 5000 entries are kept) |
 | `GET /api/fw/local/requirements` | `{"requiredRouting": bool}`; `zuano doctor` fails while an agent has an MCP server that is not routed. `404` means not required |
-| `GET /api/firewall/upstreams`, `GET /api/firewall/upstreams/{slug}` | `{"upstreams": [{"slug", "name", "transport", "status", "toolCount", "pendingChanges"}]}`, `{"upstream": {...}}` |
-| `POST /api/firewall/upstreams` | `{"slug", "name", "url"}` or `{"slug", "name", "package"}`; `201` |
-| `POST /api/firewall/upstream-requests` | as above plus `"reason"`; `201` |
-| `GET /api/firewall/changes?status=&upstream=`, `GET /api/firewall/changes/{id}` | `{"changes": [{"id", "upstream", "name", "change", "risk", "status"}]}`, `{"change": {...}}` |
+| `GET /api/firewall/upstreams?status=`, `GET /api/firewall/upstreams/{id\|slug}` | `{"upstreams": [UPSTREAM]}`, `{"upstream": UPSTREAM + {"settings", "endpoints", "connection", "hosting"}}`; UPSTREAM is `{"id", "slug", "name", "source": "url\|repo\|local\|package", "transport", "endpoint", "packageSpec", "status": "pending\|active\|quarantined\|disabled", "authMode", "exposure", "serviceTags", "toolCount", "pendingChanges", "pendingDefinitions", "requestedBy", "approvedBy", "approvedAt", "createdAt"}` |
+| `POST /api/firewall/upstreams` | `{"slug", "name", "url"}` or `{"slug", "name", "package"}`, plus `"authMode"?: "none\|stored\|per_user"` and `"tags"?`; `201` `{"upstream", "jobId"?}`, `jobId` for a package build. Step-up `mcp_server_register` |
+| `POST /api/firewall/upstream-requests` | as above plus `"reason"`; `201` `{"upstream"}`; `403` `member_requests_off` |
+| `POST /api/firewall/upstreams/{id}/approve`, `.../quarantine`, `.../release`, `.../discover` | `{"upstream", "jobId"?}`, `{"upstream"}`, `{"upstream"}` (step-up `firewall_release`), `{"outcome": "checked\|skipped\|failed", "changes"}`; no body |
+| `POST /api/firewall/upstreams/{id}/deploy` | `202` `{"jobId"}` |
+| `GET\|PUT /api/firewall/upstreams/{id}/env` | `{"names": [text]}`; `PUT` takes `{"env": {NAME: value}}` (at most 30, values 1 to 8192 bytes; an empty object removes them); step-up `credential_write` |
+| `GET /api/firewall/upstreams/{id}/definitions?state=&kind=` | `{"definitions": [{"kind", "name", "defHash", "state": "pinned\|pending\|quarantined\|rejected\|removed\|superseded", "risk", "riskSource", "allow", "executor", "needsReview", "definition", "screen", "decidedBy", "decidedAt", "lastSeenAt"}]}`; without `state`, the live ones (pinned, pending, quarantined) |
+| `POST /api/firewall/upstreams/{id}/definitions/decide` | `{"items": [{"kind", "name", "defHash", "decision": "approve\|reject"}]}` (1 to 500); `{"approved", "rejected", "skipped"}`; approving needs step-up `firewall_pin_approve` for exactly the approved items |
+| `POST /api/firewall/definitions/accept` | `{"upstreamIds": [id], "defHashes": [hash]}` (1 to 500 each, ids rather than slugs); `{"approved", "skipped", "upstreams", "setHash"}`; step-up `firewall_pin_approve` for that set |
+| `GET /api/firewall/changes?status=&upstream=&limit=`, `GET /api/firewall/changes/{id}` | `{"changes": [{"id", "upstream", "upstreamId", "kind", "name", "change": "added\|removed\|modified\|server_changed", "severity", "risk", "status": "open\|approved\|rejected\|auto_resolved", "detectedBy", "detectedAt", "decidedBy", "decidedAt", "oldHash", "newHash"}]}`, `{"change": {... + "diff", "screen", "classifier"}}` |
+| `GET /api/firewall/shadow` | `{"servers": [{"name", "transport": "http\|stdio", "host", "command", "devices"}], "source": "device_reports\|none"}` |
+
+The `/api/firewall` routes are served under `/api`, not `/api/v1`, and are in
+the OpenAPI document under an `/api` server. Their refusals are the v1
+documents; the 15 codes added with them are `member_requests_off` (`403`),
+`upstream_not_found`, `change_not_found`, `definition_not_found` (`404`),
+`upstream_exists`, `upstream_not_active`, `upstream_not_pending`,
+`upstream_not_quarantined`, `definition_not_decidable`, `deploy_running` (`409`),
+`env_name_invalid`, `federation_refused`, `tool_list_too_large`,
+`upstream_source_invalid` (`422`) and `hosting_unavailable` (`503`). They take
+no exit status of their own: `member_requests_off` ends with 10, the rest with
+1. The slugs `local`, `oauth`, `mcp`, `new`, `changes` and `shadow` are
+reserved. The routes answer a browser session or CLI login of an
+administrator only; an agent credential gets `403`. Source: the gateway's
+`lib/api/contract/firewall.ts` and `lib/mcp-firewall/admin/schemas.ts` at
+78722ba.
 
 A remote server is reached at `{gateway}/api/fw/{slug}/mcp` with the caller's
 own Bearer credential; the gateway holds the server's credentials, or, for a

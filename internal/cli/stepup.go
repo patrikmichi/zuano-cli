@@ -24,6 +24,21 @@ var (
 
 func init() { client.SetDefaultStepUpHandler(completeStepUp) }
 
+// stepUpPages are the console pages where an action is confirmed, for the
+// actions that have one; any other action is confirmed from the console's
+// front page.
+var stepUpPages = map[string]string{
+	"firewall_pin_approve": "/firewall",
+	"firewall_release":     "/firewall",
+}
+
+func stepUpPage(action string) string {
+	if page, ok := stepUpPages[action]; ok {
+		return page
+	}
+	return "/"
+}
+
 // completeStepUp asks the person to confirm the action with a passkey in the
 // console. The passkey works only in a signed-in browser, so the CLI cannot do
 // it: it names the action, points to the console and, once the person says it
@@ -33,7 +48,7 @@ func completeStepUp(_ context.Context, ch client.StepUpChallenge, _ *client.Clie
 	if !stepUpInteractive() {
 		return &client.StepUpRequiredError{Action: ch.Action, Digest: ch.Digest}
 	}
-	link, err := gatewayLink(ch.Gateway, "/")
+	link, err := gatewayLink(ch.Gateway, stepUpPage(ch.Action))
 	if err != nil {
 		return err
 	}

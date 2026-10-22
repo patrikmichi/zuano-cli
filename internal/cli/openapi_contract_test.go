@@ -52,7 +52,7 @@ type openAPIDocument struct {
 	Paths map[string]map[string]openAPIOperation `json:"paths"`
 }
 
-func loadOpenAPI(t *testing.T) openAPIDocument {
+func openAPIBytes(t *testing.T) []byte {
 	t.Helper()
 	path := vendoredOpenAPI
 	if env := os.Getenv(openAPIEnv); env != "" {
@@ -62,6 +62,34 @@ func loadOpenAPI(t *testing.T) openAPIDocument {
 	if err != nil {
 		t.Fatal(err)
 	}
+	return raw
+}
+
+// vendoredRefusalCodes lists the codes of the document's plain refusals.
+func vendoredRefusalCodes(t *testing.T) []string {
+	t.Helper()
+	var doc struct {
+		Components struct {
+			Schemas struct {
+				RefusalPlain struct {
+					Properties struct {
+						Error struct {
+							Enum []string `json:"enum"`
+						} `json:"error"`
+					} `json:"properties"`
+				} `json:"RefusalPlain"`
+			} `json:"schemas"`
+		} `json:"components"`
+	}
+	if err := json.Unmarshal(openAPIBytes(t), &doc); err != nil {
+		t.Fatal(err)
+	}
+	return doc.Components.Schemas.RefusalPlain.Properties.Error.Enum
+}
+
+func loadOpenAPI(t *testing.T) openAPIDocument {
+	t.Helper()
+	raw := openAPIBytes(t)
 	var doc openAPIDocument
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		t.Fatal(err)

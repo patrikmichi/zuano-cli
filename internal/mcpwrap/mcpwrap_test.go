@@ -358,7 +358,7 @@ func TestPolicyLoadingAndClassification(t *testing.T) {
 		}
 		return p
 	}
-	if p, err := LoadPolicy(filepath.Join(dir, "missing.yaml")); err != nil || p.For("x").OnDefinitionChange != "block" || p.For("x").Inbound != "withhold" {
+	if p, err := LoadPolicy(filepath.Join(dir, "missing.yaml")); err != nil || p.For("x").OnDefinitionChange != "block" || p.For("x").NewTools != "hidden" || p.For("x").Profile == nil {
 		t.Fatalf("default policy: %v %v", p, err)
 	}
 	p, err := LoadPolicy(write(`
@@ -366,7 +366,6 @@ firewall:
   upstreams:
     files:
       on_definition_change: warn
-      inbound: warn
       tools:
         deny: ["delete_*"]
         classify:
@@ -376,7 +375,7 @@ firewall:
 		t.Fatal(err)
 	}
 	u := p.For("files")
-	if u.OnDefinitionChange != "warn" || u.Inbound != "warn" || !u.Denied("delete_all") || u.Denied("read") {
+	if u.OnDefinitionChange != "warn" || !u.Denied("delete_all") || u.Denied("read") {
 		t.Errorf("policy = %+v", u)
 	}
 	for tool, want := range map[string]string{"sync": "read", "list_files": "read", "delete_x": "destructive", "send-mail": "outward", "create": "write", "frobnicate": "write", "": "write"} {
@@ -389,7 +388,9 @@ firewall:
 	}
 	for _, bad := range []string{
 		"firewall:\n  upstreams:\n    a:\n      on_definition_change: ask\n",
-		"firewall:\n  upstreams:\n    a:\n      inbound: drop\n",
+		"firewall:\n  upstreams:\n    a:\n      inbound: warn\n",
+		"firewall:\n  upstreams:\n    a:\n      on_definition_change: auto\n",
+		"firewall:\n  upstreams:\n    a:\n      dlp: nowhere\n",
 		"firewall:\n  upstreams:\n    a:\n      tools:\n        classify:\n          x: harmless\n",
 		"firewall:\n  upstreams:\n    a:\n      typo: 1\n",
 		"firewall: [",

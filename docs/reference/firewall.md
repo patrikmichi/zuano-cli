@@ -48,19 +48,44 @@ snapshot is missing, stale or fails verification, are decided by the gateway.
 `zuano mcp wrap --offline` (also used when `--offline` is set on zuano itself)
 needs no account. Tools wait in `zuano mcp changes` until you approve them with
 `zuano mcp pins approve <server> <tool>` (or `--all`); approvals take effect in
-a running wrapper. `~/.config/zuano/firewall.yaml` holds a per-server subset of
-the organisation policy:
+a running wrapper. `~/.config/zuano/firewall.yaml` holds the `firewall:` and
+`dlp:` sections of the organisation's policy document, written exactly as the
+gateway reads them (snake_case, no key it does not know), so a section written
+for an organisation works here unchanged:
 
 ```yaml
 firewall:
   upstreams:
     files:
       on_definition_change: block   # or warn: keep serving the approved definition
-      inbound: withhold             # or warn
+      new_tools: hidden             # or auto_read_only: pin a tool classified read at once
       tools:
+        allow: ["read_*", "list_*"] # only these, when the list is not empty
         deny: ["delete_*"]
         classify: {sync: read}
+      approvals: {people_require_approval: [destructive]}
+      dlp: secrets-and-pii
+dlp:
+  profiles:
+    secrets-and-pii:
+      detect: [secrets, pii]
+      outbound: {secret: block, pii: block}
+      inbound: {secret: redact}
+      custom:
+        - {name: project-codes, regex: "PRJ-[0-9]{6}", action: redact}
 ```
+
+A tool name matches a glob where `*` is any run of characters and `?` one.
+Offline there is no second person: a call of a class listed in
+`approvals.people_require_approval`, and a DLP rule whose action is `approval`,
+refuse the call. An upstream without a `dlp` profile gets the default one:
+secrets are blocked in arguments and redacted in results. `redact` replaces the
+text with the rules used for session upload, so a value in the same string that
+matches another built-in detector is replaced too. Settings that only matter to
+a gateway session (`sampling`, `rate`, `token_exchange` and the like) are
+checked and ignored; `on_definition_change: auto` and an `external` DLP scanner
+are refused. A result that carries instructions for the model is always
+withheld.
 
 Pins are in `~/.config/zuano/mcp-pins/`, the hash-chained audit log in
 `~/.config/zuano/mcp-audit/<server>.jsonl`. The log holds names, decisions and

@@ -1,0 +1,33 @@
+# The firewall and dlp sections as the gateway's own policy-section test writes them.
+firewall:
+  member_requests: request
+  local:
+    unknown: request
+    offline: deny
+    fast_reads: false
+    allow_packages: ["npm:@modelcontextprotocol/server-filesystem@^2"]
+  upstreams:
+    github:
+      tags: [github]
+      exposure: [transparent, aggregated]
+      on_definition_change: block
+      new_tools: hidden
+      tools:
+        deny: [delete_repository, "*_secret*"]
+        classify: { merge_pull_request: destructive }
+      resources: { allow: ["repo://acme/*"] }
+      prompts: "on"
+      sampling: "off"
+      rate: { per_minute: 600, per_identity_per_minute: 120 }
+      timeout_seconds: 60
+      dlp: secrets-and-pii
+      approvals: { people_require_approval: [destructive] }
+dlp:
+  profiles:
+    secrets-and-pii:
+      detect: [secrets, pii, financial]
+      outbound: { secret: block, pii: approval, financial: block }
+      inbound: { secret: redact, pii: redact }
+      custom:
+        - { name: project-codes, regex: "PRJ-[0-9]{6}", action: redact }
+      external: null

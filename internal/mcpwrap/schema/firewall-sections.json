@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Firewall and DLP sections of the policy document",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "firewall": { "$ref": "#/$defs/firewall" },
+    "dlp": { "$ref": "#/$defs/dlp" }
+  },
+  "$defs": {
+    "risk": { "enum": ["read", "write", "destructive", "outward"] },
+    "dlpAction": { "enum": ["allow", "redact", "block", "approval"] },
+    "dlpCategory": { "enum": ["secret", "pii", "financial", "health", "custom"] },
+    "strings": { "type": "array", "items": { "type": "string" } },
+    "allowDeny": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "allow": { "$ref": "#/$defs/strings" }, "deny": { "$ref": "#/$defs/strings" } }
+    },
+    "upstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tags": { "type": "array", "maxItems": 32, "items": { "type": "string", "minLength": 1 } },
+        "exposure": { "type": "array", "minItems": 1, "items": { "enum": ["transparent", "aggregated"] } },
+        "on_definition_change": { "enum": ["block", "warn", "auto"] },
+        "new_tools": { "enum": ["hidden", "auto_read_only"] },
+        "tools": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allow": { "$ref": "#/$defs/strings" },
+            "deny": { "$ref": "#/$defs/strings" },
+            "classify": { "type": "object", "additionalProperties": { "$ref": "#/$defs/risk" } }
+          }
+        },
+        "resources": { "$ref": "#/$defs/allowDeny" },
+        "prompts": { "enum": ["on", "off"] },
+        "elicitation": { "enum": ["off", "form", "form_and_url"] },
+        "elicitation_url_hosts": { "$ref": "#/$defs/strings" },
+        "sampling": { "enum": ["off", "client", "org_llm"] },
+        "sampling_max_tokens": { "type": "integer", "minimum": 1, "maximum": 100000 },
+        "sampling_tools": { "type": "boolean" },
+        "sampling_models": { "$ref": "#/$defs/strings" },
+        "roots": { "enum": ["off", "relay"] },
+        "roots_allow": { "$ref": "#/$defs/strings" },
+        "logging": { "enum": ["off", "warnings"] },
+        "instructions": { "enum": ["drop", "forward_pinned"] },
+        "token_exchange": {
+          "type": ["object", "null"],
+          "required": ["client_id"],
+          "additionalProperties": false,
+          "properties": {
+            "client_id": { "type": "string", "minLength": 1 },
+            "audience": { "type": "string", "minLength": 1 },
+            "scope": { "type": "string", "minLength": 1 }
+          }
+        },
+        "rate": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "per_minute": { "type": "integer", "minimum": 1 },
+            "per_identity_per_minute": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 280 },
+        "relay_wait_seconds": { "type": "integer", "minimum": 1, "maximum": 280 },
+        "dlp": { "type": ["string", "null"], "minLength": 1 },
+        "approvals": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "people_require_approval": { "type": "array", "items": { "$ref": "#/$defs/risk" } } }
+        }
+      }
+    },
+    "firewall": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "member_requests": { "enum": ["off", "request", "auto_read_only"] },
+        "required_routing": { "type": "boolean" },
+        "local": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "unknown": { "enum": ["request", "deny", "allow_read"] },
+            "offline": { "enum": ["deny", "allow_read_pinned"] },
+            "fast_reads": { "type": "boolean" },
+            "allow_packages": { "$ref": "#/$defs/strings" }
+          }
+        },
+        "upstreams": {
+          "type": "object",
+          "propertyNames": { "minLength": 1 },
+          "additionalProperties": { "$ref": "#/$defs/upstream" }
+        }
+      }
+    },
+    "dlpAssignment": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/dlpCategory" },
+      "additionalProperties": { "$ref": "#/$defs/dlpAction" }
+    },
+    "dlpProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "detect": { "type": "array", "items": { "enum": ["secrets", "pii", "financial"] } },
+        "outbound": { "$ref": "#/$defs/dlpAssignment" },
+        "inbound": { "$ref": "#/$defs/dlpAssignment" },
+        "custom": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "required": ["name", "action"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "minLength": 1, "maxLength": 64 },
+              "regex": { "type": "string" },
+              "dictionary": { "type": "array", "minItems": 1, "maxItems": 5000, "items": { "type": "string", "minLength": 1 } },
+              "action": { "$ref": "#/$defs/dlpAction" },
+              "category": { "enum": ["custom", "health"] }
+            },
+            "oneOf": [{ "required": ["regex"] }, { "required": ["dictionary"] }]
+          }
+        },
+        "external": {
+          "type": ["object", "null"],
+          "required": ["url"],
+          "additionalProperties": false,
+          "properties": {
+            "url": { "type": "string", "format": "uri" },
+            "on_error": { "enum": ["block", "allow"] }
+          }
+        }
+      }
+    },
+    "dlp": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profiles": {
+          "type": "object",
+          "propertyNames": { "minLength": 1 },
+          "additionalProperties": { "$ref": "#/$defs/dlpProfile" }
+        }
+      }
+    }
+  }
+}

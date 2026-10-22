@@ -72,6 +72,9 @@ func (g *OfflineGovernor) Tools(_ context.Context, live []Definition, final bool
 	if final {
 		g.seen = map[string]bool{}
 	}
+	if g.Policy.NewTools == "auto_read_only" {
+		g.autoApprove(live, changes)
+	}
 	if len(changes) > 0 {
 		if err := g.Pins.Save(g.set); err != nil {
 			return nil, err
@@ -94,8 +97,22 @@ func (g *OfflineGovernor) Tools(_ context.Context, live []Definition, final bool
 	return served, nil
 }
 
+// autoApprove pins the tools that appeared with a definition classified read.
+func (g *OfflineGovernor) autoApprove(live []Definition, changes []ChangeRecord) {
+	for _, c := range changes {
+		if c.Kind != "added" || g.Policy.Denied(c.Tool) {
+			continue
+		}
+		for _, def := range live {
+			if nameOf(def) == c.Tool && g.Policy.Classify(def) == "read" && g.set.Approve(c.Tool) == nil {
+				g.audit("auto_approved", map[string]any{"tool": c.Tool, "hash": c.NewHash})
+			}
+		}
+	}
+}
+
 // Call allows a pinned tool the policy does not deny.
-func (g *OfflineGovernor) Call(_ context.Context, tool string, _ json.RawMessage) (Decision, error) {
+func (g *OfflineGovernor) Call(_ context.Context, tool string, args json.RawMessage) (Decision, error) {
 	g.mu.Lock()
 	err := g.reload()
 	pin := g.set.Tools[tool]
@@ -116,8 +133,45 @@ func (g *OfflineGovernor) Call(_ context.Context, tool string, _ json.RawMessage
 	if pin != nil {
 		risk = g.Policy.Classify(pin.Def)
 	}
-	g.audit("call", map[string]any{"tool": tool, "risk": risk, "decision": d.Kind, "reason": d.Reason})
+	fields := map[string]any{"tool": tool, "risk": risk}
+	if d.Kind == "allow" && g.Policy.NeedsApproval(risk) {
+		d = Decision{Kind: "deny", Reason: "approval_unavailable", Message: "firewall.yaml asks for a person's approval of " + risk + " tools, and offline mode has no approvals"}
+	}
+	if d.Kind == "allow" {
+		d = g.screenArguments(args, fields)
+	}
+	fields["decision"], fields["reason"] = d.Kind, d.Reason
+	g.audit("call", fields)
 	return d, nil
+}
+
+// screenArguments applies the profile to what leaves: a block ends the call, a
+// redaction replaces the arguments.
+func (g *OfflineGovernor) screenArguments(args json.RawMessage, fields map[string]any) Decision {
+	if g.Policy.Profile == nil || len(args) == 0 {
+		return Decision{Kind: "allow"}
+	}
+	var value any
+	if json.Unmarshal(args, &value) != nil {
+		return Decision{Kind: "allow"}
+	}
+	v := g.Policy.Profile.Evaluate("outbound", value)
+	if len(v.Summary) > 0 {
+		fields["dlp"] = v.Summary
+	}
+	switch v.Action {
+	case dlpBlock:
+		return Decision{Kind: "deny", Reason: "dlp_blocked", Message: "the arguments hold data the DLP profile keeps from leaving (" + v.Describe() + ")"}
+	case dlpApproval:
+		return Decision{Kind: "deny", Reason: "approval_unavailable", Message: "the DLP profile asks for a person's approval of these arguments (" + v.Describe() + "), and offline mode has no approvals"}
+	case dlpRedact:
+		redacted, err := json.Marshal(v.Value)
+		if err != nil {
+			return Decision{Kind: "deny", Reason: "dlp_blocked", Message: "the arguments could not be redacted"}
+		}
+		return Decision{Kind: "redact", Arguments: redacted}
+	}
+	return Decision{Kind: "allow"}
 }
 
 // resultTexts collects the text blocks of a tool result.
@@ -144,6 +198,33 @@ func resultTexts(result json.RawMessage) []string {
 	return out
 }
 
+// screenResult applies the profile to what comes back; done is false when the
+// result passes as it is.
+func (g *OfflineGovernor) screenResult(tool string, content json.RawMessage) (ResultDecision, bool) {
+	if g.Policy.Profile == nil {
+		return ResultDecision{}, false
+	}
+	var value any
+	if json.Unmarshal(content, &value) != nil {
+		return ResultDecision{}, false
+	}
+	v := g.Policy.Profile.Evaluate("inbound", value)
+	if len(v.Summary) == 0 {
+		return ResultDecision{}, false
+	}
+	g.audit("result_dlp", map[string]any{"tool": tool, "dlp": v.Summary})
+	switch v.Action {
+	case dlpBlock, dlpApproval:
+		return ResultDecision{Kind: "withhold", Message: "it holds data the DLP profile keeps from the agent (" + v.Describe() + ")"}, true
+	case dlpRedact:
+		if redacted, err := json.Marshal(v.Value); err == nil {
+			return ResultDecision{Kind: "redact", Content: redacted}, true
+		}
+		return ResultDecision{Kind: "withhold", Message: "it could not be redacted"}, true
+	}
+	return ResultDecision{}, false
+}
+
 // Result withholds a result that tells the model what to do, and strips
 // invisible characters from one that is let through.
 func (g *OfflineGovernor) Result(_ context.Context, _ Decision, tool string, result json.RawMessage, isErr bool) (ResultDecision, error) {
@@ -153,11 +234,18 @@ func (g *OfflineGovernor) Result(_ context.Context, _ Decision, tool string, res
 	}
 	worst := MaxSeverity(findings)
 	g.audit("result", map[string]any{"tool": tool, "error": isErr, "findings": len(findings), "severity": worst})
-	if worst == SevCritical && g.Policy.Inbound == "withhold" {
+	if worst == SevCritical {
 		return ResultDecision{Kind: "withhold", Message: "it contains instructions aimed at the model (" + findings[0].Rule + ")"}, nil
 	}
+	content := result
 	if cleaned := StripInvisible(string(result)); cleaned != string(result) && json.Valid([]byte(cleaned)) {
-		return ResultDecision{Kind: "redact", Content: json.RawMessage(cleaned)}, nil
+		content = json.RawMessage(cleaned)
+	}
+	if rd, done := g.screenResult(tool, content); done {
+		return rd, nil
+	}
+	if string(content) != string(result) {
+		return ResultDecision{Kind: "redact", Content: content}, nil
 	}
 	if worst != "" {
 		g.logf("%s: the result of %s was flagged (%s) but let through", g.Name, tool, strings.ToLower(worst))

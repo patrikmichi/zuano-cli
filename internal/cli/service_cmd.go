@@ -290,7 +290,11 @@ func sendToolCall(parent context.Context, c *client.Client, service, tool string
 	}
 
 	path := "/api/" + service + "/mcp"
-	resp, err := c.MCPPostContext(ctx, path, body)
+	var extra http.Header
+	if waiting {
+		extra = preferWait(o.waitFor)
+	}
+	resp, err := c.MCPPostWith(ctx, path, body, extra)
 	if err != nil {
 		return nil, fmt.Errorf("POST %s: %w", path, err)
 	}

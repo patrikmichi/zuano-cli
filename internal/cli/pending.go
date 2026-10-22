@@ -32,6 +32,23 @@ type pendingApproval struct {
 	ExpiresAt  string `json:"expires_at"`
 	// ApprovalURL is the page the approver decides on, when the gateway names it.
 	ApprovalURL string `json:"approval_url"`
+	// HeldSeconds is how long the gateway kept the request open for a
+	// decision before answering with this pending result.
+	HeldSeconds int `json:"held_seconds"`
+}
+
+// maxPreferWaitSeconds is the longest wait the gateway honours by default
+// (its approval hold maximum); a longer --wait continues by polling.
+const maxPreferWaitSeconds = 240
+
+// preferWait is the RFC 7240 header that asks the gateway to hold a call for
+// approval open for the decision, at most as long as it would hold it.
+func preferWait(total time.Duration) http.Header {
+	secs := min(int(total/time.Second), maxPreferWaitSeconds)
+	if secs <= 0 {
+		return nil
+	}
+	return http.Header{"Prefer": {"wait=" + strconv.Itoa(secs)}}
 }
 
 func parsePending(raw []byte) *pendingApproval {
@@ -117,12 +134,17 @@ func handlePending(parent context.Context, c *client.Client, p *pendingApproval,
 			if p.ApprovalURL != "" {
 				fmt.Fprintf(out, "  page:     %s\n", textsafe.Clean(p.ApprovalURL))
 			}
+			if p.HeldSeconds > 0 {
+				fmt.Fprintf(out, "  waited:   %ds for a decision before answering\n", p.HeldSeconds)
+			}
 			fmt.Fprintf(out, "Decide it with `%s` (opens the approval page), then collect the result with `%s`, or repeat the call with --wait.\n", brand.Cmd("approvals approve "+p.ApprovalID), brand.Cmd("approvals wait "+p.ApprovalID))
 		}
 		return &ExitError{Code: exitPending}
 	}
+	// The time the gateway already held the request counts against --wait.
+	remaining := max(o.waitFor-time.Duration(p.HeldSeconds)*time.Second, 0)
 	if !jsonOut {
-		fmt.Fprintf(os.Stderr, "Approval %s required (%s, expires %s). Waiting up to %s for a decision...\n", p.ApprovalID, p.Risk, p.ExpiresAt, o.waitFor)
+		fmt.Fprintf(os.Stderr, "Approval %s required (%s, expires %s). Waiting up to %s for a decision...\n", p.ApprovalID, p.Risk, p.ExpiresAt, remaining)
 	}
-	return waitForApproval(parent, c, p.ApprovalID, o.waitFor, out, jsonOut)
+	return waitForApproval(parent, c, p.ApprovalID, remaining, out, jsonOut)
 }

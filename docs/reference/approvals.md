@@ -95,6 +95,26 @@ body or from the `structuredContent` of an MCP tool error.
 `90s` also works) waits for the decision, runs the approved call once and
 prints its result. With `--json` only the final response is printed.
 
+## The hold window
+
+A gateway holds a call for approval open for a short window, so a decision
+made on a phone finishes the same request. The window is the smallest of the
+organisation's setting, the client's cap, the platform cap (240 s) and the
+route's deadline. `--wait` sends `Prefer: wait=<seconds>` (RFC 7240; at most
+240, left out for `--wait=0` and without `--wait`) on the call's first request
+and no other. The connector REST route `POST /api/<service>/call` honours it
+up to the organisation's maximum and answers `Preference-Applied`; the MCP
+route zuano calls holds by the client's cap and ignores it, so the header costs
+nothing there.
+
+- Decided inside the window: the same request returns the call's result, zuano
+  prints it and exits 0 after one request and no poll; a denial inside the
+  window exits 10.
+- Not decided: the held-call result gains `held_seconds`, how long the
+  gateway waited. zuano prints `waited: Ns for a decision before answering`,
+  keeps the exit status (12), and with `--wait` polls only for what is left of
+  the wait. `--json` prints the document unchanged, `held_seconds` included.
+
 ## Approval pages in the session (URL elicitation)
 
 Before its first call to an MCP endpoint zuano sends `initialize` declaring

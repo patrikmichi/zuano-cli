@@ -50,8 +50,14 @@ var mcpInitializedBody = []byte(`{"jsonrpc":"2.0","method":"notifications/initia
 // gateway that does not issue sessions is used without one, and one that
 // forgets a session (HTTP 404) gets a fresh initialize and one retry.
 func (c *Client) MCPPostContext(ctx context.Context, path string, body []byte) (*http.Response, error) {
+	return c.MCPPostWith(ctx, path, body, nil)
+}
+
+// MCPPostWith is MCPPostContext with extra headers on the request itself, not
+// on the initialize that may precede it.
+func (c *Client) MCPPostWith(ctx context.Context, path string, body []byte, extra http.Header) (*http.Response, error) {
 	sid := c.mcpSession(ctx, path)
-	resp, err := c.mcpPost(ctx, path, sid, body)
+	resp, err := c.mcpPost(ctx, path, sid, body, extra)
 	if err != nil || sid == "" || resp.StatusCode != http.StatusNotFound {
 		return resp, err
 	}
@@ -59,13 +65,16 @@ func (c *Client) MCPPostContext(ctx context.Context, path string, body []byte) (
 	c.mcpMu.Lock()
 	delete(c.mcpSessions, path)
 	c.mcpMu.Unlock()
-	return c.mcpPost(ctx, path, c.mcpSession(ctx, path), body)
+	return c.mcpPost(ctx, path, c.mcpSession(ctx, path), body, extra)
 }
 
-func (c *Client) mcpPost(ctx context.Context, path, sid string, body []byte) (*http.Response, error) {
+func (c *Client) mcpPost(ctx context.Context, path, sid string, body []byte, extra http.Header) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.GatewayURL+path, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
+	}
+	for k, v := range extra {
+		req.Header[k] = v
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", mcpAccept)
@@ -89,13 +98,13 @@ func (c *Client) mcpSession(ctx context.Context, path string) string {
 		c.mcpSessions = map[string]string{}
 	}
 	sid := ""
-	resp, err := c.mcpPost(ctx, path, "", mcpInitializeBody())
+	resp, err := c.mcpPost(ctx, path, "", mcpInitializeBody(), nil)
 	if err == nil {
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, MaxJSONBytes))
 		_ = resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			sid = resp.Header.Get(MCPSessionHeader)
-			if note, err := c.mcpPost(ctx, path, sid, mcpInitializedBody); err == nil {
+			if note, err := c.mcpPost(ctx, path, sid, mcpInitializedBody, nil); err == nil {
 				_ = note.Body.Close()
 			}
 		}

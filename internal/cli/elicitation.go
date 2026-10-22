@@ -30,7 +30,14 @@ type urlElicitation struct {
 	URL        string
 	Message    string
 	ApprovalID string
+	// Upstream is set when the page connects a person's account to a server
+	// the firewall governs; no approval is waiting then.
+	Upstream string
 }
+
+// connectStartPath is the page that starts connecting an account to an
+// upstream server; the upstream is its "upstream" query parameter.
+const connectStartPath = "/api/fw/oauth/start"
 
 func elicitationFromError(e *mcpRPCError) *urlElicitation {
 	var data struct {
@@ -40,9 +47,9 @@ func elicitationFromError(e *mcpRPCError) *urlElicitation {
 			URL           string `json:"url"`
 			Message       string `json:"message"`
 		} `json:"elicitations"`
-		Relay struct {
+		Approval struct {
 			ApprovalID string `json:"approval_id"`
-		} `json:"relay"`
+		} `json:"approval"`
 	}
 	if e == nil || json.Unmarshal(e.Data, &data) != nil {
 		return nil
@@ -51,13 +58,23 @@ func elicitationFromError(e *mcpRPCError) *urlElicitation {
 		if el.URL == "" || (el.Mode != "" && el.Mode != "url") {
 			continue
 		}
-		out := &urlElicitation{ID: el.ElicitationID, URL: el.URL, Message: el.Message, ApprovalID: data.Relay.ApprovalID}
+		out := &urlElicitation{ID: el.ElicitationID, URL: el.URL, Message: el.Message, ApprovalID: data.Approval.ApprovalID}
 		if out.ApprovalID == "" {
 			out.ApprovalID = approvalIDFromPage(el.URL)
 		}
+		out.Upstream = upstreamFromConnectLink(el.URL)
 		return out
 	}
 	return nil
+}
+
+// upstreamFromConnectLink reads the upstream out of .../api/fw/oauth/start?upstream=<slug>.
+func upstreamFromConnectLink(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.Path != connectStartPath {
+		return ""
+	}
+	return u.Query().Get("upstream")
 }
 
 // approvalIDFromPage reads the id out of .../approvals/<id>.
@@ -124,6 +141,9 @@ func handleURLElicitation(parent context.Context, c *client.Client, e *urlElicit
 	page, sameOrigin, err := elicitationPage(c.GatewayURL, e.URL)
 	if err != nil {
 		return err
+	}
+	if e.Upstream != "" {
+		return handleConnectElicitation(parent, c, e, page, sameOrigin, retry, jsonOut, o, out)
 	}
 	if e.ApprovalID == "" {
 		return errors.New("the gateway asked for an approval without saying which one; open the link it sent and repeat the call")

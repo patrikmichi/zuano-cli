@@ -16,6 +16,15 @@ const MCPSessionHeader = "Mcp-Session-Id"
 
 const mcpProtocolVersion = "2025-11-25"
 
+// mcpProtocolHeader names the revision a request speaks. Without it a gateway
+// takes the request for the 2025-03-26 revision, which has no URL elicitation.
+const mcpProtocolHeader = "MCP-Protocol-Version"
+
+// mcpAccept lists both answers Streamable HTTP lets a server choose from: a
+// call is answered as a stream only when it reports progress or asks the
+// client something.
+const mcpAccept = "application/json, text/event-stream"
+
 // mcpInitializeBody is the initialize request. Declaring URL elicitation lets
 // the gateway answer a call that needs approval with a link to open instead of
 // a held-call result.
@@ -59,6 +68,8 @@ func (c *Client) mcpPost(ctx context.Context, path, sid string, body []byte) (*h
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", mcpAccept)
+	req.Header.Set(mcpProtocolHeader, mcpProtocolVersion)
 	if sid != "" {
 		req.Header.Set(MCPSessionHeader, sid)
 	}

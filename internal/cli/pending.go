@@ -15,6 +15,7 @@ import (
 	"github.com/patrikmichi/zuano-cli/internal/brand"
 	"github.com/patrikmichi/zuano-cli/internal/client"
 	"github.com/patrikmichi/zuano-cli/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 const pendingApprovalStatus = "pending_approval"
@@ -29,6 +30,8 @@ type pendingApproval struct {
 	Risk       string `json:"risk"`
 	ArgsDigest string `json:"args_digest"`
 	ExpiresAt  string `json:"expires_at"`
+	// ApprovalURL is the page the approver decides on, when the gateway names it.
+	ApprovalURL string `json:"approval_url"`
 }
 
 func parsePending(raw []byte) *pendingApproval {
@@ -111,6 +114,9 @@ func handlePending(parent context.Context, c *client.Client, p *pendingApproval,
 				fmt.Fprintln(out, "Personal CLI sessions follow the same approvals as agents; only a browser session runs writes unasked.")
 			}
 			fmt.Fprintf(out, "  approval: %s\n  call:     %s %s\n  risk:     %s\n  expires:  %s\n", p.ApprovalID, p.Service, p.Tool, p.Risk, p.ExpiresAt)
+			if p.ApprovalURL != "" {
+				fmt.Fprintf(out, "  page:     %s\n", textsafe.Clean(p.ApprovalURL))
+			}
 			fmt.Fprintf(out, "Decide it with `%s` (opens the approval page), then collect the result with `%s`, or repeat the call with --wait.\n", brand.Cmd("approvals approve "+p.ApprovalID), brand.Cmd("approvals wait "+p.ApprovalID))
 		}
 		return &ExitError{Code: exitPending}

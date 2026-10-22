@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":1,"error":{"code":-32042,"message":"This request requires more information.","data":{"elicitations":[{"mode":"url","elicitationId":"fwe_Zm9v","url":"https://gateway.example/api/fw/oauth/start?upstream=github","message":"Connect your account to \"github\" to use it."}]}}}

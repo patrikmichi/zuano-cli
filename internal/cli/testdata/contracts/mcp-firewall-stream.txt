@@ -1,0 +1,11 @@
+event: message
+data: {"jsonrpc":"2.0","method":"notifications/progress","params":{"progressToken":"zuano-call","progress":1,"total":3,"message":"cloning"}}
+
+event: message
+data: {"jsonrpc":"2.0","id":"fwr_a1B2c3D4e5F6","method":"elicitation/create","params":{"mode":"form","message":"Which branch?","requestedSchema":{"type":"object","properties":{"branch":{"type":"string"}}}}}
+
+: waiting
+
+event: message
+data: {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"listed 3 issues"}]}}
+

@@ -26,8 +26,12 @@ so a fixture changes only when a route's shape does.
 
 The gateway's OpenAPI document (`gateway/openapi/v1.json`) is vendored as
 `internal/cli/testdata/contracts/openapi-v1.json`; `ZUANO_GATEWAY_OPENAPI`
-names the gateway's own copy. The contract test sends every auth-config,
-connected-account, connect-link and `zuano runs` command to a recording server and checks
+names the gateway's own copy. The vendored copy is the document of the
+workflow-market branch (c39bbde: the market and the 12 platform market operations)
+with the three `/jobs` paths of the core branch (547f201) added, because
+neither branch has the other's operations yet; regenerate it from the merged
+document once they meet. The contract test sends every auth-config,
+connected-account, connect-link, `zuano runs` and `zuano market` command to a recording server and checks
 each request's method and path against the document, its query parameters
 against the declared ones, and its body against the request schema (unknown
 fields where the schema is closed, missing required fields).
@@ -83,7 +87,7 @@ the constants in the code, both ways.
 | Code | Name | Notes |
 |---|---|---|
 | 0 | `ok` | |
-| 1 | `error` | unclassified failure; also `spec_fetch_blocked` and `federated_mode_unsupported`, with the code in the JSON |
+| 1 | `error` | unclassified failure; also `spec_fetch_blocked`, `federated_mode_unsupported` and the market refusals without a status of their own, such as `submission_not_found` (`404`) and `submission_not_decidable` (`409`) of the staff-only platform moderation routes, with the code in the JSON |
 | 2 | `usage` | bad flags or unreadable input; `policy plan --detailed-exitcode` also returns 2 for "changes present" |
 | 4 | `signature_invalid` | any signature or content-hash verification failure, including `signature_invalid` from the gateway when a publisher's signature does not match; never a timeout |
 | 10 | `denied` | `policy_off`, DLP block, `meta_executor_blocked`, `source_not_preferred`, `agent_not_allowed`, `denied_by_policy`, `tool_not_pinned` |
@@ -129,6 +133,7 @@ the constants in the code, both ways.
 | 69 | `version_not_withdrawable` | `409` `version_not_published` (on a deprecate or yank) or `version_already_yanked` |
 | 70 | `verification_failed` | `400` `invalid_token` or `409` `verification_expired` on the publisher verification routes, or a domain check that found no proof |
 | 71 | `handle_unavailable` | `409` `handle_taken` or `handle_reserved` |
+| 72 | `account_not_connected` | `-32042` whose link is `/api/fw/oauth/start?upstream=<slug>`: the person has not connected their own account to a firewalled server, and no `--wait` was given or the wait ended first |
 
 SDK builder and catalog refusal codes map onto these by class: `400`, `409` and
 `422` end with 1 and keep the code in the JSON, `403` with 10, `402` with 30
@@ -317,14 +322,24 @@ must reject a Bearer decision (risk policy plan 5.3).
 
 | Exchange | Detail |
 |---|---|
-| `POST /api/{service}/mcp`, `/api/mcp` `initialize` | request `params`: `protocolVersion: "2025-11-25"`, `capabilities: {"elicitation": {"url": {}}}`, `clientInfo: {"name": "zuano", "version"}`. The response may carry `Mcp-Session-Id`. zuano then sends `notifications/initialized` and echoes the header on every later request to that path. `404` for a known session id means the session is gone: zuano initializes again, once. Fixture: none (the document is the request) |
-| `tools/call` error `-32042` | `data.elicitations[]` with `mode: "url"`, `elicitationId`, `url`, `message`; `data.relay.approval_id` (read; the `/approvals/<id>` path of `url` is the fallback), `expires_at`, `next`. Fixture: `mcp-url-elicitation.json` |
+| `POST /api/{service}/mcp`, `/api/mcp`, `/api/fw/{slug}/mcp` `initialize` | request `params`: `protocolVersion: "2025-11-25"`, `capabilities: {"elicitation": {"url": {}}}`, `clientInfo: {"name": "zuano", "version"}`. The response may carry `Mcp-Session-Id` (the firewall endpoint issues `fws_...`, valid for 24 hours and only for the identity that opened it). zuano then sends `notifications/initialized` and echoes the header on every later request to that path. `404` for a known session id means the session is gone: zuano initializes again, once. Fixture: none (the document is the request) |
+| every request to those endpoints | `MCP-Protocol-Version: 2025-11-25` and `Accept: application/json, text/event-stream`. Without the version header the gateway reads a request as 2025-03-26, the revision before URL elicitation, and answers a call that needs a connection with an error result instead of `-32042` |
+| `tools/call` error `-32042` for a held call | `data.elicitations[]` with `mode: "url"`, `elicitationId`, `url` (`/approvals/<id>?e=<elicitationId>`), `message`; `data.approval.approval_id` (read; the `/approvals/<id>` path of `url` is the fallback), `expires_at`, `next`. Fixture: `mcp-url-elicitation.json` |
+| `tools/call` error `-32042` for an account that is not connected | the same envelope with one `elicitations[]` entry whose `url` is `/api/fw/oauth/start?upstream=<slug>` and no `approval`; `message` is `Connect your account to "<slug>" to use it.` Fixture: `mcp-connect-elicitation.json`. zuano opens the page (same origin only), polls `GET /api/fw/oauth/pending` (`{"connections": [{"slug", "title", "connectUrl"}]}`, the servers still to connect) until the slug is gone, then repeats the call once; exit 72 when it does not wait |
+| `tools/call` answered as `text/event-stream` | sent only when the request accepts it and the upstream reports progress or asks the client something; frames are `event: message` with `data:` one JSON-RPC message, `: waiting` comments between them. `notifications/progress` carries the `progressToken` of the request (zuano sends `_meta.progressToken: "zuano-call"`), `progress`, `total?` and `message?`, and zuano prints it as a line on stderr; the last frame is the call's own result or error. Fixture: `mcp-firewall-stream.txt` |
+| a request in that stream (`"id": "fwr_..."`, `elicitation/create`, `sampling/createMessage`, `roots/list`, `ping`) | answered by a `POST` to the same endpoint and session with `{"jsonrpc": "2.0", "id": "fwr_...", "result": ...}` (`202`); the id must be the one sent. zuano declines an elicitation (`{"action": "decline"}`), answers `roots/list` with no roots and `ping` with `{}`, and refuses sampling with `-32601` |
+| held call result (`structuredContent`) | `status: "pending_approval"`, `approval_id`, `service`, `tool`, `risk`, `args_digest`, `expires_at` and `approval_url` (the page the approver decides on). The text names `await_approval` and `check_approval`. Fixture: `mcp-pending-approval.json` |
 | `GET /api/approvals/{id}` | polled for the decision, as for `approvals wait` |
 | `GET /api/org/{org}/connect-links` | `{"claude_ai": {"url", "directory_url"?, "endpoint", "steps": [text]}, "chatgpt": {"endpoint", "auth": text, "admin_url": null\|text, "steps": [text]}}`; org admins only. Fixture: `connect-links.json` |
 
-Source: connectors plan sections 4.9, 4.11, 4.12 and 4.13. The layout of the
-connect-links document, and the 300 second default wait, are this client's
-decisions; the plan names the endpoint and the two targets.
+Source: connectors plan sections 4.9, 4.11, 4.12 and 4.13, and the gateway's
+`lib/approvals/{channel,result,check}.ts` and `lib/mcp-firewall/{endpoint,stream,session,relay-store}.ts`.
+The layout of the connect-links document, and the 300 second default wait, are
+this client's decisions; the plan names the endpoint and the two targets. The
+in-call wait for a held call (`Prefer: wait` on REST, a stream with progress
+while the approval is open, `held_seconds`) is not on any gateway branch yet;
+zuano already sends the progress token and prints what the stream carries, and
+a held call still ends as above.
 
 ## Step-up
 
@@ -441,8 +456,24 @@ gets `"view": "reduced"`). Fixture: `billing-status.json`,
              "breakdown": [{"key", "used"}]}]}
 ```
 
+`GET /api/v1/billing/credits` (Bearer, a personal session of an owner or
+administrator; an agent credential gets `403`). Fixture: `billing-credits.json`.
+Amounts are nano-euros (1 EUR is 1,000,000,000).
+
+```json
+{"balance_nano": int, "held_nano": int,
+ "buckets": [{"id", "kind": "purchase|grant", "remaining_nano", "granted_nano", "expires_at": null|text}],
+ "entries": [{"id", "kind": "topup|grant|refund|adjustment|expiry|reversal|dispute", "amount_nano": int, "created_at"}]}
+```
+
+`balance_nano` is what can be spent, `held_nano` what calls in flight hold back.
+`buckets` lists only credit that is still usable, soonest to expire first;
+`entries` are the latest 50 movements of money, without per-call usage. The
+checkout, promo code and auto top-up routes under the same path need a browser
+session and a passkey and are not offered by the CLI.
+
 Source: billing plan sections 5.1 (entitlement types), 3.1 (meter keys) and 9
-(what the commands print). The field layout is this client's reading of those
+(what the commands print), and the gateway's `app/api/v1/billing/credits/route.ts`. The field layout is this client's reading of those
 types; `micros` are millionths of the currency unit.
 
 ## Jobs and runs
@@ -456,14 +487,16 @@ types; `micros` are millionths of the currency unit.
 | `GET /api/runtime/runs/{id}` | a run document that gains `job_status` (a top-level field, or under `run`); `POST /api/runtime/runs/{id}/cancel` is the existing cooperative cancel |
 
 ```json
-JOB = {"id": "job_<ulid>", "kind", "status": "queued|running|retrying|succeeded|failed|cancelled|dead",
+JOB = {"id": "job_<ulid>", "kind", "status": "queued|running|succeeded|failed|cancelled|dead",
        "attempts", "progress": {name: number}, "error": null|text,
        "createdAt", "startedAt": null|text, "finishedAt": null|text}
 ```
 
 Source: the gateway's `lib/jobs/member-view.ts` and `lib/api/contract/jobs.ts`,
 and `gateway/openapi/v1.json`, which the contract test checks every `zuano runs`
-request against. The job routes take a CLI login as well as a browser session;
+request against; read again against the core branch at 547f201. The statuses
+are the gateway's six: a job that will be retried is `queued` again, not
+`retrying`. The job routes take a CLI login as well as a browser session;
 a member sees the jobs they started, an administrator all of them, and no job
 input is returned. zuano treats an id that starts with `job_` as a job.
 
@@ -974,9 +1007,10 @@ before any tool is served (exit 4); a snapshot that does not verify is ignored.
 | `POST /api/firewall/upstream-requests` | as above plus `"reason"`; `201` |
 | `GET /api/firewall/changes?status=&upstream=`, `GET /api/firewall/changes/{id}` | `{"changes": [{"id", "upstream", "name", "change", "risk", "status"}]}`, `{"change": {...}}` |
 
-A remote server is reached at `{gateway}/api/fw/{slug}/mcp` with the install id
-in the `X-Zuano-Install` header and no token of its own: the gateway holds the
-server's credentials. A refusal reason `tool_definition_changed` exits 43,
+A remote server is reached at `{gateway}/api/fw/{slug}/mcp` with the caller's
+own Bearer credential; the gateway holds the server's credentials, or, for a
+server a person connects their own account to, answers a call made before that
+with `-32042` (see MCP sessions and URL elicitation). A refusal reason `tool_definition_changed` exits 43,
 `upstream_quarantined` and `registry_server_deleted` exit 44, and
 `denied_by_policy`, `tool_not_pinned` and the other reasons in the exit-code
 table exit 10.
@@ -990,9 +1024,32 @@ unverifiable snapshot, are decided by the gateway.
 Pages the CLI opens (no API call): `/firewall/changes/{id}` and
 `/api/fw/oauth/start?upstream={slug}`.
 
-Source: MCP firewall plan (routes, settings, decisions, exit codes). The
-`/api/firewall/*` wrappers, the session request fields and the page paths are
-this client's decisions.
+The offline file `~/.config/zuano/firewall.yaml` is the `firewall:` and `dlp:`
+sections of the policy document, in the spelling of the gateway's
+`lib/mcp-firewall/policy-section.ts`: snake_case keys, closed objects, the same
+enums and bounds (embedded as `internal/mcpwrap/schema/firewall-sections.json`;
+a test lists the gateway's upstream keys against it, and
+`internal/mcpwrap/testdata/policy-sections.yaml` is the gateway's own example).
+A section written for an organisation therefore loads offline. Offline it
+enforces `on_definition_change` (`block` or `warn`; `auto` is refused),
+`new_tools` (`hidden`, or `auto_read_only` to pin a tool classified read at
+once), `tools.allow`, `tools.deny` and `tools.classify` (globs as the gateway
+reads them: `*` any run, `?` one character), `approvals.people_require_approval`
+(there is no second person offline, so such a call is refused) and the named
+`dlp` profile (a custom regex or dictionary rule, and `secrets`, `pii` and
+`financial` through the redaction rules of session upload; an `approval`
+action blocks, `external` is refused, and an upstream without a profile gets
+the gateway's default: secrets are blocked going out and redacted coming
+back). Settings that act on a gateway session (`tags`, `exposure`, `prompts`,
+`elicitation`, `sampling`, `roots`, `logging`, `instructions`, `token_exchange`,
+`rate`, the timeouts, `resources`, and the organisation-wide keys) are
+validated and have no effect without one. The earlier `inbound: withhold|warn`
+is not a gateway setting and is refused; a result that tells the model what to
+do is always withheld.
+
+Source: MCP firewall plan (routes, settings, decisions, exit codes) and the
+gateway's `lib/mcp-firewall/policy-section.ts`. The `/api/firewall/*` wrappers,
+the session request fields and the page paths are this client's decisions.
 
 ## Evaluations
 
@@ -1003,6 +1060,14 @@ Refusals follow the billing contract (402 `plan_required` and `limit_reached`
 exit 30, `quota_exceeded` and `spend_cap_reached` exit 31, 429 `rate_limited`
 exit 13). An agent principal's spending mutation is refused unless the
 organisation allows it.
+
+The config schema is the gateway's `public/schemas/evals/v1.json`, embedded as
+`internal/evals/schema/evals-v1.json` and pinned by SHA-256
+(`internal/evals/schema/evals-v1.sha256`; `make gen-evals-schema` copies both).
+The pinned copy is the one of ab79806, `649ef54419f5c8850fdd8096789417a13a8eba9b793b548e86c002a3547757a2`,
+which adds the `refusal_classifier` assertion (the gateway's classifier
+without a phrase list; `refusal` keeps the phrase list). The assertion vectors
+in `conformance/assertions.json` are the gateway's own and already include it.
 
 | Request | Carries / answers |
 |---|---|
@@ -1239,8 +1304,14 @@ raw base64url. `content_hash` is `analysis.manifestDigest` and `manifest` the
 sign what the gateway stored. A platform pause on model calls (`403`
 `platform_paused`, with `reason` and `since`) is the gateway's sentence and exits
 1; `zuano models settings` shows the pause and `zuano models resume` ends it. The
-signing and defaults routes are in the gateway's integration branch; the signing
-routes and `POST /api/v1/market/submissions` signature field are not in it yet.
+signing and defaults routes, and the signature field of
+`POST /api/v1/market/submissions`, are in the workflow-market branch (c39bbde).
+It also serves the 12 platform moderation operations under
+`/api/v1/platform/market/` (staff only; zuano calls none of them, and a test
+fails if a command starts to). Their refusals
+`submission_not_found` (`404`) and `submission_not_decidable` (`409`) carry only
+`{error, message}`, so a command that met one would end with 1 and keep the code
+in the JSON.
 
 ## Shadow MCP quarantine
 

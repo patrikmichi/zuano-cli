@@ -76,6 +76,7 @@ Approval required: this call is held until a human decides it.
   call:     stripe create_refund
   risk:     destructive
   expires:  2026-10-16T12:15:00.000Z
+  page:     https://gateway.example/approvals/apr_3f9c4e
 Personal CLI sessions follow the same approvals as agents; only a browser session runs writes unasked.
 Decide it with `zuano approvals approve apr_3f9c4e` (opens the approval page), then collect the result with `zuano approvals wait apr_3f9c4e`, or repeat the call with --wait.
 ```
@@ -108,7 +109,7 @@ JSON-RPC error `-32042` instead of the held-call result:
   "data": {"elicitations": [{"mode": "url", "elicitationId": "eid_1",
                               "url": "https://gateway.example/approvals/apr_1?e=eid_1",
                               "message": "Approve create_refund on stripe (destructive)"}],
-           "relay": {"approval_id": "apr_1", "expires_at": "...", "next": "..."}}}}
+           "approval": {"approval_id": "apr_1", "expires_at": "...", "next": "..."}}}}
 ```
 
 With a person at the keyboard zuano then:
@@ -125,8 +126,27 @@ With a person at the keyboard zuano then:
 A denied approval exits 10 and an expired one 11, as for `approvals wait`.
 Without a person (an agent session, no terminal, or `--json`) zuano opens
 nothing, prints the link and exits 12 straight away, and waits and retries only
-when `--wait` is given. The approval id comes from `data.relay.approval_id`,
+when `--wait` is given. The approval id comes from `data.approval.approval_id`,
 or from the `/approvals/<id>` path of the link.
+
+Every request to an MCP endpoint carries `MCP-Protocol-Version: 2025-11-25` and
+`Accept: application/json, text/event-stream`. A gateway that does not see the
+version reads the request as an older revision and answers with a result in
+place of `-32042`. A call the gateway answers as an event stream (progress, or a
+request of the upstream server) is read to its last message: progress is printed
+as `progress 2/4: message` lines on stderr (not with `--json`), and a request in
+the stream is answered on the same endpoint and session, declining an
+elicitation and refusing sampling.
+
+### Connecting your own account
+
+A server the firewall governs may need each person's own account. The call then
+ends with `-32042` and one link, `/api/fw/oauth/start?upstream=<slug>`, in place
+of an approval. zuano prints it (host highlighted, opened only when it is a page
+on your gateway and you confirm), waits when a person is there or `--wait` is
+given by polling `GET /api/fw/oauth/pending` until the server is no longer
+listed, and repeats the call once. Without a wait it prints the link and exits
+72 (`account_not_connected`); a wait that ends first exits 72 as well.
 
 ## Exit statuses
 
@@ -138,6 +158,7 @@ or from the `/approvals/<id>` path of the link.
 | 10 | denied, or turned off by policy (`reason: "policy_off"`) |
 | 11 | expired (nobody decided in 15 minutes) |
 | 12 | still pending: the call was held and not waited for, or the timeout ended first |
+| 72 | the call needs your own account connected to the server first and it was not connected in time |
 | 13 | a metered quota is used up (`429` with `error: "quota_exceeded"`) |
 | 14 | a passkey step-up is needed and nobody could give it; see [step-up.md](step-up.md) |
 | 30 to 33 | the plan does not allow it; see [billing.md](billing.md#exit-statuses) |

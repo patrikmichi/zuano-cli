@@ -37,6 +37,7 @@ const (
 	exitVersionNotWithdrawn  = 69
 	exitVerificationFailed   = 70
 	exitHandleUnavailable    = 71
+	exitAccountNotConnected  = 72
 )
 
 // exitCodeEntry is one row of the exit-code registry.
@@ -95,4 +96,5 @@ var exitRegistry = []exitCodeEntry{
 	{exitVersionNotWithdrawn, "version_not_withdrawable"},
 	{exitVerificationFailed, "verification_failed"},
 	{exitHandleUnavailable, "handle_unavailable"},
+	{exitAccountNotConnected, "account_not_connected"},
 }

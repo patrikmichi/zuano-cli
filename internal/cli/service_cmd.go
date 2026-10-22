@@ -282,6 +282,7 @@ func sendToolCall(parent context.Context, c *client.Client, service, tool string
 		"params": map[string]interface{}{
 			"name":      tool,
 			"arguments": arguments,
+			"_meta":     map[string]interface{}{"progressToken": mcpProgressToken},
 		},
 	})
 	if err != nil {
@@ -295,7 +296,11 @@ func sendToolCall(parent context.Context, c *client.Client, service, tool string
 	}
 	defer resp.Body.Close()
 
-	respBody, err := readLimitedResponse(resp.Body, maxToolCallResponseBytes)
+	var progress io.Writer
+	if !jsonOut {
+		progress = os.Stderr
+	}
+	respBody, err := readMCPResponse(ctx, c, path, resp, maxToolCallResponseBytes, progress)
 	if err != nil {
 		return nil, fmt.Errorf("read response: %w", err)
 	}

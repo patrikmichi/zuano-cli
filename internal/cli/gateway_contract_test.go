@@ -135,7 +135,7 @@ func TestContract_PendingMCPResult(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := pendingFromResult(env.Result)
-	if p == nil || p.ApprovalID != "apr_1" || p.Risk != "destructive" || p.Service != "stripe" || p.Tool != "create_refund" {
+	if p == nil || p.ApprovalID != "apr_1" || p.Risk != "destructive" || p.Service != "stripe" || p.Tool != "create_refund" || p.ApprovalURL != "https://gateway.example/approvals/apr_1" {
 		t.Fatalf("pending = %+v", p)
 	}
 }

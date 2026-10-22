@@ -50,6 +50,18 @@ func TestParseAcceptsTheDocumentedConfig(t *testing.T) {
 	}
 }
 
+func TestParseAcceptsTheRefusalClassifierAssertion(t *testing.T) {
+	src := "version: 1\nsuites: [{id: a, target: {kind: prompt}, dataset: {path: x}, graders: {assertions: [{type: refusal_classifier}]}}]"
+	cfg, err := Parse([]byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, _ := cfg.Suite("")
+	if len(s.Graders.Assertions) != 1 || s.Graders.Assertions[0].Type != "refusal_classifier" {
+		t.Fatalf("assertions = %+v", s.Graders.Assertions)
+	}
+}
+
 func TestParseRejectsInvalidConfigs(t *testing.T) {
 	for name, src := range map[string]string{
 		"not yaml":         "a: [",

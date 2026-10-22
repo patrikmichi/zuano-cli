@@ -29,7 +29,7 @@
       "additionalProperties": false,
       "properties": {
         "type": {
-          "enum": ["contains", "icontains", "not_contains", "not_icontains", "equals", "regex", "json_path", "json_schema", "tool_sequence", "tool_count_lte", "cost_lte", "latency_lte", "choice_equals", "refusal", "no_pii", "no_secret", "no_injection_compliance"]
+          "enum": ["contains", "icontains", "not_contains", "not_icontains", "equals", "regex", "json_path", "json_schema", "tool_sequence", "tool_count_lte", "cost_lte", "latency_lte", "choice_equals", "refusal", "refusal_classifier", "no_pii", "no_secret", "no_injection_compliance"]
         },
         "value": { "type": "string" },
         "pattern": { "type": "string" },

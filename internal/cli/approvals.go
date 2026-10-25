@@ -43,25 +43,50 @@ var approvalStatuses = []string{"pending", "approved", "denied", "executed", "fa
 
 // approvalRecord mirrors the approval object of the gateway's approvals API.
 type approvalRecord struct {
-	ApprovalID   string `json:"approval_id"`
-	Status       string `json:"status"`
-	Service      string `json:"service"`
-	Tool         string `json:"tool"`
-	Risk         string `json:"risk"`
-	ArgsDigest   string `json:"args_digest"`
-	Requester    string `json:"requester"`
-	Client       string `json:"client"`
-	Reason       string `json:"reason"`
-	RuleID       string `json:"rule_id"`
-	CreatedAt    string `json:"created_at"`
-	ExpiresAt    string `json:"expires_at"`
-	DecidedAt    string `json:"decided_at"`
-	Approver     string `json:"approver"`
-	GrantMinutes int    `json:"grant_minutes"`
-	Note         string `json:"note"`
-	ExecutedAt   string `json:"executed_at"`
+	ApprovalID string `json:"approval_id"`
+	Status     string `json:"status"`
+	Service    string `json:"service"`
+	Tool       string `json:"tool"`
+	Risk       string `json:"risk"`
+	ArgsDigest string `json:"args_digest"`
+	Requester  string `json:"requester"`
+	Client     string `json:"client"`
+	Reason     string `json:"reason"`
+	RuleID     string `json:"rule_id"`
+	CreatedAt  string `json:"created_at"`
+	ExpiresAt  string `json:"expires_at"`
+	DecidedAt  string `json:"decided_at"`
+	Approver   string `json:"approver"`
+	// DecidedVia is how the decision was made: a passkey in a dashboard or
+	// approval session, a chat answer, or an answer inside the agent session.
+	DecidedVia   *decidedVia `json:"decided_via"`
+	GrantMinutes int         `json:"grant_minutes"`
+	Note         string      `json:"note"`
+	ExecutedAt   string      `json:"executed_at"`
 	// Notified says where the gateway sent the approval and how far it got.
 	Notified []notifiedChannel `json:"notified"`
+}
+
+type decidedVia struct {
+	Method  string `json:"method"`
+	Session string `json:"session"`
+	Channel string `json:"channel"`
+}
+
+// String names the decision path in one phrase: "passkey, approval session"
+// or "passkey, slack".
+func (d *decidedVia) String() string {
+	if d == nil || d.Method == "" {
+		return ""
+	}
+	parts := []string{textsafe.Clean(d.Method)}
+	if d.Session != "" {
+		parts = append(parts, textsafe.Clean(d.Session)+" session")
+	}
+	if d.Channel != "" {
+		parts = append(parts, textsafe.Clean(d.Channel))
+	}
+	return strings.Join(parts, ", ")
 }
 
 type notifiedChannel struct {
@@ -321,6 +346,9 @@ func printApproval(out io.Writer, a approvalRecord) {
 	if a.Approver != "" {
 		fmt.Fprintf(out, "Decided:   %s by %s\n", a.DecidedAt, a.Approver)
 	}
+	if via := a.DecidedVia.String(); via != "" {
+		fmt.Fprintf(out, "Via:       %s\n", via)
+	}
 	if a.GrantMinutes > 0 {
 		fmt.Fprintf(out, "Grant:     writes to %s for %d minutes\n", a.Service, a.GrantMinutes)
 	}
@@ -532,11 +560,15 @@ func decisionSummary(a approvalRecord) string {
 	if a.Approver != "" {
 		who = a.Approver
 	}
+	via := ""
+	if v := a.DecidedVia.String(); v != "" {
+		via = " (" + v + ")"
+	}
 	switch a.Status {
 	case "approved", "executed":
-		return a.Status + " by " + who
+		return a.Status + " by " + who + via
 	case "denied":
-		return "denied by " + who
+		return "denied by " + who + via
 	}
 	return a.Status
 }

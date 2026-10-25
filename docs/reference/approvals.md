@@ -198,6 +198,16 @@ own.
 | `zuano approvals deny <id> [--no-browser] [--wait] [--wait-timeout T] [--json]` | `GET /api/approvals/{id}`, then opens `<gateway>/approvals/{id}?decision=deny` |
 | `zuano approvals wait <id> [--wait-timeout SECONDS] [--json]` | `POST /api/approvals/{id}/await`, repeated while the status is `pending` |
 
+A decided approval shows how it was decided on a `Via:` line, from the
+gateway's `decided_via`: `passkey, approval session` (a passkey in the
+approval page's browser session), `passkey, dashboard session`, `passkey, slack`
+or `passkey, teams` (a chat answer confirmed with a passkey), or the method the
+gateway names for an answer given inside the agent session. `approve --wait`
+and `deny --wait` print it after the approver. The gateway accepts a decision
+only from a signed-in browser (`POST /api/approvals/{id}/challenge` and
+`/decide` answer `403` `browser_session_required` to any request that carries an
+`Authorization` header), so no zuano command can post one.
+
 `list` and `show` with `--json` print the response body unchanged. `wait
 --wait-timeout` takes seconds or a duration (`0` asks once; the default is 300
 seconds). The root `--timeout` limits a single request.

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -65,6 +66,33 @@ func TestRefusalReasonsMapToRegisteredCodes(t *testing.T) {
 		err := policyRefusal([]byte(`{"reason":"`+reason+`","message":"m"}`), nil)
 		if exitCodeOf(err) != want {
 			t.Errorf("%s exits %d, want %d", reason, exitCodeOf(err), want)
+		}
+	}
+}
+
+func TestRouteRefusalMapsUseRegisteredCodes(t *testing.T) {
+	registered := map[int]bool{}
+	for _, e := range exitRegistry {
+		registered[e.code] = true
+	}
+	for name, codes := range map[string]map[string]int{"refusalExit": refusalExit, "kb": kbRefusals, "domains": domainRefusals, "firewall": firewallRefusalExit} {
+		for refusal, code := range codes {
+			if !registered[code] {
+				t.Errorf("%s: %s maps to unregistered code %d", name, refusal, code)
+			}
+		}
+	}
+	// The knowledge base refusal is in the gateway's document; the domain
+	// refusals join it once the core branch is on the integration branch.
+	enum := vendoredRefusalCodes(t)
+	for refusal := range kbRefusals {
+		if !slices.Contains(enum, refusal) {
+			t.Errorf("%s is not in the OpenAPI refusal codes", refusal)
+		}
+	}
+	for _, refusal := range []string{"space_exists", "page_exists", "under_hold", "version_conflict", "browser_session_required", "expired", "already_decided", "challenge_invalid", "digest_mismatch", "passkey_verification_failed", "passkey_required"} {
+		if !slices.Contains(enum, refusal) {
+			t.Errorf("%s is documented here but not in the OpenAPI refusal codes", refusal)
 		}
 	}
 }

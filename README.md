@@ -501,6 +501,9 @@ a gateway.
 | `zuano-connector enroll\|run\|status\|check\|rotate\|pause\|resume\|update\|version` | gateway | The agent that runs inside your network and serves the targets its local config names; a separate binary ([docs/reference/connector.md](docs/reference/connector.md)) |
 | `zuano firewall …`, `zuano mcp wrap\|pins\|changes`, `zuano sync --firewall` | gateway or local | Route MCP servers through the firewall ([docs/reference/firewall.md](docs/reference/firewall.md)) |
 | `zuano agent rollback [manifest-entry-id]` | local | Revert to a prior agent manifest entry |
+| `zuano kb search\|get\|write\|link\|spaces\|pages\|sources\|status\|reindex\|usage\|export\|import` | gateway | Search, read and write the organisation's knowledge base; an agent credential's writes are held for approval and exit 12 ([docs/reference/kb.md](docs/reference/kb.md)) |
+| `zuano org domains list\|add\|verify\|remove` | gateway | Claim and verify the organisation's email domains ([docs/reference/org.md](docs/reference/org.md)) |
+| `zuano builder sessions files list\|upload\|download\|rm` | gateway | Manage the files in an SDK session's folder ([docs/reference/builder.md](docs/reference/builder.md)) |
 
 ### Diagnostics and recovery
 

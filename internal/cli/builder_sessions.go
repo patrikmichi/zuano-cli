@@ -168,7 +168,7 @@ func builderSessionsCmd() *cobra.Command {
 		Use:   "sessions",
 		Short: "Create and manage sessions for end users",
 	}
-	cmd.AddCommand(bsCreateCmd(), bsListCmd(), bsShowCmd(), bsUpdateCmd(), bsDeleteCmd(), bsHistoryCmd(), bsToolkitsCmd(), bsTokenCmd(), bsRevokeTokenCmd())
+	cmd.AddCommand(bsCreateCmd(), bsListCmd(), bsShowCmd(), bsUpdateCmd(), bsDeleteCmd(), bsHistoryCmd(), bsToolkitsCmd(), bsTokenCmd(), bsRevokeTokenCmd(), bsFilesCmd())
 	return cmd
 }
 

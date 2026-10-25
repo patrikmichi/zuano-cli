@@ -76,6 +76,15 @@ Under `zuano builder`, because `zuano sessions` is your own browser and CLI sess
 | `zuano builder sessions toolkits <ses_id>` | which services the session may use and whether each is connected |
 | `zuano builder sessions token <ses_id> [--expires-in 1h]` | a token for an agent, printed once on standard output (at most 24h) |
 | `zuano builder sessions revoke-token <ses_id> <token_id>` | |
+| `zuano builder sessions files list <ses_id> [--limit N] [--cursor C]` | the files in the session's folder, newest first (`GET /sessions/{id}/files`) |
+| `zuano builder sessions files upload <ses_id> <path>... [--name N]` | `POST /sessions/{id}/files` for a signed address, a `PUT` of the bytes straight to the object store, then `POST /sessions/{id}/files/{fileId}/complete`; the file is scanned before it can be downloaded |
+| `zuano builder sessions files download <ses_id> <file_id> [-o, --output PATH] [--force]` | `GET /sessions/{id}/files/{fileId}` for a short-lived address; a file still being scanned or one the scan rejected is a `409` |
+| `zuano builder sessions files rm <ses_id> <file_id>...` | `DELETE /sessions/{id}/files/{fileId}` |
+
+The session routes accept a project server key or a session token and no
+person's login, so the files commands need `ZUANO_API_KEY` set to a project
+server key (a session token reaches only its own session). The files go with
+the session and are what `run_code` in that session reads and writes.
 | `zuano builder session-configs list` | saved policies a session can use by id |
 | `zuano builder session-configs show <scf_id>` | one, as JSON |
 | `zuano builder session-configs create --name N [policy flags]` | save a policy |
@@ -93,7 +102,7 @@ follows the kind rather than the code:
 
 | Status | Refusals |
 |---|---|
-| 1 | a request that is wrong or conflicts: `auth_config_required`, `auth_config_invalid`, `auth_config_disabled`, `account_config_mismatch`, `policy_widening`, `request_state_invalid`, `idempotency_key_reused`, `idempotency_in_progress`, `refresh_requires_custom_app`, `callback_not_allowed`, `zdr_conflict`, `config_conflict`, an unknown id |
+| 1 | a request that is wrong or conflicts: `auth_config_required`, `auth_config_invalid`, `auth_config_disabled`, `account_config_mismatch`, `policy_widening`, `request_state_invalid`, `idempotency_key_reused`, `idempotency_in_progress`, `refresh_requires_custom_app`, `callback_not_allowed`, `zdr_conflict`, `config_conflict`, the session file refusals `payload_too_large`, `validation_error` and `conflict` (a file not yet clean), an unknown id |
 | 10 | a denial: the key may not do this (`approval_unavailable` and other 403) |
 | 12 | an agent session's write is held for approval |
 | 13 | rate limited |

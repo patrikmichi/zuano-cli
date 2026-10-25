@@ -27,20 +27,24 @@ so a fixture changes only when a route's shape does.
 The gateway's OpenAPI document (`gateway/openapi/v1.json`) is vendored as
 `internal/cli/testdata/contracts/openapi-v1.json`; `ZUANO_GATEWAY_OPENAPI`
 names the gateway's own copy. The vendored copy is the integration branch's
-document (eaf90e3) with two sets of operations added because the integration
-branch does not have them yet: the four `/runs` operations under the
-`/api/runtime` server from the workflows branch (ae0cbec), and the 17
-`/firewall` operations under the `/api` server from the events and plugins
-branch (78722ba), with their refusal codes added to `RefusalPlain`. Regenerate
-it from the integration document once those branches are merged into it; it
-then needs no merging. An operation names its own `servers` entry when it is
-not under `/api/v1`, and the test follows it. The contract test sends every
-auth-config, connected-account, connect-link, `zuano runs`, `zuano market` and
-`zuano firewall` command to a recording server and checks each request's
-method and path against the document, its query parameters against the
-declared ones, and its body against the request schema (unknown fields where
-the schema is closed, missing required fields), and that every refusal code the
-CLI gives a hint is in the document's refusal codes.
+document as it stands (411b36e), unedited: the run, firewall, knowledge base,
+approval and SDK session routes are all in it, so nothing is merged in by
+hand. Regenerate it by copying `gateway/openapi/v1.json` from the integration
+branch. An operation names its own `servers` entry when it is not under
+`/api/v1`, and the test follows it. The contract tests send every
+auth-config, connected-account, connect-link, `zuano runs`, `zuano market`,
+`zuano firewall`, `zuano kb` and `zuano builder sessions files` command to a
+recording server and check each request's method and path against the
+document, its query parameters against the declared ones, and its body against
+the request schema (unknown fields where the schema is closed, missing required
+fields), and that every refusal code the CLI gives a hint is in the document's
+refusal codes. The knowledge base test also fails for any `/kb` operation no
+command sends, except the capture and HTML render routes, which have no
+command. Two sets of routes the CLI calls are on feature branches and not in
+the integration document yet: `GET /kb/spaces/{space}/export` and
+`POST /kb/spaces/{space}/import` (events and plugins branch), and `/domains`
+(core branch). A test fails when they appear in the vendored document, so the
+contract tests get extended with them.
 
 A signing vector for the publisher signature is written by the gateway's own
 signing code: `scripts/publisher-signing-vector.ts` regenerates
@@ -110,7 +114,7 @@ the constants in the code, both ways.
 | 22 | `session_too_large` | `413` on capture |
 | 23 | `eval_inconclusive` | |
 | 24 | `eval_threshold_not_met` | |
-| 25 | `draft_conflict` | `409` `draft_conflict`: the workflow draft changed since the revision the edit was made on |
+| 25 | `draft_conflict` | `409` `draft_conflict`: the workflow draft changed since the revision the edit was made on; also `409` `version_conflict`: a knowledge base page changed since the version the write was made on |
 | 30 | `plan_required` | also `limit_reached`, `verification_required` |
 | 31 | `quota_exceeded` | also `spend_cap_reached`, daily caps |
 | 32 | `billing_unavailable` | |
@@ -137,7 +141,7 @@ the constants in the code, both ways.
 | 67 | `review_not_eligible` | `403` `review_not_eligible`: the organisation has fewer than three successful live runs, is not an admin or the installer, or is the publisher |
 | 68 | `notice_too_short` | `422` `notice_too_short`: an end-of-life date needs 7 days of notice for a free listing, 90 for a paid one, and must be in the future |
 | 69 | `version_not_withdrawable` | `409` `version_not_published` (on a deprecate or yank) or `version_already_yanked` |
-| 70 | `verification_failed` | `400` `invalid_token` or `409` `verification_expired` on the publisher verification routes, or a domain check that found no proof |
+| 70 | `verification_failed` | `400` `invalid_token` or `409` `verification_expired` on the publisher verification routes, or a domain check that found no proof; also `409` `domain_unverified` on an organisation domain's verify |
 | 71 | `handle_unavailable` | `409` `handle_taken` or `handle_reserved` |
 | 72 | `account_not_connected` | `-32042` whose link is `/api/fw/oauth/start?upstream=<slug>`: the person has not connected their own account to a firewalled server, and no `--wait` was given or the wait ended first |
 
@@ -146,7 +150,17 @@ SDK builder and catalog refusal codes map onto these by class: `400`, `409` and
 or 31. The run refusals `not_running` and `message_limit_reached` (`409`) and
 the 15 firewall refusals (see [firewall.md](firewall.md#refusals)) are of that
 class and take no number of their own: `member_requests_off` (`403`) ends with
-10, the others with 1. An agent run that stops at `output_limit` or
+10, the others with 1. So do the knowledge base refusals `space_exists`,
+`page_exists` and `under_hold` (`409`), `not_found`, `validation_error` and
+`payload_too_large`; `version_conflict` ends with 25. The organisation domain
+refusals `invalid_domain`, `domain_exists`, `domain_limit`,
+`domain_verified_elsewhere` and `dns_unavailable` end with 1 and
+`domain_unverified` with 70. The approval decision refusals
+(`browser_session_required`, `expired`, `already_decided`, `challenge_invalid`,
+`digest_mismatch`, `passkey_verification_failed`, `passkey_required`) belong to
+the browser and no command meets them; by class a `403` ends with 10 and the
+rest with 1. A write by an agent credential to the knowledge base is held for
+approval and ends with 12 (`pending_approval`). An agent run that stops at `output_limit` or
 `cost_budget` is a failed run and ends `zuano runs wait` with 1. A
 passkey step-up, including `firewall_pin_approve` and `firewall_release`, ends
 with 14 when nobody can give it.
@@ -323,12 +337,22 @@ install report are this client's decisions.
 | Route | Use |
 |---|---|
 | `GET /api/approvals?status=S` | unchanged: `{"approvals": [...]}` |
-| `GET /api/approvals/{id}` | unchanged: `{"approval": {...}, "args_preview": ...}`; Bearer allowed |
+| `GET /api/approvals/{id}` | `{"approval": {...}, "args_preview": ...}`; Bearer allowed. The approval carries `decided_via` once decided: `{"method", "session"?: "dashboard\|approval", "channel"?: "slack\|teams"}` (a passkey, with the kind of browser session it was made in or the chat channel, or an answer given inside the agent session). zuano shows it as `Via:` and in the summary `zuano approvals approve --wait` prints |
 | `POST /api/approvals/{id}/await` | unchanged |
 | page `GET /approvals/{id}?decision=approve\|deny` | where a person decides with a passkey; zuano opens it and never posts a decision |
 
-zuano calls no `approve`, `deny`, `challenge` or `decide` route. The gateway
-must reject a Bearer decision (risk policy plan 5.3).
+`POST /api/approvals/{id}/approve` and `/deny` are gone (404). `POST
+/api/approvals/{id}/challenge` and `/decide` refuse any request that carries an
+`Authorization` header with `403` `browser_session_required`, so a token cannot
+decide; they answer only a signed-in browser, which is the approval page.
+`POST /api/approvals/link` (the emailed link) takes only `decision=review`: it
+opens a read-only review for the person the link was sent to, and a decision is
+made on the approval page. zuano calls none of these routes, and a test fails
+if a command starts to. The refusals of the decision routes (`expired`,
+`already_decided`, `challenge_invalid`, `digest_mismatch`,
+`passkey_verification_failed`, `passkey_required`, `browser_session_required`)
+are the browser's; if a command met one, a `403` would end with 10 and the
+others with 1, by class.
 
 ## MCP sessions and URL elicitation
 
@@ -340,7 +364,7 @@ must reject a Bearer decision (risk policy plan 5.3).
 | `tools/call` error `-32042` for an account that is not connected | the same envelope with one `elicitations[]` entry whose `url` is `/api/fw/oauth/start?upstream=<slug>` and no `approval`; `message` is `Connect your account to "<slug>" to use it.` Fixture: `mcp-connect-elicitation.json`. zuano opens the page (same origin only), polls `GET /api/fw/oauth/pending` (`{"connections": [{"slug", "title", "connectUrl"}]}`, the servers still to connect) until the slug is gone, then repeats the call once; exit 72 when it does not wait |
 | `tools/call` answered as `text/event-stream` | sent only when the request accepts it and the upstream reports progress or asks the client something; frames are `event: message` with `data:` one JSON-RPC message, `: waiting` comments between them. `notifications/progress` carries the `progressToken` of the request (zuano sends `_meta.progressToken: "zuano-call"`), `progress`, `total?` and `message?`, and zuano prints it as a line on stderr; the last frame is the call's own result or error. Fixture: `mcp-firewall-stream.txt` |
 | a request in that stream (`"id": "fwr_..."`, `elicitation/create`, `sampling/createMessage`, `roots/list`, `ping`) | answered by a `POST` to the same endpoint and session with `{"jsonrpc": "2.0", "id": "fwr_...", "result": ...}` (`202`); the id must be the one sent. zuano declines an elicitation (`{"action": "decline"}`), answers `roots/list` with no roots and `ping` with `{}`, and refuses sampling with `-32601` |
-| held call result (`structuredContent`) | `status: "pending_approval"`, `approval_id`, `service`, `tool`, `risk`, `args_digest`, `expires_at` and `approval_url` (the page the approver decides on). The text names `await_approval` and `check_approval`. Fixture: `mcp-pending-approval.json` |
+| held call result (`structuredContent`) | `status: "pending_approval"`, `approval_id`, `service`, `tool`, `risk`, `args_digest` and `expires_at`; the gateway names no page, so zuano builds it from the gateway's origin and the id (`/approvals/<id>`) when it opens one. The text names `await_approval` and `check_approval`. Fixture: `mcp-pending-approval.json` |
 | `GET /api/approvals/{id}` | polled for the decision, as for `approvals wait` |
 | `GET /api/org/{org}/connect-links` | `{"claude_ai": {"url", "directory_url"?, "endpoint", "steps": [text]}, "chatgpt": {"endpoint", "auth": text, "admin_url": null\|text, "steps": [text]}}`; org admins only. Fixture: `connect-links.json` |
 
@@ -1367,3 +1391,71 @@ decisions.
 `hash` is the first 8 bytes, in hex, of the SHA-256 of the entry as the CLI reads
 it: the server's JSON (keys sorted, no whitespace) for a JSON config, its TOML
 tables for Codex. A listed entry whose local hash differs is not touched.
+
+## Knowledge base
+
+`/api/v1/kb`; the OpenAPI operations are `kb.*` and the commands are in
+[kb.md](kb.md). A page is `{id, spaceId, spaceSlug, spaceKind, slug, title,
+frontmatter, version, status, ownerUserId, reviewBy, verifiedAt, verifiedBy,
+stale, role, updatedAt}`, with `markdown`, `contentHash` and `versionCreatedAt`
+when read.
+
+| Request | Carries / answers |
+|---|---|
+| `GET /kb/search?q=&space=&limit=` | `{"hits": [{"pageId", "sourceDocId", "url", "spaceSlug", "slug", "title", "version", "heading", "snippet", "score", "verifiedAt", "stale"}], "mode": "hybrid\|full_text", "reason"}`; `limit` 1 to 25 |
+| `GET /kb/search/status`, `POST /kb/search/reindex`, `GET /kb/usage` | the ranking state, `202 {"queued": true}`, and per-space counts; the last two for admins |
+| `GET /kb/spaces`, `POST /kb/spaces`, `GET`/`PATCH /kb/spaces/{space}` | `{"items": [SPACE]}`; the body is `{slug, name, default_access?, review_days?}` |
+| `GET /kb/spaces/{space}/graph`, `GET /kb/spaces/{space}/routines` | the readable pages and their wikilinks; the workflows and schedules the pages link to |
+| `GET`/`PUT`/`DELETE /kb/spaces/{space}/members` | `{"items": [{"principalKind", "principal", "role"}]}`; the body is `{principal_kind: "user\|group", principal, role}`, and `DELETE` takes the first two as query parameters; `204` |
+| `GET`/`POST /kb/spaces/{space}/pages`, `GET /kb/spaces/{space}/pages/{slug}[?version=]` | the pages of a space; `POST {slug, markdown, title?}` answers `201` |
+| `GET /kb/pages/{id}[?version=]`, `PATCH /kb/pages/{id}` | a page; `PATCH {status: "draft\|published\|archived"}` |
+| `GET`/`POST /kb/pages/{id}/versions` | the versions; `POST {markdown, expected_version, title?}`; a page that moved on answers `409` `version_conflict` (exit 25) |
+| `GET /kb/pages/{id}/backlinks`, `GET /kb/pages/{id}/runs` | the linking pages; the skills, workflows and schedules a page links to |
+| `POST /kb/pages/{id}/verify`, `POST /kb/pages/{id}/promote` | `{}`; `{space}` answers `201` |
+| `GET`/`PUT`/`DELETE /kb/pages/{id}/grants` | as the space members, with the role `none` allowed on `PUT` |
+| `POST`/`DELETE /kb/pages/{id}/run-links` | `{target: "skill:<id>\|workflow:<id>\|schedule:<id>"}`; `DELETE` takes `target` as a query parameter; `204` |
+| `GET`/`POST /kb/sources`, `GET`/`PATCH`/`DELETE /kb/sources/{id}`, `POST /kb/sources/{id}/sync`, `GET /kb/sources/{id}/documents` | indexed tools, for admins; `POST {kind, name, space, config, schedule?}`; `DELETE` answers `409` `under_hold` for documents under legal hold |
+| `GET /kb/documents/{id}` | a document indexed from another tool, for one of its readers; the read is audited |
+| `GET /kb/spaces/{space}/export`, `POST /kb/spaces/{space}/import` | `{"filename", "contentBase64"}`; `{"contentBase64"}` (at most 21 MiB encoded) answers `{"created", "updated", "unchanged", "skipped": [name]}`. Not in the integration OpenAPI document yet |
+
+An agent credential is refused on every one of these routes with `403`
+(`Agent credentials cannot use this route`); its knowledge base access is the
+tools `kb_search`, `kb_get`, `kb_write` and `kb_link` on `POST
+/api/gateway/mcp`, whose writes are held for approval (a `pending_approval`
+result, exit 12). Source: knowledge base plan, KB1 to KB15. `capture` (`POST
+/kb/captures`) and the HTML render (`GET /kb/pages/{id}/html`) have no command.
+
+## Organisation domains
+
+`/api/v1/domains`, owners and admins from a signed-in session or token; the
+commands are in [org.md](org.md). The routes are on the core branch and not in
+the integration OpenAPI document yet.
+
+| Request | Carries / answers |
+|---|---|
+| `GET /domains` | `{"domains": [DOMAIN]}` |
+| `POST /domains` | `{"domain"}` answers `201` `{"domain": DOMAIN}`; `invalid_domain`, `domain_exists`, `domain_limit` |
+| `POST /domains/{id}/verify` | `{"domain": DOMAIN}`; `domain_unverified` (`409`, exit 70), `domain_verified_elsewhere` (`409`), `dns_unavailable` (`503`) |
+| `DELETE /domains/{id}` | `204` |
+
+`DOMAIN` is `{"id", "domain", "status": "pending\|verified", "verification": {"type": "TXT", "name", "value"}, "verified_at", "checked_at", "created_at"}`.
+
+## SDK session files
+
+`GET`/`POST /api/v1/sessions/{id}/files`, `GET`/`DELETE
+/api/v1/sessions/{id}/files/{fileId}` and `POST
+/api/v1/sessions/{id}/files/{fileId}/complete`, for a project server key or a
+session token (the commands are `zuano builder sessions files`, in
+[builder.md](builder.md)). A file is `{"id", "name", "contentType",
+"sizeBytes", "state", "createdAt", "expiresAt"}`.
+
+| Request | Carries / answers |
+|---|---|
+| `GET .../files?limit=&cursor=` | `{"items": [FILE], "nextCursor"?}`, newest first |
+| `POST .../files` | `{"name", "contentType", "size", "sha256"?}` answers `201` `{"fileId", "upload": {"url", "method", "headers", "expiresAt"}}`; zuano sends the bytes to `upload.url` with that method and those headers |
+| `POST .../files/{fileId}/complete` | `{}` answers `{"file"}`; the file is scanned before it can be downloaded |
+| `GET .../files/{fileId}` | `{"file", "download": {"url", "expiresAt"}}`; `409` `conflict` until the file is clean |
+| `DELETE .../files/{fileId}` | `204` |
+
+The refusals `payload_too_large`, `validation_error` and `conflict` end with 1;
+`plan_required` and `quota_exceeded` with 30 and 31.

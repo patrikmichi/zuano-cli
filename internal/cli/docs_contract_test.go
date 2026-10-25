@@ -87,3 +87,11 @@ func TestApprovalsTrustsAreDocumented(t *testing.T) {
 func TestQuarantineCommandsAreDocumented(t *testing.T) {
 	assertDocumented(t, agentsQuarantineCmd(), "zuano agents quarantine", "../../docs/reference/agents.md")
 }
+
+func TestKbReferenceDocumentsEveryCommandAndFlag(t *testing.T) {
+	assertDocumented(t, KbCmd(), "zuano kb", "../../docs/reference/kb.md")
+}
+
+func TestOrgReferenceDocumentsEveryCommandAndFlag(t *testing.T) {
+	assertDocumented(t, OrgCmd(), "zuano org", "../../docs/reference/org.md")
+}

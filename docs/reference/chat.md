@@ -11,7 +11,7 @@ decides and never edits the routes.
 | Command | Request |
 |---|---|
 | `zuano chat status [--json]` | `GET /api/me/chat-identities`, and for administrators `GET /api/admin/chat/installations` and `/reachability` |
-| `zuano chat link slack\|teams [--no-browser]` | none: opens `/api/chat/link/{provider}/start` |
+| `zuano chat link slack\|teams [--tenant ID] [--no-browser]` | none: opens `/api/chat/link/{provider}/start`; `--tenant` (teams only) is the Microsoft Entra tenant to sign in to when the organisation connected more than one, sent as `?tenant=`; without it the gateway uses the first connected tenant, and answers `409` for a tenant the organisation did not connect |
 | `zuano approvals show <id>` | `GET /api/approvals/{id}`; prints where it was sent (`notified`) and how far it got |
 | `zuano approvals routes list\|show <id>` | `GET /api/admin/approval-routes[/{id}]` |
 | `zuano approvals routes test --service S --tool T --risk R [--source agent\|automation\|cli\|run_code] [--requester EMAIL]` | `POST /api/admin/approval-routes/test` |

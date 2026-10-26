@@ -133,6 +133,16 @@ func TestChatLink(t *testing.T) {
 	if _, err := runCommand(t, ChatCmd(), "link", "discord"); err == nil {
 		t.Error("an unknown app was accepted")
 	}
+	tenant := "0A1B2C3D-0000-4000-8000-123456789ABC"
+	if out, err := runCommand(t, ChatCmd(), "link", "teams", "--tenant", tenant, "--no-browser"); err != nil || !strings.Contains(out, "/api/chat/link/teams/start?tenant=0a1b2c3d-0000-4000-8000-123456789abc") {
+		t.Errorf("teams tenant: %q %v", out, err)
+	}
+	if _, err := runCommand(t, ChatCmd(), "link", "slack", "--tenant", tenant); err == nil || !strings.Contains(err.Error(), "teams only") {
+		t.Errorf("a tenant on slack: %v", err)
+	}
+	if _, err := runCommand(t, ChatCmd(), "link", "teams", "--tenant", "acme"); err == nil || !strings.Contains(err.Error(), "not a tenant id") {
+		t.Errorf("a tenant that is not a GUID: %v", err)
+	}
 	t.Setenv("ZUANO_AGENT", "1")
 	if _, err := runCommand(t, ChatCmd(), "link", "slack"); exitCodeOf(err) != 14 {
 		t.Errorf("agent: exit %d, %v", exitCodeOf(err), err)

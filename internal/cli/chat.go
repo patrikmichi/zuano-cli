@@ -3,8 +3,11 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
 	"text/tabwriter"
 
@@ -15,6 +18,8 @@ import (
 	"github.com/patrikmichi/zuano-cli/internal/config"
 	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
+
+var entraTenant = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 var chatProviders = map[string]string{"slack": "Slack", "teams": "Microsoft Teams"}
 
@@ -134,6 +139,7 @@ func chatName(provider string) string {
 func chatLinkCmd() *cobra.Command {
 	var f approvalFlags
 	var noBrowser bool
+	var tenant string
 	cmd := &cobra.Command{
 		Use:   "link slack|teams",
 		Short: "Open the page that links your Slack or Teams account to your account",
@@ -150,9 +156,20 @@ prints the link and a QR code for your phone.`,
 			if config.AgentMode() {
 				return &ExitError{Code: client.ExitStepUp, Msg: "linking a chat account is confirmed by a person with a passkey; it is refused while ZUANO_AGENT is set"}
 			}
-			return openDecisionPage(cmd, f.gatewayURL, "/api/chat/link/"+provider+"/start", noBrowser, "Link your "+chatName(provider)+" account there")
+			start := "/api/chat/link/" + provider + "/start"
+			if tenant != "" {
+				if provider != "teams" {
+					return errors.New("--tenant names a Microsoft Entra tenant: it applies to teams only")
+				}
+				if !entraTenant.MatchString(tenant) {
+					return fmt.Errorf("--tenant %q is not a tenant id (a GUID)", textsafe.Clean(tenant))
+				}
+				start += "?" + url.Values{"tenant": {strings.ToLower(tenant)}}.Encode()
+			}
+			return openDecisionPage(cmd, f.gatewayURL, start, noBrowser, "Link your "+chatName(provider)+" account there")
 		},
 	}
+	cmd.Flags().StringVar(&tenant, "tenant", "", "Teams: the Microsoft Entra tenant id to sign in to, when the organisation connected more than one (the first when omitted)")
 	f.bind(cmd, "Unused: the command only opens a page")
 	_ = cmd.Flags().MarkHidden("json")
 	cmd.Flags().BoolVar(&noBrowser, "no-browser", false, "Print the link instead of opening a browser")

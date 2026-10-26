@@ -52,6 +52,12 @@ from the network and is shown as data.
 | `zuano kb spaces members list <space>` | who has a role |
 | `zuano kb spaces members set <space> (--user EMAIL \| --group NAME) --role reader\|editor\|admin` | give a role |
 | `zuano kb spaces members remove <space> (--user EMAIL \| --group NAME)` | take it away |
+| `zuano kb spaces git show <space>` | the repository the space is kept in step with and how the last sync went (admins) |
+| `zuano kb spaces git set <space> --repo OWNER/NAME [--branch B] [--path P]` | keep the space in step with a folder of a repository the Zuano GitHub App can reach; commits become page versions by their authors, who must be members who can edit the space |
+| `zuano kb spaces git remove <space>` | stop syncing with Git; the pages stay |
+| `zuano kb spaces git sync <space>` | sync now; the space also syncs hourly |
+| `zuano kb spaces git push enable <space>` | sync the moment the branch is pushed to; needs access to manage the repository's webhooks |
+| `zuano kb spaces git push disable <space>` | stop syncing on pushes; the hourly sync continues |
 
 ### Pages
 
@@ -84,6 +90,8 @@ input, never a flag.
 | `zuano kb sources update <id> [--name N] [--schedule S] [--status active\|paused] [--config-file F]` | rename, reschedule, pause or change what it indexes |
 | `zuano kb sources delete <id> --yes` | stop indexing and remove its documents, unless they are under legal hold (`under_hold`) |
 | `zuano kb sources sync <id>` | sync now |
+| `zuano kb sources push enable <id>` | sync a Google Drive or GitHub source the moment the provider reports a change; the schedule continues |
+| `zuano kb sources push disable <id>` | stop syncing on provider changes |
 | `zuano kb sources documents <id>` | its documents with how many readers each has; `ADMINS ONLY` marks one no reader could be matched for |
 
 `--json` on any command prints the response body unchanged.

@@ -37,6 +37,16 @@ func kbGateway(t *testing.T) (*packServer, func() map[string][]url.Values) {
 		case r.Method == http.MethodGet && strings.HasSuffix(path, "/pages/fresh"):
 			w.WriteHeader(http.StatusNotFound)
 			_, _ = io.WriteString(w, `{"error":"not_found","message":"Page not found."}`)
+		case strings.HasSuffix(path, "/export"):
+			_, _ = io.WriteString(w, `{"filename":"eng.zip","contentBase64":"UEsDBA=="}`)
+		case strings.HasSuffix(path, "/import"):
+			_, _ = io.WriteString(w, `{"created":1,"updated":0,"unchanged":0,"skipped":[]}`)
+		case strings.HasSuffix(path, "/git/push") || strings.HasSuffix(path, "/push"):
+			if r.Method == http.MethodDelete {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			_, _ = io.WriteString(w, `{"enabled":true}`)
 		case r.Method == http.MethodDelete || r.Method == http.MethodPut || strings.HasSuffix(path, "/run-links"):
 			w.WriteHeader(http.StatusNoContent)
 		case path == "/api/v1/kb/search":
@@ -77,6 +87,10 @@ func TestKbCommandsSendWhatTheOpenAPIDescribes(t *testing.T) {
 	doc := loadOpenAPI(t)
 	gw, queries := kbGateway(t)
 	sourceConfig := jsonFile(t, `{"workspace":"w1"}`)
+	importZip := filepath.Join(t.TempDir(), "in.zip")
+	if err := os.WriteFile(importZip, []byte("PK\x03\x04"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	for _, inv := range []struct {
 		stdin string
 		args  []string
@@ -115,6 +129,16 @@ func TestKbCommandsSendWhatTheOpenAPIDescribes(t *testing.T) {
 		{"", []string{"sources", "delete", "src_1", "--yes"}},
 		{"", []string{"sources", "sync", "src_1"}},
 		{"", []string{"sources", "documents", "src_1"}},
+		{"", []string{"sources", "push", "enable", "src_1"}},
+		{"", []string{"sources", "push", "disable", "src_1"}},
+		{"", []string{"spaces", "git", "show", "eng"}},
+		{"", []string{"spaces", "git", "set", "eng", "--repo", "acme/handbook", "--branch", "main", "--path", "docs"}},
+		{"", []string{"spaces", "git", "remove", "eng"}},
+		{"", []string{"spaces", "git", "sync", "eng"}},
+		{"", []string{"spaces", "git", "push", "enable", "eng"}},
+		{"", []string{"spaces", "git", "push", "disable", "eng"}},
+		{"", []string{"export", "eng", "--out", filepath.Join(t.TempDir(), "eng.zip")}},
+		{"", []string{"import", "eng", importZip}},
 		{"", []string{"status"}},
 		{"", []string{"reindex"}},
 		{"", []string{"usage"}},
@@ -394,21 +418,42 @@ func TestKbExportSavesTheArchiveAndImportSendsIt(t *testing.T) {
 	}
 }
 
-// Export and import are on the knowledge base branch and not yet in the
-// vendored OpenAPI document; this fails once they are, so the list is emptied.
-func TestKbExportAndImportAreNotYetInTheVendoredOpenAPI(t *testing.T) {
+func TestOrgDomainsSendWhatTheOpenAPIDescribes(t *testing.T) {
 	doc := loadOpenAPI(t)
-	for _, tc := range []struct{ method, path string }{
-		{"GET", "/api/v1/kb/spaces/eng/export"},
-		{"POST", "/api/v1/kb/spaces/eng/import"},
-		{"GET", "/api/v1/domains"},
-		{"POST", "/api/v1/domains"},
-		{"POST", "/api/v1/domains/dom_1/verify"},
-		{"DELETE", "/api/v1/domains/dom_1"},
-	} {
-		if _, _, ok := doc.operationFor(tc.method, tc.path); ok {
-			t.Errorf("%s %s is in the vendored OpenAPI document now: check it in the contract test", tc.method, tc.path)
+	gw := workflowGateway(t, routeMap{
+		"GET /api/v1/domains":               jsonReply(200, `{"domains":[`+pendingDomainJSON+`]}`),
+		"POST /api/v1/domains":              jsonReply(201, `{"domain":`+pendingDomainJSON+`}`),
+		"POST /api/v1/domains/dom_1/verify": jsonReply(200, `{"domain":`+verifiedDomainJSON+`}`),
+		"DELETE /api/v1/domains/dom_1":      func(_ *packServer, w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) },
+	})
+	for _, args := range [][]string{{"domains", "list"}, {"domains", "add", "example.com"}, {"domains", "verify", "dom_1"}, {"domains", "remove", "dom_1", "--yes"}} {
+		if out, err := runCommand(t, OrgCmd(), args...); err != nil {
+			t.Fatalf("%v: %v\n%s", args, err, out)
 		}
+	}
+	gw.mu.Lock()
+	defer gw.mu.Unlock()
+	covered := 0
+	for route, hits := range gw.hits {
+		method, path, _ := strings.Cut(route, " ")
+		op, _, ok := doc.operationFor(method, path)
+		if !ok {
+			t.Errorf("%s is not in the gateway's OpenAPI document", route)
+			continue
+		}
+		covered++
+		for i := 0; i < hits; i++ {
+			var body map[string]any
+			if i < len(gw.bodies[route]) {
+				body = gw.bodies[route][i]
+			}
+			for _, p := range op.problems(nil, body) {
+				t.Errorf("%s (%s): %s", route, op.ID, p)
+			}
+		}
+	}
+	if covered != 4 {
+		t.Errorf("%d domain operations were exercised, want 4", covered)
 	}
 }
 

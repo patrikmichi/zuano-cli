@@ -189,6 +189,7 @@ func kbSpacesCmd() *cobra.Command {
 				}
 			}, nil, ""),
 		kbMembersCmd(),
+		kbGitCmd(),
 	)
 	return cmd
 }
@@ -517,6 +518,7 @@ the tool, so search never shows it to anyone who could not open it there.`}
 				}
 			}, nil, "Source removed"),
 		kbCmd("sync <id>", "Sync a source now", cobra.ExactArgs(1), byID(http.MethodPost, "/sync"), nil, "Queued a sync"),
+		kbSourcePushCmd(),
 		kbCmd("documents <id>", "List a source's documents with how many readers each has", cobra.ExactArgs(1), byID(http.MethodGet, "/documents"),
 			renderKbItems([]string{"ID", "TITLE", "READERS", "UNMATCHED", "ADMINS ONLY", "SYNCED"}, func(d map[string]any) []string {
 				readers := kbField(d, "readerCount")

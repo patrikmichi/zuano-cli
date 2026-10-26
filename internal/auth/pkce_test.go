@@ -80,7 +80,7 @@ func TestRandomHex_LengthAndCharset(t *testing.T) {
 // ─── buildAuthorizeURL ──────────────────────────────────────────────────────
 
 func TestBuildAuthorizeURL_IncludesAllRequiredParams(t *testing.T) {
-	got := buildAuthorizeURL("https://gw.example.com/", "zuano-cli", "http://127.0.0.1:1234/callback", "state-1", "challenge-1", "cli_personal")
+	got := buildAuthorizeURL("https://gw.example.com/", "zuano-cli", "http://127.0.0.1:1234/callback", "state-1", "challenge-1", "cli_personal", "")
 
 	u, err := url.Parse(got)
 	if err != nil {
@@ -104,6 +104,60 @@ func TestBuildAuthorizeURL_IncludesAllRequiredParams(t *testing.T) {
 		if got := q.Get(k); got != want {
 			t.Errorf("query param %q: got %q, want %q", k, got, want)
 		}
+	}
+	if q.Has("login_hint") {
+		t.Errorf("login_hint is sent without an address: %q", q.Get("login_hint"))
+	}
+}
+
+func TestBuildAuthorizeURL_CarriesTheLoginHint(t *testing.T) {
+	got := buildAuthorizeURL("https://gw.example.com", "zuano-cli", "http://127.0.0.1:1234/callback", "s", "c", "cli_personal", "ana+x@acme.test")
+	u, err := url.Parse(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hint := u.Query().Get("login_hint"); hint != "ana+x@acme.test" {
+		t.Errorf("login_hint = %q", hint)
+	}
+}
+
+func TestNormalizeLoginEmail(t *testing.T) {
+	for in, want := range map[string]string{"": "", "  Ana@ACME.test ": "ana@acme.test"} {
+		if got, err := NormalizeLoginEmail(in); err != nil || got != want {
+			t.Errorf("NormalizeLoginEmail(%q) = %q, %v; want %q", in, got, err, want)
+		}
+	}
+	for _, in := range []string{"ana", "a b@acme.test", "@acme.test", "ana@", strings.Repeat("a", 250) + "@b.cz"} {
+		if _, err := NormalizeLoginEmail(in); err == nil {
+			t.Errorf("NormalizeLoginEmail(%q) accepted a non-address", in)
+		}
+	}
+}
+
+func TestLoginAs_OpensTheAuthorizePageWithTheAddress(t *testing.T) {
+	withTempHome(t)
+	var opened string
+	original := openBrowser
+	openBrowser = func(u string) error { opened = u; return nil }
+	defer func() { openBrowser = original }()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	var diag strings.Builder
+	_, _ = LoginAs(ctx, "https://gw.example.com", keychain.ProfileHuman, " Ana@Acme.test ", &diag)
+
+	u, err := url.Parse(opened)
+	if err != nil {
+		t.Fatalf("browser opened %q: %v", opened, err)
+	}
+	if hint := u.Query().Get("login_hint"); hint != "ana@acme.test" {
+		t.Errorf("login_hint = %q", hint)
+	}
+	if !strings.Contains(diag.String(), "single sign-on") {
+		t.Errorf("the person is not told about single sign-on:\n%s", diag.String())
+	}
+	if _, err := LoginAs(context.Background(), "https://gw.example.com", keychain.ProfileHuman, "nobody"); err == nil {
+		t.Error("an address without a domain was accepted")
 	}
 }
 

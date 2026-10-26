@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/patrikmichi/zuano-cli/internal/config"
 	"github.com/patrikmichi/zuano-cli/internal/dpop"
 	"github.com/patrikmichi/zuano-cli/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
 const (
@@ -68,9 +70,22 @@ type tokenResponse struct {
 // starts and the token request carries no flag. Both are held to approvals.
 // The agent session is stored apart from the personal one.
 func Login(ctx context.Context, gatewayURL string, profile keychain.Profile, writers ...io.Writer) (*LoginResult, error) {
+	return LoginAs(ctx, gatewayURL, profile, "", writers...)
+}
+
+// LoginAs is Login for a person who names their address. The authorize
+// request carries it as login_hint, and the gateway sends an address whose
+// domain the organization verified and connected to an identity provider
+// (OpenID Connect or SAML) straight to that provider; any other address signs
+// in as usual. An empty email makes it Login.
+func LoginAs(ctx context.Context, gatewayURL string, profile keychain.Profile, email string, writers ...io.Writer) (*LoginResult, error) {
 	var diagnostic io.Writer = os.Stderr
 	if len(writers) > 0 && writers[0] != nil {
 		diagnostic = writers[0]
+	}
+	hint, err := NormalizeLoginEmail(email)
+	if err != nil {
+		return nil, err
 	}
 	// The keychain entry this login produces is bound to this normalized
 	// origin — reject an invalid/insecure gateway value before opening a
@@ -126,8 +141,11 @@ func Login(ctx context.Context, gatewayURL string, profile keychain.Profile, wri
 		_ = server.Close()
 	}()
 
-	authorizeURL := buildAuthorizeURL(origin, cliClientID, redirectURI, state, challenge, principalFor(profile))
+	authorizeURL := buildAuthorizeURL(origin, cliClientID, redirectURI, state, challenge, principalFor(profile), hint)
 	fmt.Fprintln(diagnostic, sessionKindNotice(profile))
+	if hint != "" {
+		fmt.Fprintf(diagnostic, "Signing in as %s: if your organization uses single sign-on, the browser opens its identity provider.\n", hint)
+	}
 	if err := openBrowser(authorizeURL); err != nil {
 		fmt.Fprintf(diagnostic, "Could not open browser automatically. Please visit:\n%s\n", authorizeURL)
 	}
@@ -181,6 +199,21 @@ func Login(ctx context.Context, gatewayURL string, profile keychain.Profile, wri
 	}, nil
 }
 
+var loginEmail = regexp.MustCompile(`^[^@\s]+@[^@\s]+$`)
+
+// NormalizeLoginEmail returns the address in the form the gateway reads it
+// (trimmed, lower case) and refuses what is not an address; "" stays "".
+func NormalizeLoginEmail(email string) (string, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+	if email == "" {
+		return "", nil
+	}
+	if len(email) > 254 || !loginEmail.MatchString(email) {
+		return "", fmt.Errorf("%q is not an email address", textsafe.Clean(email))
+	}
+	return email, nil
+}
+
 // sessionKindNotice tells the person which kind of session the login asked
 // for; the browser flow shows nothing of its own about it.
 func sessionKindNotice(profile keychain.Profile) string {
@@ -226,7 +259,7 @@ func principalFor(profile keychain.Profile) string {
 }
 
 // buildAuthorizeURL constructs the /api/cli/authorize URL.
-func buildAuthorizeURL(gatewayURL, clientID, redirectURI, state, challenge, principal string) string {
+func buildAuthorizeURL(gatewayURL, clientID, redirectURI, state, challenge, principal, loginHint string) string {
 	u := fmt.Sprintf("%s/api/cli/authorize", strings.TrimRight(gatewayURL, "/"))
 	params := url.Values{
 		"client_id":             {clientID},
@@ -236,6 +269,9 @@ func buildAuthorizeURL(gatewayURL, clientID, redirectURI, state, challenge, prin
 		"code_challenge_method": {"S256"},
 		"response_type":         {"code"},
 		"principal":             {principal},
+	}
+	if loginHint != "" {
+		params.Set("login_hint", loginHint)
 	}
 	return u + "?" + params.Encode()
 }

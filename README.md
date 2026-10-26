@@ -398,7 +398,7 @@ a gateway.
 
 | Command | Kind | Description |
 |---|---|---|
-| `zuano login [--device] [--agent]` | gateway | Authenticate via Google OAuth (browser or device-code flow); `--agent` signs in the agent profile, a session the gateway holds to approvals |
+| `zuano login [--email ADDR] [--device] [--agent]` | gateway | Authenticate via Google OAuth (browser or device-code flow), or through your organization's single sign-on (OpenID Connect or SAML) with `--email`, which sends an address on a domain the organization verified straight to its identity provider; `--agent` signs in the agent profile, a session the gateway holds to approvals |
 | `zuano logout` | gateway | Revoke the current profile's session and remove the stored token; exits non-zero if the gateway did not revoke it |
 | `zuano whoami [--full]` | gateway | Show the current authenticated identity and which profile (human or agent) answered |
 | `zuano tokens list` | gateway | Show active session info |

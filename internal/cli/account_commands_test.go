@@ -545,6 +545,19 @@ func TestLogin_DeviceFlowServerErrorIsWrapped(t *testing.T) {
 	}
 }
 
+func TestLogin_EmailIsForTheBrowserFlowAndMustBeAnAddress(t *testing.T) {
+	srv := httptest.NewServer(jsonHandler(http.StatusInternalServerError, map[string]string{"error": "down"}))
+	t.Cleanup(srv.Close)
+	withNoGateway(t)
+
+	if _, err := runCommand(t, LoginCmd(), "--device", "--email", "ana@acme.test", "--gateway-url", srv.URL); err == nil || !strings.Contains(err.Error(), "--email applies to the browser sign-in") {
+		t.Errorf("--device with --email: %v", err)
+	}
+	if _, err := runCommand(t, LoginCmd(), "--email", "not-an-address", "--gateway-url", srv.URL); err == nil || !strings.Contains(err.Error(), "is not an email address") {
+		t.Errorf("a bad address: %v", err)
+	}
+}
+
 func integrationsFixture() IntegrationsResponse {
 	return IntegrationsResponse{
 		OK: true, ServiceCount: 3, ToolCount: 3,

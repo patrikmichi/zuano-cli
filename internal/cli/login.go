@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -13,7 +14,7 @@ import (
 
 // LoginCmd returns the `zuano login` cobra command.
 func LoginCmd() *cobra.Command {
-	var gatewayURL string
+	var gatewayURL, email string
 	var deviceFlow, agent bool
 
 	cmd := &cobra.Command{
@@ -24,6 +25,13 @@ func LoginCmd() *cobra.Command {
 By default, opens a browser window and starts a local callback server.
 Use --device for headless environments (SSH, containers) where a browser
 is not available.
+
+--email <address> signs in through your organization's single sign-on. The
+gateway looks the address's domain up: when the organization verified it and
+connected an identity provider (OpenID Connect or SAML), the browser opens
+that provider, and any other address signs in with Google. Without --email,
+a Google sign-in for an address the organization covers is handed on to its
+provider all the same. With --device that handover is the only route.
 
 --agent (or ZUANO_AGENT=1) signs in the agent profile: the gateway marks the
 session as an autonomous agent's, so its writes wait for approval. It is
@@ -56,6 +64,10 @@ with your own, unmarked session (zuano approvals approve).`,
 				suffix = " (agent profile)"
 			}
 
+			if deviceFlow && email != "" {
+				return errors.New("--email applies to the browser sign-in; with --device, the gateway hands a Google sign-in for an address covered by single sign-on on to the organization's provider")
+			}
+
 			if deviceFlow {
 				result, err := auth.DeviceLogin(ctx, resolvedURL, profile, cmd.OutOrStdout())
 				if err != nil {
@@ -66,7 +78,7 @@ with your own, unmarked session (zuano approvals approve).`,
 				return nil
 			}
 
-			result, err := auth.Login(ctx, resolvedURL, profile, cmd.ErrOrStderr())
+			result, err := auth.LoginAs(ctx, resolvedURL, profile, email, cmd.ErrOrStderr())
 			if err != nil {
 				return fmt.Errorf("login failed: %w", err)
 			}
@@ -78,6 +90,7 @@ with your own, unmarked session (zuano approvals approve).`,
 	}
 
 	cmd.Flags().StringVar(&gatewayURL, "gateway-url", "", "Gateway URL (default: $ZUANO_URL, then the config file)")
+	cmd.Flags().StringVar(&email, "email", "", "Your work address: sign in through your organization's single sign-on (OpenID Connect or SAML) when it has one")
 	cmd.Flags().BoolVar(&deviceFlow, "device", false, "Use device-code flow for headless environments")
 	cmd.Flags().BoolVar(&agent, "agent", false, "Sign in the agent profile (also selected by ZUANO_AGENT=1): a session marked as an agent's, held to approvals")
 

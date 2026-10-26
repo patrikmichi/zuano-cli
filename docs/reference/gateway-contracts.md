@@ -118,7 +118,7 @@ the constants in the code, both ways.
 | 30 | `plan_required` | also `limit_reached`, `verification_required` |
 | 31 | `quota_exceeded` | also `spend_cap_reached`, daily caps |
 | 32 | `billing_unavailable` | |
-| 33 | `suspended` | `org_suspended`, `seat_suspended`, `ip_not_allowed`, identity suspended |
+| 33 | `suspended` | `org_suspended`, `seat_suspended`, `ip_not_allowed`, `identity_suspended`, `identity_revoked`, `identity_expired`, `identity_refused` |
 | 34 | `network_offline` | |
 | 40 | `policy_invalid` | also DLP policy documents |
 | 41 | `policy_conflict` | |
@@ -730,7 +730,10 @@ wrappers are this client's reading and must match what the gateway writes.
 
 A request from a suspended, revoked or expired identity answers `403` with
 `{"error": "identity_suspended" | "identity_revoked" | "identity_expired",
-"message"}`; zuano exits 33. The gateway's MCP entry written by `zuano sync`
+"message"}`; zuano exits 33. A workflow run resumed under an identity that may
+no longer run it answers `403` `identity_refused`, which exits 33 as well. The
+check that cannot read an identity's status answers `503` `identity_check_failed`
+and is an ordinary failure (exit 1): retry it. The gateway's MCP entry written by `zuano sync`
 carries `X-Zuano-Install: <install id>` for the agents whose config takes
 headers.
 

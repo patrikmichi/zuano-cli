@@ -29,6 +29,7 @@ var refusalCodes = map[string]int{
 	"identity_suspended":         client.ExitSuspended,
 	"identity_revoked":           client.ExitSuspended,
 	"identity_expired":           client.ExitSuspended,
+	"identity_refused":           client.ExitSuspended,
 	"a2a_loop":                   exitA2AChainRefused,
 	"a2a_depth_exceeded":         exitA2AChainRefused,
 	"a2a_chain_limit":            exitA2AChainRefused,

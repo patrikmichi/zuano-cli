@@ -1,0 +1,1 @@
+{"error":"path_invalid","message":"3 paths cannot be published.","paths":[{"path":"a%2fb.html","reason":"encoded_separator"},{"path":"keys/server.pem","reason":"denied","detail":"key or certificate store"},{"path":"Docs/A.md","reason":"case","detail":"docs/a.md and Docs/A.md"}]}

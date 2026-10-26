@@ -179,3 +179,11 @@ func TestStepUp_ZuanoCallExitsWith14WhenNobodyIsAtTheKeyboard(t *testing.T) {
 		t.Errorf("err = %v, want the action", err)
 	}
 }
+
+func TestStepUpPage_SendsSiteActionsToTheirDashboardPages(t *testing.T) {
+	for action, want := range map[string]string{"artifact_public": "/pages/sites", "artifact_label_set": "/settings/artifacts", "policy_change": "/"} {
+		if got := stepUpPage(action); got != want {
+			t.Errorf("stepUpPage(%q) = %q, want %q", action, got, want)
+		}
+	}
+}

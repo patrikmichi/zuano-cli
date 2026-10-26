@@ -6,42 +6,76 @@
     {"input": "caf\u00e9.html", "want": "caf\u00e9.html"},
     {"input": "cafe\u0301.html", "want": "caf\u00e9.html"},
     {"input": "docs/api-notes.md", "want": "docs/api-notes.md"},
-    {"input": "apidocs/index.html", "want": "apidocs/index.html"}
+    {"input": "apidocs/index.html", "want": "apidocs/index.html"},
+    {"input": "_dropbox/readme.md", "want": "_dropbox/readme.md"},
+    {"input": "docs/_drop/x.html", "want": "docs/_drop/x.html"},
+    {"input": "100%25-done.html", "want": "100%25-done.html"},
+    {"input": "a b/c d.html", "want": "a b/c d.html"},
+    {"input": ".well-known/security.txt", "want": ".well-known/security.txt"},
+    {"input": "dir/..hidden", "want": "dir/..hidden"}
   ],
   "invalid": [
     {"input": "", "reason": "empty"},
+    {"input": "/", "reason": "absolute"},
     {"input": "/etc/passwd", "reason": "absolute"},
     {"input": "../x.html", "reason": "traversal"},
     {"input": "a/../b.html", "reason": "traversal"},
+    {"input": "a/..", "reason": "traversal"},
     {"input": "./a.html", "reason": "traversal"},
+    {"input": "a/./b.html", "reason": "traversal"},
     {"input": "a//b.html", "reason": "empty_component"},
     {"input": "a\\b.html", "reason": "backslash"},
+    {"input": "..\\x.html", "reason": "backslash"},
     {"input": "C:/x.html", "reason": "drive_prefix"},
+    {"input": "c:x.html", "reason": "drive_prefix"},
     {"input": "a\u0000b.html", "reason": "control"},
     {"input": "a\tb.html", "reason": "control"},
+    {"input": "a\nb.html", "reason": "control"},
+    {"input": "a\u007fb.html", "reason": "control"},
+    {"input": "a\u0085b.html", "reason": "control"},
     {"input": "_drop/x.html", "reason": "reserved"},
     {"input": "_DROP/x.html", "reason": "reserved"},
+    {"input": "_drop", "reason": "reserved"},
     {"input": "api/x.json", "reason": "reserved"},
-    {"input": "a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z/a1/b1/c1/d1/e1/f1/g1.html", "reason": "too_deep"}
+    {"input": "API/x.json", "reason": "reserved"},
+    {"input": "a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z/a1/b1/c1/d1/e1/f1/g1.html", "reason": "too_deep"},
+    {"input": "a%2fb.html", "reason": "encoded_separator"},
+    {"input": "a%2Fb.html", "reason": "encoded_separator"},
+    {"input": "%2e%2e/x.html", "reason": "encoded_separator"},
+    {"input": "a/%2E%2E/x.html", "reason": "encoded_separator"},
+    {"input": "a%5cb.html", "reason": "encoded_separator"}
   ],
+  "limits": {
+    "max_bytes": 240,
+    "max_components": 32
+  },
   "too_long_bytes": 241,
   "collisions": [
     {"paths": ["A.html", "a.html"], "reason": "case"},
     {"paths": ["caf\u00e9.html", "cafe\u0301.html"], "reason": "duplicate"},
     {"paths": ["docs", "docs/readme.md"], "reason": "file_and_directory"},
     {"paths": ["Docs", "docs/readme.md"], "reason": "file_and_directory"},
-    {"paths": ["a.html", "a.html"], "reason": "duplicate"}
+    {"paths": ["a.html", "a.html"], "reason": "duplicate"},
+    {"paths": ["Docs/Readme.md", "docs/readme.md"], "reason": "case"},
+    {"paths": ["a/b", "a/b/c.html"], "reason": "file_and_directory"}
   ],
   "no_collision": [
     ["a.html", "b.html"],
-    ["docs/a.md", "docs/b.md", "doc/a.md"]
+    ["docs/a.md", "docs/b.md", "doc/a.md"],
+    ["a.html", "a.htm", "a/b.html"]
   ],
   "denied": [
     ".env", ".env.local", "config/.env.production", "id_rsa", "keys/id_ed25519.pub", "server.pem",
     "certs/store.p12", ".npmrc", "home/.netrc", ".git/config", "x/.git/HEAD", ".aws/credentials",
-    "credentials.json", ".SSH/known_hosts"
+    "credentials.json", ".SSH/known_hosts", ".git", "app.keystore", "client.pfx", ".pypirc", ".pgpass", "x/.gnupg/pubring.kbx", "ID_RSA", "Server.PEM"
   ],
   "allowed": [
-    "index.html", "environment.html", "docs/envelope.md", "assets/id.png", "pem.html", "gitignore.txt", "digital/readme.md"
+    "index.html", "environment.html", "docs/envelope.md", "assets/id.png", "pem.html", "gitignore.txt", "digital/readme.md", "credentials.html", "my.environment", "keys.md"
+  ],
+  "excluded": [
+    "node_modules/x/index.js", "app/node_modules/y.js", "__MACOSX/a.html", ".DS_Store", "docs/.DS_Store", "Thumbs.db", "desktop.ini", "._index.html", "docs/._a.md", ".Trashes/x", ".Spotlight-V100/y", "node_modules"
+  ],
+  "not_excluded": [
+    "index.html", "node_modules.html", "docs/thumbs.db.html", "assets/.well-known/x"
   ]
 }

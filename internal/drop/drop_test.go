@@ -22,6 +22,12 @@ type vectors struct {
 	NoCollision [][]string `json:"no_collision"`
 	Denied      []string   `json:"denied"`
 	Allowed     []string   `json:"allowed"`
+	Excluded    []string   `json:"excluded"`
+	NotExcluded []string   `json:"not_excluded"`
+	Limits      struct {
+		MaxBytes      int `json:"max_bytes"`
+		MaxComponents int `json:"max_components"`
+	} `json:"limits"`
 }
 
 func loadVectors(t *testing.T) vectors {
@@ -40,7 +46,7 @@ func loadVectors(t *testing.T) vectors {
 var reasons = map[string]error{
 	"empty": ErrEmpty, "absolute": ErrAbsolute, "traversal": ErrTraversal, "empty_component": ErrEmptyComponent,
 	"backslash": ErrBackslash, "drive_prefix": ErrDrivePrefix, "control": ErrControl, "reserved": ErrReserved,
-	"too_deep": ErrTooDeep, "too_long": ErrTooLong,
+	"too_deep": ErrTooDeep, "too_long": ErrTooLong, "invalid_utf8": ErrInvalidUTF8, "encoded_separator": ErrEncodedSeparator,
 }
 
 func TestCanonicalize_Vectors(t *testing.T) {
@@ -54,6 +60,9 @@ func TestCanonicalize_Vectors(t *testing.T) {
 		if _, err := Canonicalize(c.Input); !errors.Is(err, reasons[c.Reason]) {
 			t.Errorf("Canonicalize(%q) = %v; want %s", c.Input, err, c.Reason)
 		}
+	}
+	if v.Limits.MaxBytes != maxPathBytes || v.Limits.MaxComponents != maxPathComponents {
+		t.Errorf("limits are %d bytes and %d components; the gateway's are %d and %d", maxPathBytes, maxPathComponents, v.Limits.MaxBytes, v.Limits.MaxComponents)
 	}
 	long := strings.Repeat("a", v.TooLong)
 	if _, err := Canonicalize(long); !errors.Is(err, ErrTooLong) {
@@ -95,6 +104,20 @@ func TestDenied_Vectors(t *testing.T) {
 	for _, p := range v.Allowed {
 		if why, bad := Denied(p); bad {
 			t.Errorf("%q was denied (%s)", p, why)
+		}
+	}
+}
+
+func TestExcluded_Vectors(t *testing.T) {
+	v := loadVectors(t)
+	for _, p := range v.Excluded {
+		if !Excluded(p) {
+			t.Errorf("%q was kept", p)
+		}
+	}
+	for _, p := range v.NotExcluded {
+		if Excluded(p) {
+			t.Errorf("%q was left out", p)
 		}
 	}
 }

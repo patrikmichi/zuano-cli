@@ -79,7 +79,8 @@ func dropPublishCmd() *cobra.Command {
 makes it live. A standalone file gets its own site. The site is named by --site
 or after the file or folder. Relative paths are kept; symlinks, node_modules,
 OS metadata and what a .dropignore lists are left out, and anything that looks
-like a credential (.env, private keys, .git) stops the publish.
+like a credential (.env, private keys, .git) stops the publish. A path the
+gateway refuses (path_invalid) is listed with the reason, every one at once.
 
 If the folder has several pages that could be the entry (and no index.html),
 the gateway asks for one: give it with --entry. The release address of a site
@@ -152,12 +153,20 @@ func runDropPublish(cmd *cobra.Command, f approvalFlags, root, site, title, entr
 	var created struct {
 		UploadID string       `json:"upload_id"`
 		Files    []uploadSlot `json:"files"`
+		// Excluded are the paths the gateway left out: dependency folders and
+		// operating system metadata.
+		Excluded []string `json:"excluded"`
 	}
 	if _, err := gatewayWrite(cmd, c, f.jsonOut, http.MethodPost, "/api/artifacts/uploads", body, &created); err != nil {
 		return err
 	}
 	if created.UploadID == "" {
 		return errors.New("the gateway did not return an upload")
+	}
+	if !f.jsonOut {
+		for _, p := range created.Excluded {
+			fmt.Fprintf(errOut, "warning: the gateway left out %s\n", textsafe.Clean(p))
+		}
 	}
 	if err := uploadSlots(cmd.Context(), m, created.Files, errOut, f.jsonOut); err != nil {
 		return err

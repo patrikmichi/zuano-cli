@@ -80,6 +80,7 @@ var exitRegistry = []exitCodeEntry{
 	{exitQuarantined, "upstream_quarantined"},
 	{exitBundleInvalid, "evidence_bundle_invalid"},
 	{exitKeysMissing, "evidence_keys_missing"},
+	{exitScanPending, "scan_pending"},
 	{exitA2AChainRefused, "a2a_chain_refused"},
 	{exitChainKilled, "chain_killed"},
 	{exitChainBudget, "chain_budget_exhausted"},

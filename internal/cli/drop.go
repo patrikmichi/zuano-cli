@@ -84,7 +84,9 @@ you share it with unless you make it public.
 An agent session's publish, public share and delete are held for approval
 (exit 12), like other writes.`,
 	}
-	cmd.AddCommand(dropPublishCmd(), dropListCmd(), dropReleasesCmd(), dropRollbackCmd(), dropShareCmd(), dropOpenCmd(), dropDeleteCmd(), dropRestoreCmd())
+	cmd.AddCommand(dropPublishCmd(), dropListCmd(), dropReleasesCmd(),
+		dropActivateCmd("activate <site> <release>", "Make a prepared release live", "Makes a ready release live, such as one prepared with publish --no-activate and checked with open --preview. "+activateNote, "%s is live at %s\n"),
+		dropRollbackCmd(), dropShareCmd(), dropOpenCmd(), dropDeleteCmd(), dropRestoreCmd(), dropOrgCmd())
 	return cmd
 }
 
@@ -200,15 +202,23 @@ func dropReleasesCmd() *cobra.Command {
 	return cmd
 }
 
+const activateNote = `Only the content changes: who can see the site does not. A change to the site's
+audience since that release was published is refused (audience_changed), and a
+release whose data protection scan has not finished is refused (scan_pending,
+exit 47); publish again to review the first, retry the second. The request names
+the content revision it was made on, so a publish in between is refused (exit 25).`
+
 func dropRollbackCmd() *cobra.Command {
+	return dropActivateCmd("rollback <site> <release>", "Make an earlier release live again", "Makes a retained release live. "+activateNote, "%s is live again at %s\n")
+}
+
+func dropActivateCmd(use, short, long, done string) *cobra.Command {
 	var f approvalFlags
 	cmd := &cobra.Command{
-		Use:   "rollback <site> <release>",
-		Short: "Make an earlier release live again",
-		Long: `Makes a retained release live. Only the content changes: who can see the site
-does not. A change to the site's audience since that release was published is
-refused (audience_changed); publish again to review it.`,
-		Args: cobra.ExactArgs(2),
+		Use:   use,
+		Short: short,
+		Long:  long,
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := approvalsClient(f.gatewayURL)
 			if err != nil {
@@ -218,16 +228,19 @@ refused (audience_changed); publish again to review it.`,
 			if err != nil {
 				return err
 			}
+			var res struct {
+				Site siteDoc `json:"site"`
+			}
 			raw, err := gatewayWrite(cmd, c, f.jsonOut, http.MethodPost, "/api/artifacts/sites/"+url.PathEscape(site.ID)+"/activate",
-				map[string]any{"release_id": args[1], "expected_content_revision": site.ContentRevision}, nil)
+				map[string]any{"release_id": args[1], "expected_content_revision": site.ContentRevision}, &res)
 			if err != nil {
-				return err
+				return withRouteExit(err, artifactRefusals)
 			}
 			if f.jsonOut {
 				printRaw(cmd.OutOrStdout(), raw)
 				return nil
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%s is live again at %s\n", textsafe.Clean(args[1]), textsafe.Clean(site.URL))
+			fmt.Fprintf(cmd.OutOrStdout(), done, textsafe.Clean(args[1]), textsafe.Clean(firstNonEmptyString(res.Site.URL, site.URL)))
 			return nil
 		},
 	}
@@ -254,13 +267,9 @@ func dropOpenCmd() *cobra.Command {
 			}
 			target := site.URL
 			if preview != "" {
-				var doc struct {
-					Release releaseDoc `json:"release"`
-				}
-				if _, err := gatewayJSON(cmd.Context(), c, http.MethodGet, "/api/artifacts/releases/"+url.PathEscape(preview), nil, &doc); err != nil {
+				if target, err = previewAddress(cmd, c, preview); err != nil {
 					return err
 				}
-				target = doc.Release.PreviewURL
 			}
 			u, err := url.Parse(target)
 			if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
@@ -276,9 +285,36 @@ func dropOpenCmd() *cobra.Command {
 	}
 	f.bind(cmd, "Unused")
 	_ = cmd.Flags().MarkHidden("json")
-	cmd.Flags().StringVar(&preview, "preview", "", "Open this release's private preview instead of the live site")
+	cmd.Flags().StringVar(&preview, "preview", "", "Open this release's private preview instead of the live site (the address works once, within a minute)")
 	cmd.Flags().BoolVar(&noBrowser, "no-browser", false, "Print the address instead of opening it")
 	return cmd
+}
+
+// previewAddress is where a release is previewed. The gateway answers a
+// one-time address that signs the person in on the release's preview host
+// (preview_url is https://<release key>--preview--<label>.<domain>/ and asks
+// for a sign-in of its own); a gateway without that route gets the release's
+// own preview_url.
+func previewAddress(cmd *cobra.Command, c *client.Client, releaseID string) (string, error) {
+	base := "/api/artifacts/releases/" + url.PathEscape(releaseID)
+	var session struct {
+		URL string `json:"url"`
+	}
+	_, err := gatewayJSON(cmd.Context(), c, http.MethodPost, base+"/preview-session", map[string]any{}, &session)
+	var refusal *gatewayRefusal
+	switch {
+	case err == nil && session.URL != "":
+		return session.URL, nil
+	case err != nil && !errors.As(err, &refusal):
+		return "", err
+	}
+	var doc struct {
+		Release releaseDoc `json:"release"`
+	}
+	if _, err := gatewayJSON(cmd.Context(), c, http.MethodGet, base, nil, &doc); err != nil {
+		return "", err
+	}
+	return doc.Release.PreviewURL, nil
 }
 
 // askDefaultNo asks a question whose answer is no unless the person types yes.

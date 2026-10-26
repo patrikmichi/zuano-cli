@@ -49,4 +49,10 @@ gen-evals-assertions:
 	cp "$(GATEWAY_ASSERTIONS)" internal/evals/testdata/conformance/assertions.json
 	cd internal/evals/testdata/conformance && (sha256sum assertions.json graders.json stats.json || shasum -a 256 assertions.json graders.json stats.json) > SHA256SUMS
 
-.PHONY: build install test vet clean gen-policy-schema gen-evals-schema gen-evals-fixtures gen-evals-assertions
+# Copies the site path vectors the gateway's rules and this client share:
+# make gen-artifact-paths GATEWAY_ARTIFACT_PATHS=/path/to/__tests__/fixtures/artifact-paths.json
+gen-artifact-paths:
+	@test -n "$(GATEWAY_ARTIFACT_PATHS)" || { echo "set GATEWAY_ARTIFACT_PATHS to the gateway's artifact-paths.json" >&2; exit 2; }
+	cp "$(GATEWAY_ARTIFACT_PATHS)" internal/drop/testdata/paths.json
+
+.PHONY: build install test vet clean gen-policy-schema gen-evals-schema gen-evals-fixtures gen-evals-assertions gen-artifact-paths

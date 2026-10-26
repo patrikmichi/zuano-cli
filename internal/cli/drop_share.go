@@ -201,10 +201,7 @@ func runShare(cmd *cobra.Command, f approvalFlags, fl shareFlags, ref string) er
 	if err != nil {
 		return err
 	}
-	var detail struct {
-		Site   siteDoc    `json:"site"`
-		Grants []grantDoc `json:"grants"`
-	}
+	var detail siteDetail
 	if _, err := gatewayJSON(cmd.Context(), c, http.MethodGet, "/api/artifacts/sites/"+url.PathEscape(site.ID), nil, &detail); err != nil {
 		return err
 	}
@@ -213,8 +210,11 @@ func runShare(cmd *cobra.Command, f approvalFlags, fl shareFlags, ref string) er
 
 	changing := len(fl.add)+len(fl.groups)+len(fl.remove) > 0 || fl.org || fl.public || fl.private
 	if !changing {
-		printSharing(out, site, detail.Grants)
+		printSharing(out, site, detail)
 		return nil
+	}
+	if detail.Role == "viewer" {
+		return &ExitError{Code: exitDenied, Msg: "you can view this site but not change who can open it; ask an owner or editor"}
 	}
 	grants, err := desiredGrants(detail.Grants, fl)
 	if err != nil {
@@ -242,7 +242,7 @@ func runShare(cmd *cobra.Command, f approvalFlags, fl shareFlags, ref string) er
 
 	var proposal shareDiff
 	if _, err := gatewayJSON(cmd.Context(), c, http.MethodPut, base+"?mode=propose", body, &proposal); err != nil {
-		return err
+		return withRouteExit(err, artifactRefusals)
 	}
 	if proposal.empty() {
 		fmt.Fprintln(out, "No change: the site is already shared that way.")
@@ -258,20 +258,35 @@ func runShare(cmd *cobra.Command, f approvalFlags, fl shareFlags, ref string) er
 		return err
 	}
 	body["expected_policy_revision"] = proposal.PolicyRevision
-	raw, err := gatewayWrite(cmd, c, f.jsonOut, http.MethodPut, base+"?mode=apply", body, nil)
+	var applied siteDetail
+	raw, err := gatewayWrite(cmd, c, f.jsonOut, http.MethodPut, base+"?mode=apply", body, &applied)
 	if err != nil {
-		return err
+		return withRouteExit(err, artifactRefusals)
 	}
 	if f.jsonOut {
 		printRaw(out, raw)
 		return nil
 	}
 	fmt.Fprintf(out, "Sharing of %s updated.\n", textsafe.Clean(site.Slug))
+	if applied.Site.Audience != "" {
+		fmt.Fprintf(out, "Visible to: %s\n", textsafe.Clean(applied.Site.Audience))
+	}
 	return nil
 }
 
-func printSharing(out io.Writer, s siteDoc, grants []grantDoc) {
+// siteDetail is a site with who it is shared with and what the caller may do
+// with it: view it, edit it or own it.
+type siteDetail struct {
+	Site   siteDoc    `json:"site"`
+	Grants []grantDoc `json:"grants"`
+	Role   string     `json:"role"`
+}
+
+func printSharing(out io.Writer, s siteDoc, d siteDetail) {
 	fmt.Fprintf(out, "%s  %s\n", textsafe.Clean(s.Slug), textsafe.Clean(s.URL))
+	if d.Role != "" {
+		fmt.Fprintf(out, "Your role: %s\n", textsafe.Clean(d.Role))
+	}
 	public := "off"
 	if s.PublicRead {
 		public = "on"
@@ -280,7 +295,7 @@ func printSharing(out io.Writer, s siteDoc, grants []grantDoc) {
 		}
 	}
 	fmt.Fprintf(out, "Public: %s\n", public)
-	for _, g := range grants {
+	for _, g := range d.Grants {
 		line := fmt.Sprintf("  %-8s %s", textsafe.Clean(g.Role), textsafe.Clean(g.label()))
 		if g.ExpiresAt != nil && *g.ExpiresAt != "" {
 			line += " (until " + textsafe.Clean(*g.ExpiresAt) + ")"

@@ -32551,6 +32551,350 @@
         }
       }
     },
+    "/org": {
+      "get": {
+        "operationId": "artifacts.org.get",
+        "summary": "Read the organization’s settings for sites. Admins only.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "label": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "public_sharing": {
+                      "type": "boolean"
+                    },
+                    "allow_remote": {
+                      "type": "boolean"
+                    },
+                    "storage_bytes": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "storage_limit": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "label",
+                    "public_sharing",
+                    "allow_remote",
+                    "storage_bytes",
+                    "storage_limit"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      },
+      "put": {
+        "operationId": "artifacts.org.update",
+        "summary": "Turn sites on or off, set the label in every site address (final, needs a passkey confirmation), and switch public sharing and remote content. Admins only.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "public_sharing": {
+                    "type": "boolean"
+                  },
+                  "allow_remote": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "label": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "public_sharing": {
+                      "type": "boolean"
+                    },
+                    "allow_remote": {
+                      "type": "boolean"
+                    },
+                    "storage_bytes": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "storage_limit": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "label",
+                    "public_sharing",
+                    "allow_remote",
+                    "storage_bytes",
+                    "storage_limit"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalStepUp"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      }
+    },
     "/platform/market/flagged-handles": {
       "get": {
         "operationId": "platform.market.flaggedHandles.list",
@@ -35881,6 +36225,371 @@
             }
           }
         }
+      }
+    },
+    "/releases/{id}": {
+      "get": {
+        "operationId": "artifacts.releases.get",
+        "summary": "Read a release and its site: its state while it is built, its warnings, and why it failed.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "release": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "site_id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "preparing",
+                            "ready",
+                            "failed",
+                            "deleted"
+                          ]
+                        },
+                        "entry_path": {
+                          "type": "string"
+                        },
+                        "total_bytes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "file_count": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "ready_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "preview_url": {
+                          "type": "string"
+                        },
+                        "warnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string"
+                              },
+                              "path": {
+                                "type": "string"
+                              },
+                              "line": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "path",
+                              "message"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "failure": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "message": {
+                                  "type": "string"
+                                },
+                                "candidates": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "files": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "path": {
+                                        "type": "string"
+                                      },
+                                      "error": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "path",
+                                      "error"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "message",
+                                "candidates",
+                                "files"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "site_id",
+                        "state",
+                        "entry_path",
+                        "total_bytes",
+                        "file_count",
+                        "created_at",
+                        "ready_at",
+                        "preview_url",
+                        "warnings",
+                        "failure"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "site": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        },
+                        "routing": {
+                          "type": "string",
+                          "enum": [
+                            "files",
+                            "spa"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "deleted"
+                          ]
+                        },
+                        "audience": {
+                          "type": "string",
+                          "enum": [
+                            "private",
+                            "shared",
+                            "organisation",
+                            "public"
+                          ]
+                        },
+                        "active_release_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "active_release_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "total_bytes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "content_revision": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "policy_revision": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "public_read": {
+                          "type": "boolean"
+                        },
+                        "public_expires_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "source_download": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "slug",
+                        "title",
+                        "url",
+                        "routing",
+                        "status",
+                        "audience",
+                        "active_release_id",
+                        "active_release_at",
+                        "total_bytes",
+                        "content_revision",
+                        "policy_revision",
+                        "public_read",
+                        "public_expires_at",
+                        "source_download"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "release",
+                    "site"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
       }
     },
     "/runs": {
@@ -44923,6 +45632,2619 @@
         }
       }
     },
+    "/sites": {
+      "get": {
+        "operationId": "artifacts.sites.list",
+        "summary": "List the sites the caller can open. The deleted ones, still restorable, are listed with status=deleted for their owners.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "deleted"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sites": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "routing": {
+                            "type": "string",
+                            "enum": [
+                              "files",
+                              "spa"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "deleted"
+                            ]
+                          },
+                          "audience": {
+                            "type": "string",
+                            "enum": [
+                              "private",
+                              "shared",
+                              "organisation",
+                              "public"
+                            ]
+                          },
+                          "active_release_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "active_release_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "total_bytes": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "content_revision": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "policy_revision": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "public_read": {
+                            "type": "boolean"
+                          },
+                          "public_expires_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "source_download": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "slug",
+                          "title",
+                          "url",
+                          "routing",
+                          "status",
+                          "audience",
+                          "active_release_id",
+                          "active_release_at",
+                          "total_bytes",
+                          "content_revision",
+                          "policy_revision",
+                          "public_read",
+                          "public_expires_at",
+                          "source_download"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "sites"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      }
+    },
+    "/sites/{id}": {
+      "delete": {
+        "operationId": "artifacts.sites.delete",
+        "summary": "Delete a site. It stops serving at once and can be restored until the trash period of the plan ends.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content."
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      },
+      "get": {
+        "operationId": "artifacts.sites.get",
+        "summary": "Read a site. Editors also get who it is shared with.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "site": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        },
+                        "routing": {
+                          "type": "string",
+                          "enum": [
+                            "files",
+                            "spa"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "deleted"
+                          ]
+                        },
+                        "audience": {
+                          "type": "string",
+                          "enum": [
+                            "private",
+                            "shared",
+                            "organisation",
+                            "public"
+                          ]
+                        },
+                        "active_release_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "active_release_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "total_bytes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "content_revision": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "policy_revision": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "public_read": {
+                          "type": "boolean"
+                        },
+                        "public_expires_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "source_download": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "slug",
+                        "title",
+                        "url",
+                        "routing",
+                        "status",
+                        "audience",
+                        "active_release_id",
+                        "active_release_at",
+                        "total_bytes",
+                        "content_revision",
+                        "policy_revision",
+                        "public_read",
+                        "public_expires_at",
+                        "source_download"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "grants": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "principal_type": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "group",
+                              "org"
+                            ]
+                          },
+                          "principal_id": {
+                            "type": "string"
+                          },
+                          "principal_label": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "viewer",
+                              "editor",
+                              "owner"
+                            ]
+                          },
+                          "expires_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "principal_type",
+                          "principal_id",
+                          "principal_label",
+                          "role",
+                          "expires_at"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "viewer",
+                        "editor",
+                        "owner"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "site",
+                    "grants",
+                    "role"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "artifacts.sites.update",
+        "summary": "Change the title or routing of a site. Letting people download its source files is the owner’s decision.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "routing": {
+                    "type": "string",
+                    "enum": [
+                      "files",
+                      "spa"
+                    ]
+                  },
+                  "source_download": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "site": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        },
+                        "routing": {
+                          "type": "string",
+                          "enum": [
+                            "files",
+                            "spa"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "deleted"
+                          ]
+                        },
+                        "audience": {
+                          "type": "string",
+                          "enum": [
+                            "private",
+                            "shared",
+                            "organisation",
+                            "public"
+                          ]
+                        },
+                        "active_release_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "active_release_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "total_bytes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "content_revision": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "policy_revision": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "public_read": {
+                          "type": "boolean"
+                        },
+                        "public_expires_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "source_download": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "slug",
+                        "title",
+                        "url",
+                        "routing",
+                        "status",
+                        "audience",
+                        "active_release_id",
+                        "active_release_at",
+                        "total_bytes",
+                        "content_revision",
+                        "policy_revision",
+                        "public_read",
+                        "public_expires_at",
+                        "source_download"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "site"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      }
+    },
+    "/sites/{id}/access-requests": {
+      "post": {
+        "operationId": "artifacts.accessRequests.create",
+        "summary": "Ask the owner of a site for access. Asking twice while a request is open does not notify the owner again.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "requested": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "requested"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      }
+    },
+    "/sites/{id}/activate": {
+      "post": {
+        "operationId": "artifacts.sites.activate",
+        "summary": "Make a ready release the live one, or go back to an earlier release. Who can open the site does not change.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "release_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "expected_content_revision": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "release_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "release": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "site_id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "preparing",
+                            "ready",
+                            "failed",
+                            "deleted"
+                          ]
+                        },
+                        "entry_path": {
+                          "type": "string"
+                        },
+                        "total_bytes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "file_count": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "ready_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "preview_url": {
+                          "type": "string"
+                        },
+                        "warnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string"
+                              },
+                              "path": {
+                                "type": "string"
+                              },
+                              "line": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "path",
+                              "message"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "failure": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "message": {
+                                  "type": "string"
+                                },
+                                "candidates": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "files": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "path": {
+                                        "type": "string"
+                                      },
+                                      "error": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "path",
+                                      "error"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "message",
+                                "candidates",
+                                "files"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "site_id",
+                        "state",
+                        "entry_path",
+                        "total_bytes",
+                        "file_count",
+                        "created_at",
+                        "ready_at",
+                        "preview_url",
+                        "warnings",
+                        "failure"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "site": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        },
+                        "routing": {
+                          "type": "string",
+                          "enum": [
+                            "files",
+                            "spa"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "deleted"
+                          ]
+                        },
+                        "audience": {
+                          "type": "string",
+                          "enum": [
+                            "private",
+                            "shared",
+                            "organisation",
+                            "public"
+                          ]
+                        },
+                        "active_release_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "active_release_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "total_bytes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "content_revision": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "policy_revision": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "public_read": {
+                          "type": "boolean"
+                        },
+                        "public_expires_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "source_download": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "slug",
+                        "title",
+                        "url",
+                        "routing",
+                        "status",
+                        "audience",
+                        "active_release_id",
+                        "active_release_at",
+                        "total_bytes",
+                        "content_revision",
+                        "policy_revision",
+                        "public_read",
+                        "public_expires_at",
+                        "source_download"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "release",
+                    "site"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      }
+    },
+    "/sites/{id}/releases": {
+      "get": {
+        "operationId": "artifacts.sites.releases",
+        "summary": "List the releases of a site, newest first. Editors only.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "releases": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "site_id": {
+                            "type": "string"
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "preparing",
+                              "ready",
+                              "failed",
+                              "deleted"
+                            ]
+                          },
+                          "entry_path": {
+                            "type": "string"
+                          },
+                          "total_bytes": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "file_count": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "created_at": {
+                            "type": "string"
+                          },
+                          "ready_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "preview_url": {
+                            "type": "string"
+                          },
+                          "warnings": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "path": {
+                                  "type": "string"
+                                },
+                                "line": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "message": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "path",
+                                "message"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "failure": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string"
+                                  },
+                                  "message": {
+                                    "type": "string"
+                                  },
+                                  "candidates": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "files": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "path": {
+                                          "type": "string"
+                                        },
+                                        "error": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "path",
+                                        "error"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "code",
+                                  "message",
+                                  "candidates",
+                                  "files"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "site_id",
+                          "state",
+                          "entry_path",
+                          "total_bytes",
+                          "file_count",
+                          "created_at",
+                          "ready_at",
+                          "preview_url",
+                          "warnings",
+                          "failure"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "releases"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      }
+    },
+    "/sites/{id}/restore": {
+      "post": {
+        "operationId": "artifacts.sites.restore",
+        "summary": "Restore a deleted site. It comes back private, with only its owner able to open it.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "site": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        },
+                        "routing": {
+                          "type": "string",
+                          "enum": [
+                            "files",
+                            "spa"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "deleted"
+                          ]
+                        },
+                        "audience": {
+                          "type": "string",
+                          "enum": [
+                            "private",
+                            "shared",
+                            "organisation",
+                            "public"
+                          ]
+                        },
+                        "active_release_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "active_release_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "total_bytes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "content_revision": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "policy_revision": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "public_read": {
+                          "type": "boolean"
+                        },
+                        "public_expires_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "source_download": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "slug",
+                        "title",
+                        "url",
+                        "routing",
+                        "status",
+                        "audience",
+                        "active_release_id",
+                        "active_release_at",
+                        "total_bytes",
+                        "content_revision",
+                        "policy_revision",
+                        "public_read",
+                        "public_expires_at",
+                        "source_download"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "site"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      }
+    },
+    "/sites/{id}/sharing": {
+      "put": {
+        "operationId": "artifacts.sites.sharing",
+        "summary": "Show (mode=propose) or apply (mode=apply) the whole desired audience of a site. Applying needs the policy revision from the proposal; going public needs a passkey confirmation and a clean data protection scan.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "propose",
+                "apply"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "grants": {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "principal_type": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "group",
+                            "org"
+                          ]
+                        },
+                        "principal_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "principal_email": {
+                          "type": "string",
+                          "maxLength": 320,
+                          "format": "email",
+                          "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                        },
+                        "principal_label": {
+                          "type": "string",
+                          "maxLength": 400
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "viewer",
+                            "editor",
+                            "owner"
+                          ]
+                        },
+                        "expires_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "principal_type",
+                        "role"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "public": {
+                    "type": "object",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "expires_at": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "source_download": {
+                    "type": "boolean"
+                  },
+                  "expected_policy_revision": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "grants",
+                  "public",
+                  "source_download",
+                  "expected_policy_revision"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "diff": {
+                          "type": "object",
+                          "properties": {
+                            "gain": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "principal_type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "user",
+                                      "group",
+                                      "org"
+                                    ]
+                                  },
+                                  "principal_label": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "viewer",
+                                      "editor",
+                                      "owner"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "principal_type",
+                                  "principal_label",
+                                  "role"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "lose": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "principal_type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "user",
+                                      "group",
+                                      "org"
+                                    ]
+                                  },
+                                  "principal_label": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "viewer",
+                                      "editor",
+                                      "owner"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "principal_type",
+                                  "principal_label",
+                                  "role"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "public": {
+                              "type": "object",
+                              "properties": {
+                                "before": {
+                                  "type": "boolean"
+                                },
+                                "after": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "before",
+                                "after"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "gain",
+                            "lose",
+                            "public"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "policy_revision": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "diff",
+                        "policy_revision"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "site": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "slug": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "url": {
+                              "type": "string"
+                            },
+                            "routing": {
+                              "type": "string",
+                              "enum": [
+                                "files",
+                                "spa"
+                              ]
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "active",
+                                "deleted"
+                              ]
+                            },
+                            "audience": {
+                              "type": "string",
+                              "enum": [
+                                "private",
+                                "shared",
+                                "organisation",
+                                "public"
+                              ]
+                            },
+                            "active_release_id": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "active_release_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "total_bytes": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "content_revision": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "policy_revision": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "public_read": {
+                              "type": "boolean"
+                            },
+                            "public_expires_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "source_download": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "slug",
+                            "title",
+                            "url",
+                            "routing",
+                            "status",
+                            "audience",
+                            "active_release_id",
+                            "active_release_at",
+                            "total_bytes",
+                            "content_revision",
+                            "policy_revision",
+                            "public_read",
+                            "public_expires_at",
+                            "source_download"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "grants": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "principal_type": {
+                                "type": "string",
+                                "enum": [
+                                  "user",
+                                  "group",
+                                  "org"
+                                ]
+                              },
+                              "principal_id": {
+                                "type": "string"
+                              },
+                              "principal_label": {
+                                "type": "string"
+                              },
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "viewer",
+                                  "editor",
+                                  "owner"
+                                ]
+                              },
+                              "expires_at": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "principal_type",
+                              "principal_id",
+                              "principal_label",
+                              "role",
+                              "expires_at"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "viewer",
+                            "editor",
+                            "owner"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "site",
+                        "grants",
+                        "role"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalStepUp"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      }
+    },
     "/slack/install": {
       "post": {
         "operationId": "chatSlack.install",
@@ -48119,6 +51441,584 @@
         }
       }
     },
+    "/uploads": {
+      "post": {
+        "operationId": "artifacts.uploads.create",
+        "summary": "Declare the files of a release and get a signed upload slot for each file the organization does not already store.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "site": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                          }
+                        },
+                        "required": [
+                          "id"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 60
+                          },
+                          "title": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "routing": {
+                            "type": "string",
+                            "enum": [
+                              "files",
+                              "spa"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "slug"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "files": {
+                    "minItems": 1,
+                    "maxItems": 20000,
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "path": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1024
+                            },
+                            "size": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "sha256": {
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}$"
+                            }
+                          },
+                          "required": [
+                            "path",
+                            "size",
+                            "sha256"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "path": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1024
+                            },
+                            "file_id": {
+                              "type": "string",
+                              "pattern": "^(?:file:)?fil_[0-9a-zA-Z]{21}$"
+                            }
+                          },
+                          "required": [
+                            "path",
+                            "file_id"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "entry": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  },
+                  "expected_content_revision": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 255
+                  }
+                },
+                "required": [
+                  "site",
+                  "files"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "upload_id": {
+                      "type": "string"
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "file_key": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "const": "present"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "file_key",
+                              "status"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "file_key": {
+                                "type": "string"
+                              },
+                              "upload": {
+                                "type": "object",
+                                "properties": {
+                                  "url": {
+                                    "type": "string"
+                                  },
+                                  "method": {
+                                    "type": "string",
+                                    "const": "PUT"
+                                  },
+                                  "headers": {
+                                    "type": "object",
+                                    "propertyNames": {
+                                      "type": "string"
+                                    },
+                                    "additionalProperties": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "expires_at": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "url",
+                                  "method",
+                                  "headers",
+                                  "expires_at"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "file_key",
+                              "upload"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "excluded": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "upload_id",
+                    "files",
+                    "excluded"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalValidation"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlan"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalQuota"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      }
+    },
+    "/uploads/{id}/finalize": {
+      "post": {
+        "operationId": "artifacts.uploads.finalize",
+        "summary": "Start building the release from the uploaded files. The release is polled until it is ready or failed.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "activate": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "release_id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "preparing",
+                        "ready",
+                        "failed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "release_id",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      }
+    },
     "/webhooks/endpoints": {
       "post": {
         "operationId": "webhooks.endpoints.create",
@@ -50616,6 +54516,16 @@
               "sso_test_required",
               "sso_break_glass_required",
               "sso_unavailable",
+              "path_invalid",
+              "artifacts_disabled",
+              "audience_changed",
+              "scan_pending",
+              "entry_required",
+              "site_exists",
+              "site_deleted",
+              "upload_incomplete",
+              "upload_expired",
+              "revision_conflict",
               "rate_limiter_unavailable"
             ]
           },

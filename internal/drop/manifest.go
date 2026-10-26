@@ -47,6 +47,20 @@ var excludedFiles = map[string]bool{".ds_store": true, "thumbs.db": true, "deskt
 
 var deniedDirs = map[string]bool{".git": true, ".ssh": true, ".aws": true, ".gnupg": true}
 
+// Excluded reports whether a canonical path is left out of a site with a
+// warning: it is inside a dependency folder, or is operating system metadata
+// (including the "._" files macOS writes beside a file).
+func Excluded(p string) bool {
+	parts := strings.Split(strings.ToLower(p), "/")
+	for _, dir := range parts[:len(parts)-1] {
+		if excludedDirs[dir] {
+			return true
+		}
+	}
+	last := parts[len(parts)-1]
+	return excludedDirs[last] || excludedFiles[last] || strings.HasPrefix(last, "._")
+}
+
 // Denied reports why a path must not be published: it looks like a credential
 // or a repository's internals.
 func Denied(p string) (string, bool) {
@@ -126,7 +140,7 @@ func Build(root string) (Manifest, error) {
 		case d.IsDir() && excludedDirs[lower]:
 			m.Warnings = append(m.Warnings, "left out "+rel+"/")
 			return filepath.SkipDir
-		case !d.IsDir() && excludedFiles[lower]:
+		case !d.IsDir() && Excluded(rel):
 			m.Warnings = append(m.Warnings, "left out "+rel)
 			return nil
 		case d.IsDir():

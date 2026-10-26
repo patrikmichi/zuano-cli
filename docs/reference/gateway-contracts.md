@@ -127,6 +127,7 @@ the constants in the code, both ways.
 | 44 | `upstream_quarantined` | also `registry_server_deleted` |
 | 45 | `evidence_bundle_invalid` | `compliance verify` |
 | 46 | `evidence_keys_missing` | `compliance verify` |
+| 47 | `scan_pending` | `409` `scan_pending` on `sites/{id}/activate` or `sites/{id}/sharing`: the release's data protection scan has not finished, so it cannot go live or public yet; retry shortly |
 | 50 | `a2a_chain_refused` | `a2a_loop`, `a2a_depth_exceeded`, `a2a_chain_limit` |
 | 51 | `chain_killed` | |
 | 52 | `chain_budget_exhausted` | |
@@ -262,25 +263,47 @@ and the request bodies of the two create routes are this client's decisions.
 
 Under `/api/artifacts/`, bearer auth, organisation from the credential. A write
 by an agent session may answer `202` with the held-call document (exit 12).
-Fixtures: `artifact-upload-create.json`, `artifact-release-ready.json`,
-`artifact-release-entry-required.json`, `artifact-sites.json`,
-`artifact-site-detail.json`, `artifact-releases.json`,
-`artifact-share-proposal.json`. Path rules: `internal/drop/testdata/paths.json`,
-to be replaced by the gateway's own vectors file.
+The operations are in the vendored OpenAPI document (`artifacts.*`), and a test
+runs every `zuano drop` command against it. Fixtures: `artifact-upload-create.json`,
+`artifact-release-ready.json`, `artifact-release-entry-required.json`,
+`artifact-sites.json`, `artifact-site-detail.json`, `artifact-releases.json`,
+`artifact-share-proposal.json`, `artifact-share-applied.json`,
+`artifact-org.json`, `artifact-path-invalid.json`. Path rules and their vectors:
+`internal/drop/testdata/paths.json`, the gateway's own file, copied with
+`make gen-artifact-paths`.
 
 | Route | Request and response |
 |---|---|
-| `POST uploads` | `{"site": {"slug", "title"?, "routing"?: "spa"}, "files": [{"path", "size", "sha256"}], "entry"?, "idempotency_key": "cli_..."}` answers `{"upload_id": "aup_...", "files": [SLOT]}` |
+| `POST uploads` | `{"site": {"slug", "title"?, "routing"?: "spa"}, "files": [{"path", "size", "sha256"}], "entry"?, "idempotency_key": "cli_..."}` answers `{"upload_id": "aup_...", "files": [SLOT], "excluded": [text]}`; `excluded` lists the paths the gateway left out (dependency folders, operating system metadata), which zuano prints as warnings. A new slug creates the site |
 | `PUT {slot.upload.url}` | the object store: the bytes, the listed headers, no credential |
-| `POST uploads/{id}/finalize` | `{"activate": bool}` answers `{"release_id", "status": "preparing"}` |
+| `POST uploads/{id}/finalize` | `{"activate": bool}` answers `200` `{"release_id", "status": "preparing"\|"ready"\|"failed"}` |
 | `GET releases/{id}` | `{"release": RELEASE, "site": SITE}`; `state` is `preparing`, `ready`, `failed` or `deleted` |
+| `POST releases/{id}/preview-session` | `{"url"}`: an address that signs the caller in on the release's preview host and opens it, once, within a minute. `zuano drop open --preview` uses it, and the release's `preview_url` when the gateway has no such route |
 | `GET sites[?status=deleted]` | `{"sites": [SITE]}` |
-| `GET sites/{id}` | `{"site": SITE, "grants": [GRANT]}` |
+| `GET sites/{id}` | `{"site": SITE, "grants": [GRANT], "role": "viewer\|editor\|owner"}`; `role` is what the caller may do with the site |
 | `GET sites/{id}/releases` | `{"releases": [RELEASE]}` |
-| `POST sites/{id}/activate` | `{"release_id", "expected_content_revision"}`; `412 revision_conflict`, `409 audience_changed` |
-| `PUT sites/{id}/sharing?mode=propose` | `{"grants": [GRANT], "public": {"enabled", "expires_at"?}, "source_download", "expected_policy_revision"}` answers `{"diff": {"gain": [GRANT], "lose": [GRANT], "public": {"before", "after"}}, "policy_revision"}` |
-| `PUT sites/{id}/sharing?mode=apply` | the same body with the revision from the proposal; `412` when the sharing changed meanwhile |
-| `DELETE sites/{id}`, `POST sites/{id}/restore` | `200` or `204` |
+| `POST sites/{id}/activate` | `{"release_id", "expected_content_revision"}` answers `{"release", "site"}`; `412 revision_conflict` (exit 25), `409 audience_changed`, `409 scan_pending` (exit 47) |
+| `PUT sites/{id}/sharing?mode=propose` | `{"grants": [GRANT_IN], "public": {"enabled", "expires_at"?}, "source_download", "expected_policy_revision"}` answers `{"diff": {"gain": [DIFF], "lose": [DIFF], "public": {"before", "after"}}, "policy_revision"}` |
+| `PUT sites/{id}/sharing?mode=apply` | the same body with the revision from the proposal; answers `{"site", "grants", "role"}`, as `GET sites/{id}` does; `412 revision_conflict` (exit 25) when the sharing changed meanwhile, `409 scan_pending` (exit 47), and `step_up_required` (exit 14) for going public, which zuano points to the dashboard for |
+| `DELETE sites/{id}`, `POST sites/{id}/restore` | `204`, and `200` `{"site"}` |
+| `GET org`, `PUT org` | admins: `{"enabled", "label": null\|text, "public_sharing", "allow_remote", "storage_bytes", "storage_limit": null\|number}`; `PUT` takes any of `enabled`, `label`, `public_sharing`, `allow_remote`. Setting the label is final and needs a passkey (`step_up_required`, exit 14, pointing to the dashboard's artifact settings) |
+
+`path_invalid` (`400`) lists every refused path at once:
+`{"error": "path_invalid", "message", "paths": [{"path", "reason", "detail"?}]}`.
+`reason` is `empty`, `invalid_utf8`, `backslash`, `control`, `encoded_separator`
+(a `%2f`, `%5c` or `%2e` in a name), `absolute`, `drive_prefix`, `too_deep`,
+`empty_component`, `traversal`, `reserved`, `too_long`, `denied` (a credential or
+repository internals, with `detail`), or a collision (`duplicate`, `case`,
+`file_and_directory`, with both paths in `detail`). zuano refuses the same
+paths before it uploads anything.
+
+The preview address of a release is
+`https://<release key>--preview--<label>.<domain>/`, the release key being the
+release id without its prefix, in lower case. A browser that opens a private
+site or preview without a session is sent to the dashboard's
+`/api/artifacts/auth/start?host=...&return=...&state=<16 to 64 URL-safe
+characters>` and back with a one-time code; that route takes the dashboard's own
+session and never a token, so zuano does not call it.
 
 ```json
 SLOT    = {"path", "file_key", "status": "present"}  or  {"path", "file_key", "upload": {"url", "method": "PUT", "headers": {}, "expires_at"}}
@@ -291,15 +314,13 @@ SITE    = {"id": "ast_...", "slug", "title", "url", "routing", "status", "audien
            "active_release_at", "total_bytes", "content_revision", "policy_revision", "public_read",
            "public_expires_at": null|text, "source_download"}
 GRANT   = {"principal_type": "user|group|org", "principal_id", "principal_label", "role": "viewer|editor|owner", "expires_at": null|text}
+DIFF    = {"principal_type", "principal_label", "role"}
 ```
 
-A new user grant in a sharing request names the person by `principal_email`
-instead of `principal_id`. Source: artifact pages plan, "Publish flow",
-"Sharing" and "relay CLI changes". The plan names the routes, the upload and
-sharing bodies and the typed errors; the response wrappers, the `SLOT` shape
-(the plan says `{file_key, ...}` per file; zuano also reads `path` to match it
-to a file), the proposal diff and the `GRANT`/`SITE` fields are this client's
-decisions.
+`GRANT_IN` is a `GRANT` in a sharing request. A new user grant names the person
+by `principal_email`, among the organisation's members, instead of
+`principal_id`; `principal_label` is ignored on the way in. A viewer cannot
+change the sharing, and an editor can only add viewers.
 
 ## Plugin feeds
 

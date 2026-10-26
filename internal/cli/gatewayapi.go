@@ -71,6 +71,12 @@ func gatewayStatusError(status int, raw []byte) error {
 			Pointer string `json:"pointer"`
 			Message string `json:"message"`
 		} `json:"issues"`
+		// Paths lists every path a publish refused (path_invalid), with why.
+		Paths []struct {
+			Path   string `json:"path"`
+			Reason string `json:"reason"`
+			Detail string `json:"detail"`
+		} `json:"paths"`
 	}
 	_ = json.Unmarshal(raw, &doc)
 	msg := doc.Message
@@ -83,6 +89,12 @@ func gatewayStatusError(status int, raw []byte) error {
 	text := fmt.Sprintf("%s (HTTP %d)%s", textsafe.Clean(msg), status, client.RequestIDNote())
 	for _, i := range doc.Issues {
 		text += fmt.Sprintf("\n  %s: %s", textsafe.Clean(i.Pointer), textsafe.Clean(i.Message))
+	}
+	for _, p := range doc.Paths {
+		text += fmt.Sprintf("\n  %s: %s", textsafe.Clean(p.Path), textsafe.Clean(p.Reason))
+		if p.Detail != "" {
+			text += " (" + textsafe.Clean(p.Detail) + ")"
+		}
 	}
 	if code, ok := refusalExit[doc.Error]; ok {
 		return &ExitError{Code: code, Msg: text}

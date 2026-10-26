@@ -7,6 +7,7 @@ package drop
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -32,7 +33,12 @@ var (
 	ErrTooLong        = errors.New("path is too long")
 	ErrTooDeep        = errors.New("path has too many components")
 	ErrInvalidUTF8    = errors.New("path is not valid UTF-8")
+	// ErrEncodedSeparator is a percent-encoded / \ or . in a name: a server
+	// that decodes it later would read a different path than the one checked.
+	ErrEncodedSeparator = errors.New("path has an encoded separator (%2f, %5c or %2e)")
 )
+
+var encodedSeparator = regexp.MustCompile(`(?i)%(?:2f|5c|2e)`)
 
 // reservedTop are first path components the platform serves itself.
 var reservedTop = map[string]bool{"_drop": true, "api": true}
@@ -55,6 +61,9 @@ func Canonicalize(p string) (string, error) {
 		}
 	}
 	p = norm.NFC.String(p)
+	if encodedSeparator.MatchString(p) {
+		return "", ErrEncodedSeparator
+	}
 	if strings.HasPrefix(p, "/") {
 		return "", ErrAbsolute
 	}

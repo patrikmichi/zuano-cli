@@ -120,7 +120,7 @@ func TestDropPublish_UploadsOnlyWhatIsMissingFinalizesAndPrintsTheAddress(t *tes
 	if err != nil {
 		t.Fatalf("err = %v\n%s", err, out)
 	}
-	for _, want := range []string{"Published docs (arl_r1e2l3e4a5, 2 files)", g.srv.URL + "/site/", "Visible to: organisation", "warning: index.html: img/logo.png is not in the release (line 4)"} {
+	for _, want := range []string{"Published docs (arl_r1e2l3e4a5, 2 files)", g.srv.URL + "/site/", "Visible to: organisation", "warning: index.html: img/logo.png is not in the release (line 4)", "warning: the gateway left out .DS_Store"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
@@ -161,7 +161,7 @@ func TestDropPublish_NoActivateJSONAndAFailedEntry(t *testing.T) {
 	})
 	root := writeSite(t, map[string]string{"a.md": "# a", "b.md": "# b"})
 	out, err := runCommand(t, DropCmd(), "publish", root, "--no-activate")
-	if err != nil || !strings.Contains(out, "is ready but not live") || !strings.Contains(out, "Preview: https://preview--acme.sites.example/_drop/preview/arl_r1e2l3e4a5/") {
+	if err != nil || !strings.Contains(out, "is ready but not live") || !strings.Contains(out, "Preview: https://r1e2l3e4a5--preview--acme.sites.example/") {
 		t.Fatalf("no-activate: %q, %v", out, err)
 	}
 	if fin := g.calls("POST", "/api/artifacts/uploads/aup_x1y2z3a4b5/finalize")[0].body; fin["activate"] != false {
@@ -233,13 +233,13 @@ func TestSlugFrom(t *testing.T) {
 func TestDrop_ListReleasesRollbackOpenDeleteRestore(t *testing.T) {
 	var g *dropGW
 	g = newDropGW(t, map[string]func(http.ResponseWriter, map[string]any){
-		"GET /api/artifacts/sites":                          fixtureReply(t, func() *dropGW { return g }, 200, "artifact-sites.json"),
-		"GET /api/artifacts/sites?status=deleted":           fixtureReply(t, func() *dropGW { return g }, 200, "artifact-sites.json"),
-		"GET /api/artifacts/sites/ast_s1i2t3e4a5/releases":  reply(200, contractFixture(t, "artifact-releases.json")),
-		"POST /api/artifacts/sites/ast_s1i2t3e4a5/activate": reply(200, `{"ok":true}`),
-		"GET /api/artifacts/releases/arl_r1e2l3e4a5":        fixtureReply(t, func() *dropGW { return g }, 200, "artifact-release-ready.json"),
-		"DELETE /api/artifacts/sites/ast_s1i2t3e4a5":        reply(204, ``),
-		"POST /api/artifacts/sites/ast_s1i2t3e4a5/restore":  reply(200, `{"ok":true}`),
+		"GET /api/artifacts/sites":                                    fixtureReply(t, func() *dropGW { return g }, 200, "artifact-sites.json"),
+		"GET /api/artifacts/sites?status=deleted":                     fixtureReply(t, func() *dropGW { return g }, 200, "artifact-sites.json"),
+		"GET /api/artifacts/sites/ast_s1i2t3e4a5/releases":            reply(200, contractFixture(t, "artifact-releases.json")),
+		"POST /api/artifacts/sites/ast_s1i2t3e4a5/activate":           fixtureReply(t, func() *dropGW { return g }, 200, "artifact-release-ready.json"),
+		"POST /api/artifacts/releases/arl_r1e2l3e4a5/preview-session": reply(200, `{"url":"https://r1e2l3e4a5--preview--acme.sites.example/_drop/auth/callback?code=once"}`),
+		"DELETE /api/artifacts/sites/ast_s1i2t3e4a5":                  reply(204, ``),
+		"POST /api/artifacts/sites/ast_s1i2t3e4a5/restore":            reply(200, `{"site":{}}`),
 	})
 	out, err := runCommand(t, DropCmd(), "list")
 	if err != nil || !strings.Contains(out, "docs") || !strings.Contains(out, "Team docs") || !strings.Contains(out, "organisation") {
@@ -261,7 +261,7 @@ func TestDrop_ListReleasesRollbackOpenDeleteRestore(t *testing.T) {
 	if out, err = runCommand(t, DropCmd(), "open", "docs", "--no-browser"); err != nil || strings.TrimSpace(out) != g.srv.URL+"/site/" || len(*opened) != 0 {
 		t.Fatalf("open: %q, %v, %v", out, err, *opened)
 	}
-	if out, err = runCommand(t, DropCmd(), "open", "docs", "--preview", "arl_r1e2l3e4a5", "--no-browser"); err != nil || strings.TrimSpace(out) != "https://preview--acme.sites.example/_drop/preview/arl_r1e2l3e4a5/" {
+	if out, err = runCommand(t, DropCmd(), "open", "docs", "--preview", "arl_r1e2l3e4a5", "--no-browser"); err != nil || strings.TrimSpace(out) != "https://r1e2l3e4a5--preview--acme.sites.example/_drop/auth/callback?code=once" {
 		t.Fatalf("open preview: %q, %v", out, err)
 	}
 
@@ -294,10 +294,10 @@ func TestDropShare_ShowsProposesAndAppliesAfterConfirmation(t *testing.T) {
 		"GET /api/artifacts/sites":                                     fixtureReply(t, func() *dropGW { return g }, 200, "artifact-sites.json"),
 		"GET /api/artifacts/sites/ast_s1i2t3e4a5":                      fixtureReply(t, func() *dropGW { return g }, 200, "artifact-site-detail.json"),
 		"PUT /api/artifacts/sites/ast_s1i2t3e4a5/sharing?mode=propose": reply(200, contractFixture(t, "artifact-share-proposal.json")),
-		"PUT /api/artifacts/sites/ast_s1i2t3e4a5/sharing?mode=apply":   reply(200, `{"site":{}}`),
+		"PUT /api/artifacts/sites/ast_s1i2t3e4a5/sharing?mode=apply":   fixtureReply(t, func() *dropGW { return g }, 200, "artifact-share-applied.json"),
 	})
 	out, err := runCommand(t, DropCmd(), "share", "docs")
-	if err != nil || !strings.Contains(out, "Public: off") || !strings.Contains(out, "owner    owner@example.com") || !strings.Contains(out, "group eng") {
+	if err != nil || !strings.Contains(out, "Public: off") || !strings.Contains(out, "Your role: owner") || !strings.Contains(out, "owner    owner@example.com") || !strings.Contains(out, "group eng") {
 		t.Fatalf("show: %q, %v", out, err)
 	}
 
@@ -305,7 +305,7 @@ func TestDropShare_ShowsProposesAndAppliesAfterConfirmation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("share: %v\n%s", err, out)
 	}
-	for _, want := range []string{"+ bo@example.com (viewer)", "- group eng", "Public access: off -> on", "Sharing of docs updated"} {
+	for _, want := range []string{"+ bo@example.com (viewer)", "- group eng", "Public access: off -> on", "Sharing of docs updated", "Visible to: public"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}

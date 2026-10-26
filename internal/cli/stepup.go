@@ -30,6 +30,8 @@ func init() { client.SetDefaultStepUpHandler(completeStepUp) }
 var stepUpPages = map[string]string{
 	"firewall_pin_approve": "/firewall",
 	"firewall_release":     "/firewall",
+	"artifact_public":      "/pages/sites",
+	"artifact_label_set":   "/settings/artifacts",
 }
 
 func stepUpPage(action string) string {

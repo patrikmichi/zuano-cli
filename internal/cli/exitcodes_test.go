@@ -90,6 +90,11 @@ func TestRouteRefusalMapsUseRegisteredCodes(t *testing.T) {
 			t.Errorf("%s is not in the OpenAPI refusal codes", refusal)
 		}
 	}
+	for refusal := range artifactRefusals {
+		if !slices.Contains(enum, refusal) {
+			t.Errorf("%s is not in the OpenAPI refusal codes", refusal)
+		}
+	}
 	for _, refusal := range []string{"space_exists", "page_exists", "under_hold", "version_conflict", "browser_session_required", "expired", "already_decided", "challenge_invalid", "digest_mismatch", "passkey_verification_failed", "passkey_required"} {
 		if !slices.Contains(enum, refusal) {
 			t.Errorf("%s is documented here but not in the OpenAPI refusal codes", refusal)

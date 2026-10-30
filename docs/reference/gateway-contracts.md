@@ -27,7 +27,7 @@ so a fixture changes only when a route's shape does.
 The gateway's OpenAPI document (`gateway/openapi/v1.json`) is vendored as
 `internal/cli/testdata/contracts/openapi-v1.json`; `ZUANO_GATEWAY_OPENAPI`
 names the gateway's own copy. The vendored copy is the integration branch's
-document as it stands (411b36e), unedited: the run, firewall, knowledge base,
+document as it stands (32d8c1a), unedited: the run, firewall, knowledge base,
 approval and SDK session routes are all in it, so nothing is merged in by
 hand. Regenerate it by copying `gateway/openapi/v1.json` from the integration
 branch. An operation names its own `servers` entry when it is not under
@@ -45,6 +45,8 @@ the integration document yet: `GET /kb/spaces/{space}/export` and
 `POST /kb/spaces/{space}/import` (events and plugins branch), and `/domains`
 (core branch). A test fails when they appear in the vendored document, so the
 contract tests get extended with them.
+
+The recipe lifecycle routes (activate, rollback, override) are session-only: the gateway accepts them from a browser session and not from an API key, so the CLI has no command for them and must not call them.
 
 A signing vector for the publisher signature is written by the gateway's own
 signing code: `scripts/publisher-signing-vector.ts` regenerates
@@ -278,7 +280,7 @@ runs every `zuano drop` command against it. Fixtures: `artifact-upload-create.js
 | `PUT {slot.upload.url}` | the object store: the bytes, the listed headers, no credential |
 | `POST uploads/{id}/finalize` | `{"activate": bool}` answers `200` `{"release_id", "status": "preparing"\|"ready"\|"failed"}` |
 | `GET releases/{id}` | `{"release": RELEASE, "site": SITE}`; `state` is `preparing`, `ready`, `failed` or `deleted` |
-| `POST releases/{id}/preview-session` | `{"url"}`: an address that signs the caller in on the release's preview host and opens it, once, within a minute. `zuano drop open --preview` uses it, and the release's `preview_url` when the gateway has no such route |
+| `POST releases/{id}/preview-session` | `{"url"}`: an address that signs the caller in on the release's preview host and opens it, once, within a minute. `zuano drop open --preview` uses it (operation `artifacts.releases.preview_session`, browser-session auth, so an API key is refused), and then the release's `preview_url` |
 | `GET sites[?status=deleted]` | `{"sites": [SITE]}` |
 | `GET sites/{id}` | `{"site": SITE, "grants": [GRANT], "role": "viewer\|editor\|owner"}`; `role` is what the caller may do with the site |
 | `GET sites/{id}/releases` | `{"releases": [RELEASE]}` |

@@ -11,6 +11,1404 @@
     }
   ],
   "paths": {
+    "/agents": {
+      "get": {
+        "operationId": "agents.list",
+        "summary": "List agent identities, or ask which can reach a service or tool. Members see their own; admins see the organization's.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "label",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "stale",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "exposure",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            }
+          },
+          {
+            "name": "can",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "risk",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "agents": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "mcp_client",
+                              "cli_agent",
+                              "cli_personal",
+                              "api_key_agent",
+                              "api_key_personal",
+                              "coding_agent",
+                              "trigger",
+                              "workload",
+                              "project_app"
+                            ]
+                          },
+                          "owner": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "suspended",
+                              "revoked",
+                              "expired"
+                            ]
+                          },
+                          "lastActivity": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "exposure": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "low",
+                                  "medium",
+                                  "high"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "labels": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          },
+                          "reviewDue": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "ownerUserId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "exposureScore": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "scopes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "expiresAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "matched": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "service": {
+                                  "type": "string"
+                                },
+                                "risk": {
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "type": "string",
+                                  "enum": [
+                                    "allowed",
+                                    "approval",
+                                    "off"
+                                  ]
+                                },
+                                "toolCount": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "service",
+                                "risk",
+                                "mode",
+                                "toolCount"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "kind",
+                          "owner",
+                          "status",
+                          "lastActivity",
+                          "exposure",
+                          "labels",
+                          "reviewDue",
+                          "ownerUserId",
+                          "exposureScore",
+                          "scopes",
+                          "createdAt",
+                          "expiresAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "policyVersion": {
+                      "type": "number"
+                    },
+                    "recomputing": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "agents",
+                    "nextCursor",
+                    "policyVersion",
+                    "recomputing"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api"
+          }
+        ]
+      }
+    },
+    "/agents/{id}": {
+      "get": {
+        "operationId": "agents.get",
+        "summary": "One agent identity with its credentials, effective access and exposure.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "agent": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "mcp_client",
+                            "cli_agent",
+                            "cli_personal",
+                            "api_key_agent",
+                            "api_key_personal",
+                            "coding_agent",
+                            "trigger",
+                            "workload",
+                            "project_app"
+                          ]
+                        },
+                        "owner": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "suspended",
+                            "revoked",
+                            "expired"
+                          ]
+                        },
+                        "lastActivity": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "exposure": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "low",
+                                "medium",
+                                "high"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "labels": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        "reviewDue": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "ownerUserId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "exposureScore": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "scopes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "expiresAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "matched": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "service": {
+                                "type": "string"
+                              },
+                              "risk": {
+                                "type": "string"
+                              },
+                              "mode": {
+                                "type": "string",
+                                "enum": [
+                                  "allowed",
+                                  "approval",
+                                  "off"
+                                ]
+                              },
+                              "toolCount": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "service",
+                              "risk",
+                              "mode",
+                              "toolCount"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "statusReason": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "statusChangedBy": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "statusChangedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "usesIdentityId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "previousIdentityId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "lastReviewedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "lastReviewedBy": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "exposureFactors": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "exposureFactorDetails": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "factor": {
+                                "type": "string"
+                              },
+                              "weight": {
+                                "type": "number"
+                              },
+                              "detail": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "factor",
+                              "weight"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "credentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              },
+                              "expiresAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "revokedAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "createdAt",
+                              "expiresAt",
+                              "revokedAt"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "device": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "hostLabel": {
+                                  "type": "string"
+                                },
+                                "os": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "hostLabel",
+                                "os"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "access": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "service": {
+                                "type": "string"
+                              },
+                              "risk": {
+                                "type": "string"
+                              },
+                              "mode": {
+                                "type": "string",
+                                "enum": [
+                                  "allowed",
+                                  "approval",
+                                  "off"
+                                ]
+                              },
+                              "source": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "service",
+                              "risk",
+                              "mode",
+                              "source"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "accessSummary": {
+                          "type": "object",
+                          "properties": {
+                            "cells": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "service": {
+                                    "type": "string"
+                                  },
+                                  "risk": {
+                                    "type": "string"
+                                  },
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": [
+                                      "allowed",
+                                      "approval",
+                                      "off"
+                                    ]
+                                  },
+                                  "toolCount": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "service",
+                                  "risk",
+                                  "mode",
+                                  "toolCount"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "overrides": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "service": {
+                                    "type": "string"
+                                  },
+                                  "tool": {
+                                    "type": "string"
+                                  },
+                                  "risk": {
+                                    "type": "string"
+                                  },
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": [
+                                      "allowed",
+                                      "approval",
+                                      "off"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "service",
+                                  "tool",
+                                  "risk",
+                                  "mode"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "policyVersion": {
+                              "type": "number"
+                            },
+                            "recomputing": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "cells",
+                            "overrides",
+                            "policyVersion",
+                            "recomputing"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "kind",
+                        "owner",
+                        "status",
+                        "lastActivity",
+                        "exposure",
+                        "labels",
+                        "reviewDue",
+                        "ownerUserId",
+                        "exposureScore",
+                        "scopes",
+                        "createdAt",
+                        "expiresAt",
+                        "statusReason",
+                        "statusChangedBy",
+                        "statusChangedAt",
+                        "usesIdentityId",
+                        "previousIdentityId",
+                        "lastReviewedAt",
+                        "lastReviewedBy",
+                        "exposureFactors",
+                        "exposureFactorDetails",
+                        "credentials",
+                        "device",
+                        "access",
+                        "accessSummary"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "agent"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api"
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "agents.patch",
+        "summary": "Rename an agent identity, label it (admins) or change its expiry. Shortening an expiry is free; lengthening or removing it is confirmed with a passkey.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "labels": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,39}$"
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "maxLength": 100
+                    }
+                  },
+                  "expiresAt": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "agent": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "labels": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        "expiresAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "suspended",
+                            "revoked",
+                            "expired"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "labels",
+                        "expiresAt",
+                        "status"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "agent"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalStepUp"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api"
+          }
+        ]
+      }
+    },
+    "/agents/{id}/activity": {
+      "get": {
+        "operationId": "agents.activity",
+        "summary": "When an agent identity was last active, and the approvals its calls asked for in a period.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "activity": {
+                      "type": "object",
+                      "properties": {
+                        "calls": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "service": {
+                                "type": "string"
+                              },
+                              "count": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "service",
+                              "count"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "approvals": {
+                          "type": "number"
+                        },
+                        "refusals": {
+                          "type": "number"
+                        },
+                        "identityId": {
+                          "type": "string"
+                        },
+                        "from": {
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        },
+                        "lastSeenAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "lastToolCallAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "lastWriteAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "approvalsByOutcome": {
+                          "type": "object",
+                          "properties": {
+                            "approved": {
+                              "type": "number"
+                            },
+                            "denied": {
+                              "type": "number"
+                            },
+                            "pending": {
+                              "type": "number"
+                            },
+                            "expired": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "approved",
+                            "denied",
+                            "pending",
+                            "expired"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "calls",
+                        "approvals",
+                        "refusals",
+                        "identityId",
+                        "from",
+                        "to",
+                        "lastSeenAt",
+                        "lastToolCallAt",
+                        "lastWriteAt",
+                        "approvalsByOutcome"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "activity"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api"
+          }
+        ]
+      }
+    },
     "/agents/{id}/owner": {
       "post": {
         "operationId": "agents.owner",
@@ -32895,6 +34293,266 @@
         ]
       }
     },
+    "/org/recipe-settings": {
+      "get": {
+        "operationId": "recipes.settings.get",
+        "summary": "Whether tool search offers the platform’s and the organization’s recipes, only the organization’s, or none.",
+        "security": [
+          {
+            "browserSession": [
+              "recipes:read"
+            ]
+          },
+          {
+            "serverKey": [
+              "recipes:read"
+            ]
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "serveRecipes": {
+                      "type": "string",
+                      "enum": [
+                        "all",
+                        "org_only",
+                        "off"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "serveRecipes"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "recipes.settings.put",
+        "summary": "Choose which recipes tool search offers.",
+        "security": [
+          {
+            "browserSession": [
+              "recipes:write"
+            ]
+          },
+          {
+            "serverKey": [
+              "recipes:write"
+            ]
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serveRecipes": {
+                    "type": "string",
+                    "enum": [
+                      "all",
+                      "org_only",
+                      "off"
+                    ]
+                  }
+                },
+                "required": [
+                  "serveRecipes"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "serveRecipes": {
+                      "type": "string",
+                      "enum": [
+                        "all",
+                        "org_only",
+                        "off"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "serveRecipes"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/platform/market/flagged-handles": {
       "get": {
         "operationId": "platform.market.flaggedHandles.list",
@@ -36614,9 +38272,7 @@
                           "type": "array",
                           "items": {
                             "type": "string",
-                            "minLength": 1,
-                            "maxLength": 80,
-                            "pattern": "^[A-Za-z0-9_:.-]+$"
+                            "pattern": "^[A-Z][A-Z0-9_]{1,40}$"
                           }
                         },
                         "text": {
@@ -37446,9 +39102,7 @@
                           "type": "array",
                           "items": {
                             "type": "string",
-                            "minLength": 1,
-                            "maxLength": 80,
-                            "pattern": "^[A-Za-z0-9_:.-]+$"
+                            "pattern": "^[A-Z][A-Z0-9_]{1,40}$"
                           }
                         },
                         "text": {
@@ -37767,6 +39421,1780 @@
             }
           },
           "412": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipes/{id}:activate": {
+      "post": {
+        "operationId": "recipes.activate",
+        "summary": "Make a version the served one (the latest unless `version` names another). It must have passed its evaluation; activation signs it.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "recipe": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "number"
+                        },
+                        "currentVersion": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "latestVersion": {
+                          "type": "number"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "useCase": {
+                          "type": "string"
+                        },
+                        "services": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "difficulty": {
+                          "type": "object",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "enum": [
+                                "easy",
+                                "medium",
+                                "hard"
+                              ]
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "level",
+                            "reason"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "primaryTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "relatedTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "order": {
+                                "type": "number"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "required",
+                                  "optional",
+                                  "fallback"
+                                ]
+                              },
+                              "condition": {
+                                "type": "string"
+                              },
+                              "fallbackFor": {
+                                "type": "number"
+                              },
+                              "tool": {
+                                "type": "string"
+                              },
+                              "instruction": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "order",
+                              "kind",
+                              "tool",
+                              "instruction"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "pitfalls": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tool": {
+                                "type": "string"
+                              },
+                              "errorCodes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "fix": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tool",
+                              "text",
+                              "fix"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "platform",
+                            "mined",
+                            "org"
+                          ]
+                        },
+                        "overrides": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "active",
+                            "suspended",
+                            "retired"
+                          ]
+                        },
+                        "contentHash": {
+                          "type": "string"
+                        },
+                        "editable": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "slug",
+                        "version",
+                        "currentVersion",
+                        "latestVersion",
+                        "title",
+                        "useCase",
+                        "services",
+                        "difficulty",
+                        "primaryTools",
+                        "relatedTools",
+                        "steps",
+                        "pitfalls",
+                        "source",
+                        "overrides",
+                        "status",
+                        "contentHash",
+                        "editable",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "recipe"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipes/{id}:override": {
+      "post": {
+        "operationId": "recipes.override",
+        "summary": "Copy a platform recipe into the organization as a draft. Once served, it replaces the platform recipe for this organization.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "recipe": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "number"
+                        },
+                        "currentVersion": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "latestVersion": {
+                          "type": "number"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "useCase": {
+                          "type": "string"
+                        },
+                        "services": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "difficulty": {
+                          "type": "object",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "enum": [
+                                "easy",
+                                "medium",
+                                "hard"
+                              ]
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "level",
+                            "reason"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "primaryTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "relatedTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "order": {
+                                "type": "number"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "required",
+                                  "optional",
+                                  "fallback"
+                                ]
+                              },
+                              "condition": {
+                                "type": "string"
+                              },
+                              "fallbackFor": {
+                                "type": "number"
+                              },
+                              "tool": {
+                                "type": "string"
+                              },
+                              "instruction": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "order",
+                              "kind",
+                              "tool",
+                              "instruction"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "pitfalls": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tool": {
+                                "type": "string"
+                              },
+                              "errorCodes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "fix": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tool",
+                              "text",
+                              "fix"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "platform",
+                            "mined",
+                            "org"
+                          ]
+                        },
+                        "overrides": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "active",
+                            "suspended",
+                            "retired"
+                          ]
+                        },
+                        "contentHash": {
+                          "type": "string"
+                        },
+                        "editable": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "slug",
+                        "version",
+                        "currentVersion",
+                        "latestVersion",
+                        "title",
+                        "useCase",
+                        "services",
+                        "difficulty",
+                        "primaryTools",
+                        "relatedTools",
+                        "steps",
+                        "pitfalls",
+                        "source",
+                        "overrides",
+                        "status",
+                        "contentHash",
+                        "editable",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "recipe"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipes/{id}:retire": {
+      "post": {
+        "operationId": "recipes.retire",
+        "summary": "End a recipe for good. It is no longer served or changed and no longer counts against the plan.",
+        "security": [
+          {
+            "browserSession": [
+              "recipes:write"
+            ]
+          },
+          {
+            "serverKey": [
+              "recipes:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "recipe": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "number"
+                        },
+                        "currentVersion": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "latestVersion": {
+                          "type": "number"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "useCase": {
+                          "type": "string"
+                        },
+                        "services": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "difficulty": {
+                          "type": "object",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "enum": [
+                                "easy",
+                                "medium",
+                                "hard"
+                              ]
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "level",
+                            "reason"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "primaryTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "relatedTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "order": {
+                                "type": "number"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "required",
+                                  "optional",
+                                  "fallback"
+                                ]
+                              },
+                              "condition": {
+                                "type": "string"
+                              },
+                              "fallbackFor": {
+                                "type": "number"
+                              },
+                              "tool": {
+                                "type": "string"
+                              },
+                              "instruction": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "order",
+                              "kind",
+                              "tool",
+                              "instruction"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "pitfalls": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tool": {
+                                "type": "string"
+                              },
+                              "errorCodes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "fix": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tool",
+                              "text",
+                              "fix"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "platform",
+                            "mined",
+                            "org"
+                          ]
+                        },
+                        "overrides": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "active",
+                            "suspended",
+                            "retired"
+                          ]
+                        },
+                        "contentHash": {
+                          "type": "string"
+                        },
+                        "editable": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "slug",
+                        "version",
+                        "currentVersion",
+                        "latestVersion",
+                        "title",
+                        "useCase",
+                        "services",
+                        "difficulty",
+                        "primaryTools",
+                        "relatedTools",
+                        "steps",
+                        "pitfalls",
+                        "source",
+                        "overrides",
+                        "status",
+                        "contentHash",
+                        "editable",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "recipe"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipes/{id}:rollback": {
+      "post": {
+        "operationId": "recipes.rollback",
+        "summary": "Serve an earlier version again. It must have passed its evaluation.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "version"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "recipe": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "number"
+                        },
+                        "currentVersion": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "latestVersion": {
+                          "type": "number"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "useCase": {
+                          "type": "string"
+                        },
+                        "services": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "difficulty": {
+                          "type": "object",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "enum": [
+                                "easy",
+                                "medium",
+                                "hard"
+                              ]
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "level",
+                            "reason"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "primaryTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "relatedTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "order": {
+                                "type": "number"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "required",
+                                  "optional",
+                                  "fallback"
+                                ]
+                              },
+                              "condition": {
+                                "type": "string"
+                              },
+                              "fallbackFor": {
+                                "type": "number"
+                              },
+                              "tool": {
+                                "type": "string"
+                              },
+                              "instruction": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "order",
+                              "kind",
+                              "tool",
+                              "instruction"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "pitfalls": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tool": {
+                                "type": "string"
+                              },
+                              "errorCodes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "fix": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tool",
+                              "text",
+                              "fix"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "platform",
+                            "mined",
+                            "org"
+                          ]
+                        },
+                        "overrides": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "active",
+                            "suspended",
+                            "retired"
+                          ]
+                        },
+                        "contentHash": {
+                          "type": "string"
+                        },
+                        "editable": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "slug",
+                        "version",
+                        "currentVersion",
+                        "latestVersion",
+                        "title",
+                        "useCase",
+                        "services",
+                        "difficulty",
+                        "primaryTools",
+                        "relatedTools",
+                        "steps",
+                        "pitfalls",
+                        "source",
+                        "overrides",
+                        "status",
+                        "contentHash",
+                        "editable",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "recipe"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipes/{id}:suspend": {
+      "post": {
+        "operationId": "recipes.suspend",
+        "summary": "Stop serving a recipe. It stays readable; activating a version serves it again.",
+        "security": [
+          {
+            "browserSession": [
+              "recipes:write"
+            ]
+          },
+          {
+            "serverKey": [
+              "recipes:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "recipe": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "number"
+                        },
+                        "currentVersion": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "latestVersion": {
+                          "type": "number"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "useCase": {
+                          "type": "string"
+                        },
+                        "services": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "difficulty": {
+                          "type": "object",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "enum": [
+                                "easy",
+                                "medium",
+                                "hard"
+                              ]
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "level",
+                            "reason"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "primaryTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "relatedTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "order": {
+                                "type": "number"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "required",
+                                  "optional",
+                                  "fallback"
+                                ]
+                              },
+                              "condition": {
+                                "type": "string"
+                              },
+                              "fallbackFor": {
+                                "type": "number"
+                              },
+                              "tool": {
+                                "type": "string"
+                              },
+                              "instruction": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "order",
+                              "kind",
+                              "tool",
+                              "instruction"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "pitfalls": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tool": {
+                                "type": "string"
+                              },
+                              "errorCodes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "fix": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tool",
+                              "text",
+                              "fix"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "platform",
+                            "mined",
+                            "org"
+                          ]
+                        },
+                        "overrides": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "active",
+                            "suspended",
+                            "retired"
+                          ]
+                        },
+                        "contentHash": {
+                          "type": "string"
+                        },
+                        "editable": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "slug",
+                        "version",
+                        "currentVersion",
+                        "latestVersion",
+                        "title",
+                        "useCase",
+                        "services",
+                        "difficulty",
+                        "primaryTools",
+                        "relatedTools",
+                        "steps",
+                        "pitfalls",
+                        "source",
+                        "overrides",
+                        "status",
+                        "contentHash",
+                        "editable",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "recipe"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
             "description": "Refusal.",
             "content": {
               "application/json": {
@@ -38240,6 +41668,140 @@
                   "required": [
                     "release",
                     "site"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/artifacts"
+          }
+        ]
+      }
+    },
+    "/releases/{id}/preview-session": {
+      "post": {
+        "operationId": "artifacts.releases.preview_session",
+        "summary": "Get an address that opens the release on its preview host already signed in, for showing the preview in a frame of the dashboard.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "description": "An address that signs the caller in on the release's preview host and opens it. It works once, within a minute."
+                    }
+                  },
+                  "required": [
+                    "url"
                   ],
                   "additionalProperties": false
                 }
@@ -56176,6 +59738,8 @@
               "approval_unavailable",
               "cmk_unavailable",
               "payload_too_large",
+              "dlp_blocked",
+              "dlp_scan_failed",
               "invalid_cursor",
               "invalid_domain",
               "invalid_handle",

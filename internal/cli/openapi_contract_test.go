@@ -338,3 +338,14 @@ func requestCount(gw *packServer) int {
 	}
 	return n
 }
+
+// drop open --preview calls the registered preview-session operation.
+func TestContract_DropPreviewSessionIsRegistered(t *testing.T) {
+	op, template, ok := loadOpenAPI(t).operationFor("POST", "/api/artifacts/releases/arl_1/preview-session")
+	if !ok || template != "/releases/{id}/preview-session" || op.ID != "artifacts.releases.preview_session" {
+		t.Fatalf("preview-session operation = %q, %q, %v", op.ID, template, ok)
+	}
+	if problems := op.problems(nil, map[string]any{}); len(problems) > 0 {
+		t.Fatalf("the empty request differs from the operation: %v", problems)
+	}
+}

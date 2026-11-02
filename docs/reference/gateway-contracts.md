@@ -27,7 +27,7 @@ so a fixture changes only when a route's shape does.
 The gateway's OpenAPI document (`gateway/openapi/v1.json`) is vendored as
 `internal/cli/testdata/contracts/openapi-v1.json`; `ZUANO_GATEWAY_OPENAPI`
 names the gateway's own copy. The vendored copy is the integration branch's
-document as it stands (32d8c1a), unedited: the run, firewall, knowledge base,
+document as it stands (9d8687c), unedited: the run, firewall, knowledge base,
 approval and SDK session routes are all in it, so nothing is merged in by
 hand. Regenerate it by copying `gateway/openapi/v1.json` from the integration
 branch. An operation names its own `servers` entry when it is not under
@@ -201,7 +201,7 @@ Fixtures: `file-create.json`, `file-meta.json`, `files-list.json`,
 
 | Route | Request and response |
 |---|---|
-| `POST /api/v1/files` | `{"name", "content_type", "size", "sha256", "share_with_org"}` answers `{"file_id": "fil_...", "upload": {"url", "method": "PUT", "headers": {}, "expires_at"}}`; over a limit: `402 quota_exceeded` or `413` |
+| `POST /api/v1/files` | `{"name", "content_type", "size", "sha256", "share_with_org"}` answers `{"file_id": "fil_...", "upload": {"url", "method": "PUT", "headers": {}, "expires_at"}}`; over a limit: `402 quota_exceeded`, or `402 limit_reached` for a file over the plan's size cap (it was `413`) |
 | `PUT {upload.url}` | the object store, not the gateway: zuano sends the bytes, the listed headers and no credential |
 | `POST /api/v1/files/{id}/complete` | `{}` answers `{"file": FILE}` |
 | `GET /api/v1/files/{id}` | `{"file": FILE}`; `404` for a file the caller may not read |

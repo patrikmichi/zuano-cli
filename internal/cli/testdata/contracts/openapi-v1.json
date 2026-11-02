@@ -36135,6 +36135,946 @@
         }
       }
     },
+    "/policy/releases": {
+      "get": {
+        "operationId": "policy.releases.list",
+        "summary": "The organization's policy releases, newest first. Each names who made it, when, and whether it is the live one; the policy values a release holds are never returned. Browser sessions only; owners and admins.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "seq": {
+                            "type": "number"
+                          },
+                          "parentId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "dashboard",
+                              "pack",
+                              "api",
+                              "git",
+                              "rollback",
+                              "break_glass"
+                            ]
+                          },
+                          "contentHash": {
+                            "type": "string"
+                          },
+                          "kid": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "active": {
+                            "type": "boolean"
+                          },
+                          "actorRef": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "reason": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "seq",
+                          "parentId",
+                          "source",
+                          "contentHash",
+                          "kid",
+                          "createdAt",
+                          "active",
+                          "actorRef",
+                          "reason"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "policy.releases.apply",
+        "summary": "Apply a policy document as one signed release: every section, and every enveloped document, is written in one transaction or none is. The files are compiled first; the change is judged against what is live now, never against the last release. A change that loosens protection needs a passkey confirmation made for exactly this release (`401 step_up_required` names the action and digest to confirm; confirm, then send the same request again). `expectedParentId` is the release the caller planned against: another live release, or a policy write that landed while the apply was running, answers `409 policy_conflict`. Browser sessions only; owners and admins.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "minItems": 1,
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "content": {
+                          "type": "string",
+                          "maxLength": 1048576
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "content"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "expectedParentId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "files"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "changed": {
+                      "type": "boolean"
+                    },
+                    "release": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "seq": {
+                          "type": "number"
+                        },
+                        "parentId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "dashboard",
+                            "pack",
+                            "api",
+                            "git",
+                            "rollback",
+                            "break_glass"
+                          ]
+                        },
+                        "contentHash": {
+                          "type": "string"
+                        },
+                        "kid": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "seq",
+                        "parentId",
+                        "source",
+                        "contentHash",
+                        "kid",
+                        "createdAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "classification": {
+                      "type": "string",
+                      "enum": [
+                        "loosening",
+                        "tightening",
+                        "neutral",
+                        "mixed"
+                      ]
+                    },
+                    "changes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "loosening",
+                              "tightening",
+                              "neutral"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "changed",
+                    "release",
+                    "classification",
+                    "changes"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalStepUp"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/policy/releases/{id}": {
+      "get": {
+        "operationId": "policy.releases.get",
+        "summary": "One release: who made it, why, which top-level sections differ from the release before it, and any upstreams a rollback left out. The policy values are never returned. Browser sessions only; owners and admins.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "release": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "seq": {
+                          "type": "number"
+                        },
+                        "parentId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "dashboard",
+                            "pack",
+                            "api",
+                            "git",
+                            "rollback",
+                            "break_glass"
+                          ]
+                        },
+                        "contentHash": {
+                          "type": "string"
+                        },
+                        "kid": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "active": {
+                          "type": "boolean"
+                        },
+                        "actorRef": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "reason": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "changedSections": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "skippedUpstreams": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "rolledBackTo": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "seq",
+                        "parentId",
+                        "source",
+                        "contentHash",
+                        "kid",
+                        "createdAt",
+                        "active",
+                        "actorRef",
+                        "reason",
+                        "changedSections",
+                        "skippedUpstreams",
+                        "rolledBackTo"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "release"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/policy/releases/{id}/rollback": {
+      "post": {
+        "operationId": "policy.releases.rollback",
+        "summary": "Make an earlier release's policy live again, as a new signed release; history only grows. The change is judged against what is live now. A rollback that loosens protection needs a passkey confirmation for action `policy_rollback`, made for exactly this release (`401 step_up_required` names the action and digest; confirm, then send the same request again). An upstream the earlier release names that has been deleted since is left out and listed in `skippedUpstreams`. `expectedParentId` is the release the caller saw as live: another live release, or a policy write that landed meanwhile, answers `409 policy_conflict`. Browser sessions only; owners and admins.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedParentId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "changed": {
+                      "type": "boolean"
+                    },
+                    "release": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "seq": {
+                          "type": "number"
+                        },
+                        "parentId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "dashboard",
+                            "pack",
+                            "api",
+                            "git",
+                            "rollback",
+                            "break_glass"
+                          ]
+                        },
+                        "contentHash": {
+                          "type": "string"
+                        },
+                        "kid": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "seq",
+                        "parentId",
+                        "source",
+                        "contentHash",
+                        "kid",
+                        "createdAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "classification": {
+                      "type": "string",
+                      "enum": [
+                        "loosening",
+                        "tightening",
+                        "neutral",
+                        "mixed"
+                      ]
+                    },
+                    "changes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "loosening",
+                              "tightening",
+                              "neutral"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "skippedUpstreams": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "changed",
+                    "release",
+                    "classification",
+                    "changes",
+                    "skippedUpstreams"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalStepUp"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/projects": {
       "get": {
         "operationId": "projects.list",
@@ -39824,6 +40764,305 @@
         }
       }
     },
+    "/recipes/{id}:evaluate": {
+      "post": {
+        "operationId": "recipes.evaluate",
+        "summary": "Check a version (the latest unless `version` names another) against the catalog and the data protection policy as they are now, and store the result on it. A version is served only after its last evaluation passed. On a plan with evaluations, when an eval set is attached to the recipe’s eval target (`model.targetId`), a model run follows: the version passes only after the run ends, when the recipe reaches the goal in at least 80% of the cases and at least 5 points more often than the same model without it. `model.status` is `pending` until then (follow the run, `model.runId`, in the evaluation API), and activating the version is refused until it has passed.",
+        "security": [
+          {
+            "browserSession": [
+              "recipes:write"
+            ]
+          },
+          {
+            "serverKey": [
+              "recipes:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "evaluation": {
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "number"
+                        },
+                        "evalRunId": {
+                          "type": "string"
+                        },
+                        "passed": {
+                          "type": "boolean"
+                        },
+                        "score": {
+                          "type": "number"
+                        },
+                        "checks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "enum": [
+                                  "structure",
+                                  "text",
+                                  "tools",
+                                  "data_protection"
+                                ]
+                              },
+                              "passed": {
+                                "type": "boolean"
+                              },
+                              "detail": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "passed",
+                              "detail"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "model": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "const": "pending"
+                                },
+                                "runId": {
+                                  "type": "string"
+                                },
+                                "targetId": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "runId",
+                                "targetId"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "const": "skipped"
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "plan",
+                                    "runtime_off",
+                                    "no_user",
+                                    "no_cases",
+                                    "checks_failed"
+                                  ]
+                                },
+                                "targetId": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "const": "unavailable"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "targetId": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "reason",
+                                "targetId"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "evalRunId",
+                        "passed",
+                        "score",
+                        "checks",
+                        "model"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "evaluation"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/recipes/{id}:override": {
       "post": {
         "operationId": "recipes.override",
@@ -41195,6 +42434,377 @@
             }
           },
           "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipes/{id}/eval": {
+      "get": {
+        "operationId": "recipes.eval",
+        "summary": "Read the stored evaluation verdict of a recipe version, the served one unless `version` is given: whether it passed, its score, the run that produced it and when. `state` is `running` while a model run is still going.",
+        "security": [
+          {
+            "browserSession": [
+              "recipes:read"
+            ]
+          },
+          {
+            "serverKey": [
+              "recipes:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "recipeId": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "number"
+                    },
+                    "contentHash": {
+                      "type": "string"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "not_evaluated",
+                        "running",
+                        "passed",
+                        "failed"
+                      ]
+                    },
+                    "passed": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "score": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "evalRunId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "evaluatedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "served": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "recipeId",
+                    "version",
+                    "contentHash",
+                    "state",
+                    "passed",
+                    "score",
+                    "evalRunId",
+                    "evaluatedAt",
+                    "served"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipes/{id}/stats": {
+      "get": {
+        "operationId": "recipes.stats",
+        "summary": "How often each version of a recipe was offered in a search (`served`) and read in full (`fetched`) by this organization over the last `days` days. Counts are the organization’s own, also for a platform recipe.",
+        "security": [
+          {
+            "browserSession": [
+              "recipes:read"
+            ]
+          },
+          {
+            "serverKey": [
+              "recipes:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "recipeId": {
+                      "type": "string"
+                    },
+                    "days": {
+                      "type": "number"
+                    },
+                    "versions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "version": {
+                            "type": "number"
+                          },
+                          "served": {
+                            "type": "number"
+                          },
+                          "fetched": {
+                            "type": "number"
+                          },
+                          "lastDay": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "version",
+                          "served",
+                          "fetched",
+                          "lastDay"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "recipeId",
+                    "days",
+                    "versions"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Refusal.",
             "content": {
               "application/json": {
@@ -48818,16 +50428,6 @@
             }
           },
           "404": {
-            "description": "Refusal.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RefusalPlain"
-                }
-              }
-            }
-          },
-          "413": {
             "description": "Refusal.",
             "content": {
               "application/json": {
@@ -59836,6 +61436,14 @@
               "upload_incomplete",
               "upload_expired",
               "revision_conflict",
+              "policy_conflict",
+              "policy_invalid",
+              "policy_kind_duplicate",
+              "policy_kind_unknown",
+              "policy_kind_unsupported",
+              "policy_upstream_missing",
+              "policy_live_unreadable",
+              "policy_signing_unavailable",
               "rate_limiter_unavailable"
             ]
           },

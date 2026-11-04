@@ -1,6 +1,6 @@
 module github.com/patrikmichi/zuano-cli
 
-go 1.22
+go 1.27.3
 
 require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c

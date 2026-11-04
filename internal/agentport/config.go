@@ -286,7 +286,7 @@ func (c *ProviderConfig) validate(registeredHooks, registeredCodecs map[string]b
 			// adapter.go ResolveOwnSkillPath -> skill_uninstall.go
 			// os.RemoveAll, and rollback.go os.Remove. A path-traversal
 			// segment or an unexpectedly-absolute override (especially
-			// from a user-tier config in ~/.config/relay/providers/*.yml,
+			// from a user-tier config in ~/.config/zuano/providers/*.yml,
 			// loaded unconditionally by embed.go) would let a provider
 			// config point a writable/removable dir anywhere on disk.
 			// Checked for EVERY role (own/compat/admin) in BOTH scopes,

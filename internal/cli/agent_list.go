@@ -6,10 +6,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
-// AgentListCmd returns the `relay agent list` cobra command — the
+// AgentListCmd returns the `zuano agent list` cobra command — the
 // Agent-IR analogue of SkillListCmd. Enumerates agents present across
 // provider agent directories.
 func AgentListCmd() *cobra.Command {
@@ -24,10 +24,10 @@ func AgentListCmd() *cobra.Command {
 		Short: "List installed agents across agent providers",
 		Long: fmt.Sprintf(`Enumerate agents present in each provider's agent directory: name,
 provider, and scope. With --provenance, joins the manifest ledger to show
-where each agent was installed/migrated from (when relay recorded it).
+where each agent was installed/migrated from (when zuano recorded it).
 
 Scope 'project' is resolved relative to the current working directory only
-(no parent-directory search, unlike 'relay agent migrate --from').
+(no parent-directory search, unlike 'zuano agent migrate --from').
 
 Supported providers: %s.`, agentProviderIDsCSV()),
 		RunE: func(cmd *cobra.Command, _ []string) error {

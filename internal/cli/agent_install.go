@@ -6,20 +6,20 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/agentport"
-	"github.com/patrikmichi/relay/internal/catalog"
-	"github.com/patrikmichi/relay/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/catalog"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
-// AgentInstallCmd returns the `relay agent install <catalog-id>` cobra
+// AgentInstallCmd returns the `zuano agent install <catalog-id>` cobra
 // command — the Agent-IR analogue of SkillInstallCmd. Unlike skill install,
 // there is no local-path source: an agent install ALWAYS resolves
 // <catalog-id> against the gateway catalog (catalog.FetchAgent, targeting
 // the generalized /api/catalog/resources/<id>/download endpoint added by
 // gateway D1/D2), then projects the result into one or more --to providers
-// via the same agentport.MigrateAgent/WriteAgent engine `relay agent
+// via the same agentport.MigrateAgent/WriteAgent engine `zuano agent
 // migrate` uses — so a Kind: "agent" manifest entry is recorded per target
-// and `relay agent rollback` works unmodified.
+// and `zuano agent rollback` works unmodified.
 //
 // If --to is omitted, installs to every agent provider detected as
 // installed on this machine.
@@ -41,10 +41,10 @@ func AgentInstallCmd() *cobra.Command {
 or slug, and project it into one or more --to agent providers, printing a
 fidelity-loss report for each. Unless --dry-run, files are written and a
 Kind: "agent" manifest entry is recorded per target — the same engine as
-'relay agent migrate', so 'relay agent rollback' can undo it.
+'zuano agent migrate', so 'zuano agent rollback' can undo it.
 
 Requires a reachable, authenticated gateway (GATEWAY_URL/GATEWAY_API_KEY env
-vars, or a prior 'relay login') and fails closed — no partial writes — on:
+vars, or a prior 'zuano login') and fails closed — no partial writes — on:
 no gateway configured / --offline, a content-hash mismatch, a missing/failed
 scan verdict, or a malformed bundle.
 
@@ -52,9 +52,9 @@ If --to is omitted, installs to every agent provider detected as installed
 on this machine.
 
 Examples:
-  relay agent install res_abc123 --to claude
-  relay agent install pr-reviewer --to claude --to opencode
-  relay agent install pr-reviewer --version 1.2.0 --channel beta --to claude`,
+  zuano agent install res_abc123 --to claude
+  zuano agent install pr-reviewer --to claude --to opencode
+  zuano agent install pr-reviewer --version 1.2.0 --channel beta --to claude`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAgentInstall(cmd, args[0], agentInstallOpts{

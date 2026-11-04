@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/patrikmichi/zuano-cli/internal/config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -28,7 +29,7 @@ var embeddedProviderFS embed.FS
 //go:embed agents/*.yml
 var embeddedAgentProviderFS embed.FS
 
-// AllowProjectProviderOverrides gates whether .relay/providers/*.yml
+// AllowProjectProviderOverrides gates whether .zuano/providers/*.yml
 // (repo-local, untrusted-input provider overrides) are loaded at all.
 // Off by default. A caller (e.g. the CLI, after an explicit user
 // opt-in flag or config setting) may set this to true before invoking any
@@ -37,8 +38,8 @@ var embeddedAgentProviderFS embed.FS
 var AllowProjectProviderOverrides = false
 
 // loadedProviderConfigs loads the full provider-config set for THIS call:
-// embedded defaults, overlaid by ~/.config/relay/providers/*.yml (user
-// tier), overlaid by .relay/providers/*.yml (project tier, gated by
+// embedded defaults, overlaid by ~/.config/zuano/providers/*.yml (user
+// tier), overlaid by .zuano/providers/*.yml (project tier, gated by
 // AllowProjectProviderOverrides) — whole-provider replacement by id,
 // precedence project > user > embedded.
 //
@@ -55,11 +56,12 @@ func loadedProviderConfigs() map[string]ProviderConfig {
 
 	configs := mustParseEmbeddedConfigs(hookNames, codecNames)
 
-	if home, err := os.UserHomeDir(); err == nil {
-		applyOverrideTier(configs, filepath.Join(home, ".config", "relay", "providers"), hookNames, codecNames)
+	if dir, err := config.Dir(); err == nil {
+		applyOverrideTier(configs, filepath.Join(dir, "providers"), hookNames, codecNames)
 	}
 	if AllowProjectProviderOverrides {
 		applyOverrideTier(configs, filepath.Join(".relay", "providers"), hookNames, codecNames)
+		applyOverrideTier(configs, filepath.Join(".zuano", "providers"), hookNames, codecNames)
 	}
 
 	return configs
@@ -99,7 +101,7 @@ func mustParseEmbeddedConfigs(hookNames, codecNames map[string]bool) map[string]
 
 // loadedAgentProviderConfigs is the Agent-IR analogue of
 // loadedProviderConfigs: embedded agents/*.yml defaults, overlaid by
-// ~/.config/relay/agents/*.yml (user tier), overlaid by .relay/agents/*.yml
+// ~/.config/zuano/agents/*.yml (user tier), overlaid by .zuano/agents/*.yml
 // (project tier, gated by the SAME AllowProjectProviderOverrides flag skill
 // overrides use — one opt-in switch for both kinds). Deliberately not
 // memoized, for the same reasons as loadedProviderConfigs.
@@ -109,11 +111,12 @@ func loadedAgentProviderConfigs() map[string]ProviderConfig {
 
 	configs := mustParseEmbeddedAgentConfigs(hookNames, codecNames)
 
-	if home, err := os.UserHomeDir(); err == nil {
-		applyOverrideTier(configs, filepath.Join(home, ".config", "relay", "agents"), hookNames, codecNames)
+	if dir, err := config.Dir(); err == nil {
+		applyOverrideTier(configs, filepath.Join(dir, "agents"), hookNames, codecNames)
 	}
 	if AllowProjectProviderOverrides {
 		applyOverrideTier(configs, filepath.Join(".relay", "agents"), hookNames, codecNames)
+		applyOverrideTier(configs, filepath.Join(".zuano", "agents"), hookNames, codecNames)
 	}
 
 	return configs

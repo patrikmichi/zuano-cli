@@ -10,10 +10,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
-// TokensCmd returns the `relay tokens` cobra command with list and revoke subcommands.
+// TokensCmd returns the `zuano tokens` cobra command with list and revoke subcommands.
 func TokensCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tokens",
@@ -23,7 +23,7 @@ func TokensCmd() *cobra.Command {
 	return cmd
 }
 
-// tokensListCmd returns `relay tokens list`.
+// tokensListCmd returns `zuano tokens list`.
 // Calls GET /api/cli/whoami and prints active session info.
 func tokensListCmd() *cobra.Command {
 	var gatewayURL string
@@ -46,7 +46,7 @@ func tokensListCmd() *cobra.Command {
 			defer resp.Body.Close()
 
 			if resp.StatusCode == http.StatusUnauthorized {
-				fmt.Fprintln(os.Stderr, "Token expired or revoked — run `relay login` to re-authenticate.")
+				fmt.Fprintln(os.Stderr, "Token expired or revoked — run `zuano login` to re-authenticate.")
 				os.Exit(1)
 			}
 
@@ -88,7 +88,7 @@ func tokensListCmd() *cobra.Command {
 	return cmd
 }
 
-// tokensRevokeCmd returns `relay tokens revoke`.
+// tokensRevokeCmd returns `zuano tokens revoke`.
 // Calls POST /api/cli/logout and removes the local keychain entry.
 //
 // Same two-halves shape as LogoutCmd (logout.go) — deleting the local OS

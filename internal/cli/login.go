@@ -8,10 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/auth"
+	"github.com/patrikmichi/zuano-cli/internal/auth"
 )
 
-// LoginCmd returns the `relay login` cobra command.
+// LoginCmd returns the `zuano login` cobra command.
 func LoginCmd() *cobra.Command {
 	var gatewayURL string
 	var deviceFlow bool

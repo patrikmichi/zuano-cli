@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/relay/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
 // TestProviderIDsCSV_MatchesLiveAdapterRegistry proves providerIDsCSV is
@@ -68,7 +68,7 @@ func TestProviderIDsOxfordOr(t *testing.T) {
 }
 
 // TestProvidersCmd_ListsSkillsAndAgentsColumns is the direct regression
-// test for A9: `relay providers` must report both skill and agent support
+// test for A9: `zuano providers` must report both skill and agent support
 // per provider, derived from the two adapter registries.
 func TestProvidersCmd_ListsSkillsAndAgentsColumns(t *testing.T) {
 	cmd := ProvidersCmd()

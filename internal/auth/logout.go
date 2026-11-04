@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/patrikmichi/relay/internal/client"
-	"github.com/patrikmichi/relay/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 // Logout revokes the token family on the server and deletes the keychain

@@ -12,18 +12,18 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 // mcpCatalogPath is the plain REST catalog-listing endpoint (gateway
 // app/api/catalog/route.ts) — NOT the aggregate MCP endpoint: management.
 // search_skills (skill_search.go) is hardcoded to type:'skill' and has no
-// type filter, so relay-cli-completion plan D6 falls back to this route's
+// type filter, so zuano-cli-completion plan D6 falls back to this route's
 // documented ?type= query param instead (GET /api/catalog?search=&type=&tag=).
 const mcpCatalogPath = "/api/catalog?type=mcp_server"
 
 // mcpListTimeout bounds a single catalog-list request end to end, mirroring
-// skill_search.go's searchTimeout — a hanging gateway must not hang `relay
+// skill_search.go's searchTimeout — a hanging gateway must not hang `zuano
 // mcp list` forever.
 var mcpListTimeout = 30 * time.Second
 
@@ -72,9 +72,9 @@ type mcpCatalogListResponse struct {
 	Resources []mcpCatalogEntry `json:"resources"`
 }
 
-// McpListCmd returns the `relay mcp list` cobra command — a read-only
+// McpListCmd returns the `zuano mcp list` cobra command — a read-only
 // listing of catalog MCP-server resources (id, slug, name, source,
-// version). Per relay-cli-completion plan D6, `mcp install`/`mcp remove`
+// version). Per zuano-cli-completion plan D6, `mcp install`/`mcp remove`
 // are deliberately descoped (see README) — writing an MCP-server
 // registration into a per-provider client config is a fourth artifact kind
 // with its own IR and codecs, a separate design from this listing command.
@@ -90,8 +90,8 @@ func McpListCmd() *cobra.Command {
 		Long: `List catalog resources of type mcp_server: id, slug, name, registration
 source (builtin/url/repo), and current published version.
 
-Read-only — this command never writes any provider config. 'relay mcp
-install'/'relay mcp remove' are deliberately NOT implemented (see README):
+Read-only — this command never writes any provider config. 'zuano mcp
+install'/'zuano mcp remove' are deliberately NOT implemented (see README):
 writing MCP-server registrations into per-provider client config
 (~/.claude.json, ~/.codex/config.toml, .cursor/mcp.json, ...) is a separate,
 larger design.
@@ -99,8 +99,8 @@ larger design.
 Requires a reachable, authenticated gateway; fails closed offline.
 
 Examples:
-  relay mcp list
-  relay mcp list --json`,
+  zuano mcp list
+  zuano mcp list --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runMcpList(cmd, gatewayURL, jsonOut)

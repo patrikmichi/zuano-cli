@@ -7,10 +7,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/auth"
+	"github.com/patrikmichi/zuano-cli/internal/auth"
 )
 
-// WhoamiCmd returns the `relay whoami` cobra command.
+// WhoamiCmd returns the `zuano whoami` cobra command.
 func WhoamiCmd() *cobra.Command {
 	var gatewayURL string
 	var full bool

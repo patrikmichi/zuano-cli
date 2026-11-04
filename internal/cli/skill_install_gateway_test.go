@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/relay/internal/agentport"
-	"github.com/patrikmichi/relay/internal/catalog"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/catalog"
 )
 
 func TestTranslateGatewayFetchError_MapsEachSentinel(t *testing.T) {
@@ -24,7 +24,7 @@ func TestTranslateGatewayFetchError_MapsEachSentinel(t *testing.T) {
 		want string
 	}{
 		{"no-access", catalog.ErrNoAccess, "don't have access"},
-		{"not-found", catalog.ErrNotFound, "relay skill search"},
+		{"not-found", catalog.ErrNotFound, "zuano skill search"},
 		{"not-downloadable", catalog.ErrNotDownloadable, "not downloadable"},
 		{"unauthorized", catalog.ErrUnauthorized, "no gateway configured"},
 		{"other", errBoomTest, "boom"},
@@ -255,7 +255,7 @@ func TestSkillInstall_CatalogID_BadScanVerdict_NonZeroExitNoWrite(t *testing.T) 
 func TestSkillInstall_CatalogID_NoGatewayConfigured_FailsClosed(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	// Deliberately no GATEWAY_API_KEY / RELAY_EMAIL / keychain session, and
+	// Deliberately no GATEWAY_API_KEY / ZUANO_EMAIL / keychain session, and
 	// no --gateway-url override — client.Resolve must fail with
 	// ErrNotLoggedIn, and runSkillInstall must translate that into the
 	// offline degradation message rather than attempting a network call.
@@ -276,7 +276,7 @@ func TestSkillInstall_CatalogID_NoGatewayConfigured_FailsClosed(t *testing.T) {
 
 // TestSkillInstall_CatalogID_OfflineFlag_FailsClosed exercises the root
 // `--offline` persistent flag's effect on a catalog-id install. --offline
-// is now registered on the cobra root (cmd/relay/main.go) rather than on
+// is now registered on the cobra root (cmd/zuano/main.go) rather than on
 // SkillInstallCmd itself, so a standalone SkillInstallCmd() — as every test
 // in this file constructs, without the root's PersistentPreRunE ever
 // running — can't set it via a command-line flag. Instead this simulates

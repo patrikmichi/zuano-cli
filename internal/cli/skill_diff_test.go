@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/relay/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
 func TestSkillDiff_ReportsDroppedFieldsAndWritesNothing(t *testing.T) {

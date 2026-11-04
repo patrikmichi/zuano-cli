@@ -5,10 +5,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
-// SkillScanCmd returns the `relay skill scan <name>` cobra command — a
+// SkillScanCmd returns the `zuano skill scan <name>` cobra command — a
 // thin wrapper over agentport.Scan.
 func SkillScanCmd() *cobra.Command {
 	var (
@@ -33,9 +33,9 @@ finding has "high" severity.`,
 	return cmd
 }
 
-// SkillScoreCmd returns the `relay skill score <name>` cobra command — a
+// SkillScoreCmd returns the `zuano skill score <name>` cobra command — a
 // thin wrapper over agentport.Scan's quality score, sharing the same
-// loader as `relay skill scan`.
+// loader as `zuano skill scan`.
 func SkillScoreCmd() *cobra.Command {
 	var (
 		fromFlag  string
@@ -47,7 +47,7 @@ func SkillScoreCmd() *cobra.Command {
 		Long: `Load <name> from --from's directory (in the given --scope) and print its
 deterministic 0-100 quality score (description/body completeness, minus a
 penalty per scan finding). Thin wrapper over the same scan engine as
-'relay skill scan'.`,
+'zuano skill scan'.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSkillScore(cmd, args[0], fromFlag, scopeFlag)

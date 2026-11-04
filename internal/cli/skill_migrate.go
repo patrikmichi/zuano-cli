@@ -9,10 +9,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
-// SkillMigrateCmd returns the `relay skill migrate <name>` cobra command —
+// SkillMigrateCmd returns the `zuano skill migrate <name>` cobra command —
 // the flagship agentport command. It loads a skill by name from --from's
 // directory (in the given --scope), projects it to one or more --to
 // providers, prints a fidelity-loss report for each, and (unless --dry-run)
@@ -39,9 +39,9 @@ machine (excluding --from).
 Supported providers: %s.
 
 Examples:
-  relay skill migrate my-skill --from claude --to codex
-  relay skill migrate my-skill --from cursor --scope project --dry-run
-  relay skill migrate my-skill --from claude --strict`, providerIDsCSV()),
+  zuano skill migrate my-skill --from claude --to codex
+  zuano skill migrate my-skill --from cursor --scope project --dry-run
+  zuano skill migrate my-skill --from claude --strict`, providerIDsCSV()),
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSkillMigrate(cmd, args[0], skillMigrateOpts{
@@ -105,7 +105,7 @@ func runSkillMigrate(cmd *cobra.Command, name string, opts skillMigrateOpts) err
 // applyMigrationToTargets projects src into each target (via
 // agentport.Migrate), printing a fidelity-loss report for each, and
 // (unless dryRun) writes the projected files and records a manifest entry.
-// Shared by `relay skill migrate` and `relay skill install` — the only
+// Shared by `zuano skill migrate` and `zuano skill install` — the only
 // difference between the two commands is how src was loaded (a named skill
 // from a provider's directory vs. an arbitrary local path). fromLabel is
 // used only in the printed "== fromLabel -> target ==" header.

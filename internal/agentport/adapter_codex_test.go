@@ -114,7 +114,7 @@ func TestCodexAdapter_Capabilities(t *testing.T) {
 // Codex also reads the admin (org-wide) scope /etc/codex/skills. It must
 // appear in UserDirs() (so Detect()/ResolveSkillPath/List can read it) but
 // NOT as dirs[0] (Migrate/Write/TargetDir always target dirs[0] — this
-// scope is read-only, relay must never write there).
+// scope is read-only, zuano must never write there).
 func TestCodexAdapter_UserDirsIncludesAdminScope(t *testing.T) {
 	dirs := NewCodexAdapter().UserDirs()
 

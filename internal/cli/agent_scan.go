@@ -5,12 +5,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
-// AgentScanCmd returns the `relay agent scan <name>` cobra command — a
+// AgentScanCmd returns the `zuano agent scan <name>` cobra command — a
 // thin wrapper over agentport.AgentScan, the Agent-IR analogue of
-// SkillScanCmd. There is deliberately no `relay agent score` companion
+// SkillScanCmd. There is deliberately no `zuano agent score` companion
 // command (unlike skills' scan/score pair).
 func AgentScanCmd() *cobra.Command {
 	var (

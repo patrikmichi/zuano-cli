@@ -110,7 +110,7 @@ func splitFlexList(s string) []string {
 // preserves the original unscoped behavior (walk everything) — used by
 // LoadGenericSkill, which has no ProviderConfig to scope by.
 //
-// Symlinks are NEVER followed: a malicious `relay skill install <path>`
+// Symlinks are NEVER followed: a malicious `zuano skill install <path>`
 // source package could contain e.g. a resource file that's actually a
 // symlink to ~/.ssh/id_rsa, and Project()/Write() would then happily copy
 // that target's content into every provider's directory. Each walked entry

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/relay/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 func TestPollDeviceToken_SuccessOnFirstPoll(t *testing.T) {

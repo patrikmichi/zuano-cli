@@ -19,7 +19,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 // artifactMaxBytes is the client-side size cap for a bundle (25 MiB).
@@ -131,7 +131,7 @@ type publishStatusDoer interface {
 
 // ---- PublishCmd + aliases ----
 
-// PublishCmd returns the `relay publish <path>` cobra command.
+// PublishCmd returns the `zuano publish <path>` cobra command.
 func PublishCmd() *cobra.Command {
 	return publishCmdWithDoer(nil)
 }
@@ -151,7 +151,7 @@ func publishCmdWithDoer(doer publishDoer) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "publish <path>",
 		Short: "Publish a skill, agent, or MCP server to the marketplace",
-		Long: `Publish a resource to the relay marketplace.
+		Long: `Publish a resource to the zuano marketplace.
 
 <path> can be a single manifest file (SKILL.md / agent.md) or a directory.
 The resource type is detected from the manifest frontmatter; use --type to override.
@@ -223,7 +223,7 @@ Flags:
 	return cmd
 }
 
-// skillPublishCmd returns `relay skill publish <path>` — thin alias.
+// skillPublishCmd returns `zuano skill publish <path>` — thin alias.
 func skillPublishCmd() *cobra.Command {
 	cmd := publishCmdWithDoer(nil)
 	cmd.Use = "publish <path>"
@@ -231,7 +231,7 @@ func skillPublishCmd() *cobra.Command {
 	return cmd
 }
 
-// agentPublishCmd returns `relay agent publish <path>` — thin alias.
+// agentPublishCmd returns `zuano agent publish <path>` — thin alias.
 func agentPublishCmd() *cobra.Command {
 	cmd := publishCmdWithDoer(nil)
 	cmd.Use = "publish <path>"
@@ -239,7 +239,7 @@ func agentPublishCmd() *cobra.Command {
 	return cmd
 }
 
-// mcpPublishCmd returns `relay mcp publish <path>` — thin alias.
+// mcpPublishCmd returns `zuano mcp publish <path>` — thin alias.
 func mcpPublishCmd() *cobra.Command {
 	cmd := publishCmdWithDoer(nil)
 	cmd.Use = "publish [path]"
@@ -283,7 +283,7 @@ func mcpPublishCmd() *cobra.Command {
 	return cmd
 }
 
-// SkillCmd returns the `relay skill` parent command with `publish`,
+// SkillCmd returns the `zuano skill` parent command with `publish`,
 // `migrate`, and the Wave 2 agentport manager sub-commands (install, list,
 // diff, scan, score, uninstall, rollback), plus the Phase-2 gateway-catalog
 // commands (search, and install's catalog-id source — see SkillInstallCmd).
@@ -305,7 +305,7 @@ func SkillCmd() *cobra.Command {
 	return skill
 }
 
-// AgentCmd returns the `relay agent` parent command with `publish`, the
+// AgentCmd returns the `zuano agent` parent command with `publish`, the
 // offline agent-manager sub-commands (migrate, list, diff, scan, uninstall,
 // rollback), and the gateway-catalog `install` sub-command (D5) —
 // mirroring SkillCmd's shape for the Agent IR. Supported agent providers are
@@ -330,7 +330,7 @@ Supported agent providers: %s.`, agentProviderIDsCSV()),
 	return agent
 }
 
-// MCPCmd returns the `relay mcp` parent command with `publish` and the
+// MCPCmd returns the `zuano mcp` parent command with `publish` and the
 // read-only `list` sub-command (D6). `install`/`remove` are deliberately
 // NOT implemented — see McpListCmd's doc comment and the README's MCP
 // section for the descope rationale.
@@ -340,11 +340,11 @@ func MCPCmd() *cobra.Command {
 		Short: "MCP server commands",
 		Long: `MCP server commands.
 
-'relay mcp install'/'relay mcp remove' are NOT implemented: writing an
+'zuano mcp install'/'zuano mcp remove' are NOT implemented: writing an
 MCP-server registration into per-provider client config (~/.claude.json,
 ~/.codex/config.toml, .cursor/mcp.json, ...) is a separate artifact kind
 with its own IR and per-provider codecs — a distinct design from anything
-this CLI currently ships. 'relay mcp list' is read-only.`,
+this CLI currently ships. 'zuano mcp list' is read-only.`,
 	}
 	mcp.AddCommand(mcpPublishCmd())
 	mcp.AddCommand(McpListCmd())
@@ -362,7 +362,7 @@ func resolvePublishDoer(overrideURL string) (publishDoer, error) {
 
 // resolvePublishDoerWithURL resolves an authenticated client and returns both
 // the publishDoer and the resolved gateway URL (for catalog link
-// generation). Auth resolution (GATEWAY_API_KEY / RELAY_EMAIL / persisted
+// generation). Auth resolution (GATEWAY_API_KEY / ZUANO_EMAIL / persisted
 // login email → keychain, with transparent OAuth refresh) is centralized in
 // client.Resolve — *client.Client already satisfies both publishDoer and
 // publishStatusDoer (matching Post/Get signatures), so no adapter type is
@@ -381,7 +381,7 @@ func resolvePublishDoerWithURL(overrideURL string) (publishDoer, string, error) 
 }
 
 // resolvePublishStatusDoer resolves the gateway URL + OAuth token and returns
-// a publishStatusDoer for `relay publish status`. Shares auth resolution with
+// a publishStatusDoer for `zuano publish status`. Shares auth resolution with
 // resolvePublishDoerWithURL — *client.Client satisfies both interfaces.
 func resolvePublishStatusDoer(overrideURL string) (publishStatusDoer, error) {
 	d, _, err := resolvePublishDoerWithURL(overrideURL)
@@ -822,12 +822,12 @@ func handlePublishResponse(statusCode int, hdr http.Header, rawBody []byte, gate
 			fmt.Println()
 			fmt.Println("The version needs changes before it can be published.")
 			fmt.Println("Review the gate report at the catalog URL above, address the issues,")
-			fmt.Println("then re-run `relay publish <path>` with a bumped version number.")
+			fmt.Println("then re-run `zuano publish <path>` with a bumped version number.")
 		}
 		return nil
 
 	case http.StatusUnauthorized:
-		return fmt.Errorf("not authenticated — run `relay login` first")
+		return fmt.Errorf("not authenticated — run `zuano login` first")
 
 	case http.StatusForbidden:
 		return fmt.Errorf("not authorized to publish — you must be an author or admin for this organization")
@@ -912,7 +912,7 @@ func catalogURL(resourceID, gatewayURL string) string {
 	return strings.TrimRight(gURL, "/") + "/catalog/" + resourceID
 }
 
-// ---- publish status (relay publish status <versionId> / relay publish --watch) ----
+// ---- publish status (zuano publish status <versionId> / zuano publish --watch) ----
 
 // publishStatusPath is the REST polling endpoint on the gateway — the
 // counterpart to the management.publish_status MCP tool (gateway
@@ -1024,7 +1024,7 @@ func printPublishStatus(status *publishStatusResult) {
 // watchPublishStatus polls fetchPublishStatus until the version reaches a
 // terminal state (see terminalPublishStates), printing status on each change.
 // Returns a non-nil error when the final state is changes_requested — so
-// `relay publish --watch` / `relay publish status --watch` exit non-zero and
+// `zuano publish --watch` / `zuano publish status --watch` exit non-zero and
 // CI can gate on it.
 func watchPublishStatus(d publishStatusDoer, versionID string) error {
 	var last string
@@ -1049,7 +1049,7 @@ func watchPublishStatus(d publishStatusDoer, versionID string) error {
 	return fmt.Errorf("timed out waiting for version %s to reach a terminal state after %d polls", versionID, publishStatusMaxPolls)
 }
 
-// publishStatusCmd returns the `relay publish status <versionId>` cobra command.
+// publishStatusCmd returns the `zuano publish status <versionId>` cobra command.
 func publishStatusCmd() *cobra.Command {
 	var (
 		flagWatch      bool

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/patrikmichi/relay/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 // overrideHomeDir temporarily redirects os.UserHomeDir by setting $HOME.
@@ -53,7 +53,7 @@ func TestSave_CreatesDir(t *testing.T) {
 		t.Fatalf("Save: %v", err)
 	}
 
-	cfgPath := filepath.Join(home, ".config", "relay", "config.json")
+	cfgPath := filepath.Join(home, ".config", "zuano", "config.json")
 	if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
 		t.Errorf("config file not created at %s", cfgPath)
 	}
@@ -75,7 +75,7 @@ func TestGatewayURL_EmptyWithoutEnvOrConfig(t *testing.T) {
 func TestGatewayURL_EmptyWhenConfigUnreadable(t *testing.T) {
 	home := withTempHome(t)
 	t.Setenv("GATEWAY_URL", "")
-	dir := filepath.Join(home, ".config", "relay")
+	dir := filepath.Join(home, ".config", "zuano")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -166,8 +166,8 @@ func TestLoad_MigratesLegacyGwDir(t *testing.T) {
 	if cfg.GatewayURL != "https://legacy.example.com" {
 		t.Errorf("GatewayURL: got %q, want legacy value", cfg.GatewayURL)
 	}
-	if _, err := os.Stat(filepath.Join(home, ".config", "relay", "config.json")); err != nil {
-		t.Errorf("migrated config not found at ~/.config/relay: %v", err)
+	if _, err := os.Stat(filepath.Join(home, ".config", "zuano", "config.json")); err != nil {
+		t.Errorf("migrated config not found at ~/.config/zuano: %v", err)
 	}
 	if _, err := os.Stat(legacyDir); !os.IsNotExist(err) {
 		t.Errorf("legacy ~/.config/gw dir still present after migration")

@@ -5,8 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+
 	"errors"
 	"fmt"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 	"os"
 	"path/filepath"
 	"time"
@@ -26,7 +28,7 @@ const (
 
 // ManifestEntry records one migrate/install operation for later
 // uninstall/rollback. ID is assigned automatically by RecordEntry if left
-// empty — it's how `relay skill rollback <id>` (and RemoveEntry/FindEntry)
+// empty — it's how `zuano skill rollback <id>` (and RemoveEntry/FindEntry)
 // address a specific entry.
 type ManifestEntry struct {
 	ID   string `json:"id"`
@@ -62,16 +64,12 @@ func normalizeManifestKinds(m *Manifest) {
 	}
 }
 
-// manifestPath returns ~/.config/relay/agentport-manifest.json, creating the
+// manifestPath returns ~/.config/zuano/agentport-manifest.json, creating the
 // parent directory if necessary.
 func manifestPath() (string, error) {
-	home, err := os.UserHomeDir()
+	dir, err := config.Dir()
 	if err != nil {
-		return "", fmt.Errorf("resolve home directory: %w", err)
-	}
-	dir := filepath.Join(home, ".config", "relay")
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return "", fmt.Errorf("create config dir %s: %w", dir, err)
+		return "", err
 	}
 	return filepath.Join(dir, "agentport-manifest.json"), nil
 }
@@ -141,7 +139,7 @@ func SaveManifest(m Manifest) error {
 }
 
 // manifestLockPath returns the advisory lock file path sitting alongside the
-// manifest (e.g. ~/.config/relay/agentport-manifest.json.lock).
+// manifest (e.g. ~/.config/zuano/agentport-manifest.json.lock).
 func manifestLockPath() (string, error) {
 	path, err := manifestPath()
 	if err != nil {
@@ -170,7 +168,7 @@ const (
 // its lock file, so without a staleness check a single crash would wedge
 // every future manifest write forever) and steal it. This is intentionally
 // NOT flock/unix-specific — a lock *file*, not an OS-level advisory lock —
-// so it needs no build tags and works identically on every platform relay
+// so it needs no build tags and works identically on every platform zuano
 // ships to.
 func withManifestLock(fn func() error) error {
 	lockPath, err := manifestLockPath()
@@ -257,7 +255,7 @@ func LastEntry(m Manifest) (ManifestEntry, bool) {
 
 // LastEntryOfKind returns the most recently recorded entry whose Kind
 // matches kind (scanning from the end), or ok=false if none match. Used by
-// `relay agent rollback --last` so it rolls back the most recent AGENT
+// `zuano agent rollback --last` so it rolls back the most recent AGENT
 // entry specifically, never a skill entry that happens to sort later in
 // the single shared ledger (one manifest file holds both kinds).
 func LastEntryOfKind(m Manifest, kind ArtifactKind) (ManifestEntry, bool) {
@@ -271,7 +269,7 @@ func LastEntryOfKind(m Manifest, kind ArtifactKind) (ManifestEntry, bool) {
 
 // LastEntryFor returns the most recent entry matching name+provider+scope+
 // kind (scanning from the end), or ok=false if none match. Used by
-// `relay skill list --provenance` to join manifest provenance onto
+// `zuano skill list --provenance` to join manifest provenance onto
 // discovered skills. kind-aware: a skill entry and an agent
 // entry can legitimately share name+provider+scope (e.g. a "reviewer"
 // skill and a "reviewer" agent both targeting claude/user) without one

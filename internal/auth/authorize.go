@@ -19,7 +19,7 @@ type DeviceCodeResponse struct {
 }
 
 // DeviceLogin performs the device-code grant flow (RFC 8628) for headless environments.
-// Used by `relay login --device`.
+// Used by `zuano login --device`.
 func DeviceLogin(ctx context.Context, gatewayURL string) (*LoginResult, error) {
 	// 1. Request device code
 	endpoint := fmt.Sprintf("%s/api/cli/device/code", strings.TrimRight(gatewayURL, "/"))
@@ -115,7 +115,7 @@ func pollDeviceToken(ctx context.Context, gatewayURL, deviceCode string, interva
 			errCode, _ := result["error"].(string)
 			errDesc, _ := result["error_description"].(string)
 			if errCode == "expired_token" {
-				return nil, fmt.Errorf("device code expired — run `relay login --device` again")
+				return nil, fmt.Errorf("device code expired — run `zuano login --device` again")
 			}
 			return nil, fmt.Errorf("device token error: %s — %s", errCode, errDesc)
 

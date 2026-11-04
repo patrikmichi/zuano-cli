@@ -5,13 +5,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/patrikmichi/relay/internal/config"
-	"github.com/patrikmichi/relay/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 // writeToken is a shared helper to write a token to the OS keychain, and
 // persist the logged-in email (config.SetEmail) so subsequent commands
-// don't require RELAY_EMAIL to be set. Callers should propagate a non-nil
+// don't require ZUANO_EMAIL to be set. Callers should propagate a non-nil
 // return as a user-visible abort — the keychain write is the one that
 // matters; a config-persist failure is logged but non-fatal (mirrors
 // Login's same best-effort treatment in login.go).

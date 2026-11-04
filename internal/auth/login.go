@@ -17,13 +17,14 @@ import (
 
 	"github.com/pkg/browser"
 
-	"github.com/patrikmichi/relay/internal/config"
-	"github.com/patrikmichi/relay/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 const (
 	loginTimeout = 120 * time.Second
-	cliClientID  = "relay-cli"
+	// The gateway still registers this OAuth client ID.
+	cliClientID = "relay-cli"
 )
 
 // openBrowser launches the system browser to the given URL. A package-level
@@ -147,9 +148,9 @@ func Login(ctx context.Context, gatewayURL string) (*LoginResult, error) {
 	}
 
 	// Persist the logged-in email so subsequent commands don't require
-	// RELAY_EMAIL to be set (client.Resolve / config.ResolveEmail). Best
+	// ZUANO_EMAIL to be set (client.Resolve / config.ResolveEmail). Best
 	// effort — a failure here doesn't invalidate the login itself (the
-	// keychain write above already succeeded); RELAY_EMAIL remains an
+	// keychain write above already succeeded); ZUANO_EMAIL remains an
 	// explicit fallback for the user.
 	if err := config.SetEmail(resp.Email); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not persist login email to config: %v\n", err)

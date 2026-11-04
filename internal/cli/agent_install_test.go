@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/patrikmichi/relay/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
 // buildCanonicalAgentBundle builds a real gzipped tarball containing a
@@ -185,7 +185,7 @@ func TestAgentInstall_CatalogID_ChecksumMismatch_NonZeroExitNoWrite(t *testing.T
 func TestAgentInstall_NoGatewayConfigured_FailsClosed(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	// Deliberately no GATEWAY_API_KEY / RELAY_EMAIL / keychain session, and
+	// Deliberately no GATEWAY_API_KEY / ZUANO_EMAIL / keychain session, and
 	// no --gateway-url override.
 
 	cmd := AgentInstallCmd()
@@ -206,7 +206,7 @@ func TestAgentInstall_NoGatewayConfigured_FailsClosed(t *testing.T) {
 }
 
 // TestAgentInstall_OfflineFlag_FailsClosed mirrors
-// TestSkillInstall_CatalogID_OfflineFlag_FailsClosed for `relay agent
+// TestSkillInstall_CatalogID_OfflineFlag_FailsClosed for `zuano agent
 // install`.
 func TestAgentInstall_OfflineFlag_FailsClosed(t *testing.T) {
 	home := t.TempDir()

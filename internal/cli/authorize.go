@@ -7,10 +7,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/auth"
+	"github.com/patrikmichi/zuano-cli/internal/auth"
 )
 
-// AuthorizeCmd returns the `relay authorize <service>` cobra command.
+// AuthorizeCmd returns the `zuano authorize <service>` cobra command.
 // Used for per-service Google Workspace authorization (device-code fallback).
 func AuthorizeCmd() *cobra.Command {
 	var gatewayURL string
@@ -28,7 +28,7 @@ func AuthorizeCmd() *cobra.Command {
 			service := args[0]
 			ctx := context.Background()
 
-			// relay authorize uses the same device-code flow as relay login --device.
+			// zuano authorize uses the same device-code flow as zuano login --device.
 			// Per-service Workspace scope authorization is a follow-up task.
 			fmt.Printf("Authorizing %s via device-code flow...\n", service)
 			result, err := auth.DeviceLogin(ctx, resolvedURL)

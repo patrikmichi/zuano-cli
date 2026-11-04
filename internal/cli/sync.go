@@ -12,7 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 // maxResponseBytes is the per-response read cap (10 MiB).
@@ -58,7 +58,7 @@ type syncDoer interface {
 
 // ---- SyncCmd ----
 
-// SyncCmd returns the `relay sync` cobra command.
+// SyncCmd returns the `zuano sync` cobra command.
 // It pulls the caller's marketplace manifest from the gateway and materialises
 // a local-path Claude Code marketplace directory.
 func SyncCmd() *cobra.Command {
@@ -79,7 +79,7 @@ func syncCmdWithDoer(doer syncDoer) *cobra.Command {
 		Use:   "sync",
 		Short: "Sync the marketplace from the gateway to a local Claude Code directory",
 		Long: `Pull the caller's marketplace from the gateway and write a local-path
-Claude Code marketplace under ~/.config/relay/marketplace/<name>/.
+Claude Code marketplace under ~/.config/zuano/marketplace/<name>/.
 
 The directory is namespaced by the marketplace name so multiple orgs never collide.
 This materializes a CLAUDE-CODE-SPECIFIC plugin-marketplace distribution
@@ -107,23 +107,23 @@ Flags:
 	}
 
 	cmd.Flags().StringVar(&gatewayURL, "gateway-url", "", "Gateway URL (default: $GATEWAY_URL, config, or built-in default)")
-	cmd.Flags().StringVar(&customDir, "dir", "", "Local marketplace directory (default: ~/.config/relay/marketplace/<name>/)")
+	cmd.Flags().StringVar(&customDir, "dir", "", "Local marketplace directory (default: ~/.config/zuano/marketplace/<name>/)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Fetch and report changes without writing anything")
-	cmd.Flags().StringVar(&toFlag, "to", "", "NOT supported — relay-cli-completion plan D7 descope; errors naming the portable alternative")
+	cmd.Flags().StringVar(&toFlag, "to", "", "NOT supported — zuano-cli-completion plan D7 descope; errors naming the portable alternative")
 	return cmd
 }
 
-// errSyncToUnsupported is `relay sync --to <provider>`'s descope error
-// (relay-cli-completion plan D7): sync materializes a Claude-Code-specific
+// errSyncToUnsupported is `zuano sync --to <provider>`'s descope error
+// (zuano-cli-completion plan D7): sync materializes a Claude-Code-specific
 // plugin-marketplace distribution format with no per-provider analogue.
 // Checked BEFORE any doer/gateway resolution so it never depends on
 // network/auth state — a plain, always-reachable usage error.
 func errSyncToUnsupported(provider string) error {
-	return fmt.Errorf("relay sync --to %s is not supported: sync materializes a Claude-Code-specific plugin marketplace with no per-provider equivalent — use `relay skill install <catalog-id> --to %s` and `relay agent install <catalog-id> --to %s` instead", provider, provider, provider)
+	return fmt.Errorf("zuano sync --to %s is not supported: sync materializes a Claude-Code-specific plugin marketplace with no per-provider equivalent — use `zuano skill install <catalog-id> --to %s` and `zuano agent install <catalog-id> --to %s` instead", provider, provider, provider)
 }
 
 // resolveSyncDoer reads the gateway URL and resolves an authenticated
-// client for it. Auth resolution (GATEWAY_API_KEY / RELAY_EMAIL / persisted
+// client for it. Auth resolution (GATEWAY_API_KEY / ZUANO_EMAIL / persisted
 // login email → keychain, with transparent OAuth refresh) is centralized in
 // client.Resolve — *client.Client already satisfies syncDoer (it has a
 // matching Get(path string) (*http.Response, error) method), so no adapter
@@ -211,7 +211,7 @@ func runSync(d syncDoer, customDir string, dryRun bool) error {
 		rawPlugin, err := fetchPlugin(d, id, rev)
 		if err != nil {
 			// L6: append retry guidance.
-			return fmt.Errorf("fetch plugin %s: %w — re-run `relay sync` to retry", id, err)
+			return fmt.Errorf("fetch plugin %s: %w — re-run `zuano sync` to retry", id, err)
 		}
 
 		if err := os.MkdirAll(pluginDir, 0o700); err != nil {
@@ -274,7 +274,7 @@ func fetchManifest(d syncDoer) (marketplaceManifest, []byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return marketplaceManifest{}, nil, fmt.Errorf("not authenticated — run `relay login` first")
+		return marketplaceManifest{}, nil, fmt.Errorf("not authenticated — run `zuano login` first")
 	}
 	if resp.StatusCode != http.StatusOK {
 		// M4: cap error-body read too.
@@ -295,7 +295,7 @@ func fetchManifest(d syncDoer) (marketplaceManifest, []byte, error) {
 	if m.Name == "" {
 		return marketplaceManifest{}, nil, fmt.Errorf("manifest has no name field")
 	}
-	// C2: reject names that could escape ~/.config/relay/marketplace/ when used as a
+	// C2: reject names that could escape ~/.config/zuano/marketplace/ when used as a
 	// path component — even if the caller supplied --dir, the name is printed and
 	// logged, so we reject unsafe names unconditionally.
 	if strings.ContainsAny(m.Name, "/\\") || strings.Contains(m.Name, "..") {
@@ -316,7 +316,7 @@ func fetchPlugin(d syncDoer, id, rev string) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("not authenticated — run `relay login` first")
+		return nil, fmt.Errorf("not authenticated — run `zuano login` first")
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
@@ -378,7 +378,7 @@ func fetchManagedSettings(d syncDoer, localDir string) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("not authenticated — run `relay login` first")
+		return nil, fmt.Errorf("not authenticated — run `zuano login` first")
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
@@ -413,7 +413,7 @@ func safePluginID(source string) (string, error) {
 
 // resolveLocalDir returns the absolute path for the marketplace dir.
 // If customDir is non-empty it is used; otherwise defaults to
-// ~/.config/relay/marketplace/<marketplaceName>/.
+// ~/.config/zuano/marketplace/<marketplaceName>/.
 // C2: rejects marketplace names containing path-unsafe characters.
 func resolveLocalDir(customDir, marketplaceName string) (string, error) {
 	if customDir != "" {
@@ -431,7 +431,7 @@ func resolveLocalDir(customDir, marketplaceName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve home dir: %w", err)
 	}
-	return filepath.Join(home, ".config", "relay", "marketplace", marketplaceName), nil
+	return filepath.Join(home, ".config", "zuano", "marketplace", marketplaceName), nil
 }
 
 // pluginIDFromSource extracts the plugin ID from a source path like "./plugins/<id>".

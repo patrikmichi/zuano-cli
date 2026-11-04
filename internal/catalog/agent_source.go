@@ -1,16 +1,16 @@
 // FetchAgent is the Agent-IR analogue of FetchSkill (gateway_source.go) —
-// relay-cli-completion plan D4. It downloads a governed AGENT bundle from
+// zuano-cli-completion plan D4. It downloads a governed AGENT bundle from
 // the gateway catalog's generalized download endpoint
 // (GET /api/catalog/resources/<id>/download, added gateway-side by D1/D2),
 // verifies it end to end (content hash + scan verdict), path-safe extracts
 // it, and loads the single agent file it contains through the SAME
-// provider-adapter Load code path `relay agent migrate`/`relay agent
+// provider-adapter Load code path `zuano agent migrate`/`zuano agent
 // install` use — so everything downstream (MigrateAgent/WriteAgent/manifest)
 // is unmodified, shipped Phase-C code.
 //
 // Bundle-shape assumption (see plan D4): the catalog stores every published
 // agent resource as a single flat `<name>.md` frontmatter+body file at the
-// tarball root — the SAME canonical shape `relay agent publish <path>`
+// tarball root — the SAME canonical shape `zuano agent publish <path>`
 // already uploads (publish.go's buildBundle picks the root-level .md as the
 // manifest) and the shape Claude Code's own agent files use. This package
 // deliberately loads that file through agentport's CLAUDE agent adapter
@@ -34,7 +34,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/patrikmichi/relay/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
 // resourceDownloadPathPrefix is the generalized (skill+agent) download
@@ -128,7 +128,7 @@ func FetchAgent(doer Doer, id, version, channel string) (*agentport.Agent, error
 		return nil, fmt.Errorf("catalog: %s: %w", id, err)
 	}
 
-	tmpDir, err := os.MkdirTemp("", "relay-catalog-agent-*")
+	tmpDir, err := os.MkdirTemp("", "zuano-catalog-agent-*")
 	if err != nil {
 		return nil, fmt.Errorf("catalog: create temp extraction dir: %w", err)
 	}

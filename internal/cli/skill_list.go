@@ -6,10 +6,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
-// SkillListCmd returns the `relay skill list` cobra command — enumerates
+// SkillListCmd returns the `zuano skill list` cobra command — enumerates
 // skills present across provider skill directories.
 func SkillListCmd() *cobra.Command {
 	var (
@@ -23,10 +23,10 @@ func SkillListCmd() *cobra.Command {
 		Short: "List installed skills across agent-skill providers",
 		Long: `Enumerate skills present in each provider's skill directories: name,
 provider, and scope. With --provenance, joins the manifest ledger to show
-where each skill was installed/migrated from (when relay recorded it).
+where each skill was installed/migrated from (when zuano recorded it).
 
 Scope 'project' is resolved relative to the current working directory only
-(no parent-directory search, unlike 'relay skill migrate --from').`,
+(no parent-directory search, unlike 'zuano skill migrate --from').`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runSkillList(cmd, skillListOpts{provider: providerFlag, scope: scopeFlag, provenance: provenance})
 		},

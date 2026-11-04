@@ -7,16 +7,16 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
-// ConfigCmd returns the `relay config` cobra command group.
+// ConfigCmd returns the `zuano config` cobra command group.
 // Sub-commands: set-gateway, get-gateway, show.
 func ConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Manage CLI configuration",
-		Long:  "Read and write CLI configuration stored at ~/.config/relay/config.json.",
+		Long:  "Read and write CLI configuration stored at ~/.config/zuano/config.json.",
 	}
 	cmd.AddCommand(
 		configSetGatewayCmd(),
@@ -26,15 +26,15 @@ func ConfigCmd() *cobra.Command {
 	return cmd
 }
 
-// configSetGatewayCmd returns `relay config set-gateway <url>`.
+// configSetGatewayCmd returns `zuano config set-gateway <url>`.
 func configSetGatewayCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "set-gateway <url>",
 		Short: "Set the gateway URL",
-		Long: `Save the gateway URL to ~/.config/relay/config.json.
+		Long: `Save the gateway URL to ~/.config/zuano/config.json.
 
 Example:
-  relay config set-gateway https://gateway.example.com`,
+  zuano config set-gateway https://gateway.example.com`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url := args[0]
@@ -52,7 +52,7 @@ Example:
 	}
 }
 
-// configGetGatewayCmd returns `relay config get-gateway`.
+// configGetGatewayCmd returns `zuano config get-gateway`.
 func configGetGatewayCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get-gateway",
@@ -68,7 +68,7 @@ func configGetGatewayCmd() *cobra.Command {
 	}
 }
 
-// configShowCmd returns `relay config show`.
+// configShowCmd returns `zuano config show`.
 func configShowCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "show",
@@ -81,10 +81,10 @@ func configShowCmd() *cobra.Command {
 
 			// Resolve the effective gateway URL for display (may come from env var).
 			effectiveURL, _ := config.GatewayURL()
-			// Resolve the effective identity for display (RELAY_EMAIL, when
+			// Resolve the effective identity for display (ZUANO_EMAIL, when
 			// set, overrides the persisted login email — see
 			// config.ResolveEmail). Never errors on "not logged in" here —
-			// `relay config show` should always succeed; EffectiveEmail is
+			// `zuano config show` should always succeed; EffectiveEmail is
 			// just empty in that case.
 			effectiveEmail, _ := config.ResolveEmail()
 

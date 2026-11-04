@@ -14,8 +14,8 @@ import (
 
 	"github.com/zalando/go-keyring"
 
-	"github.com/patrikmichi/relay/internal/config"
-	"github.com/patrikmichi/relay/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 // init installs a mock keyring so these tests never touch the real OS keychain.
@@ -25,7 +25,7 @@ func init() {
 
 // withTempHome redirects os.UserHomeDir (via $HOME) to an isolated temp dir
 // for the duration of the test, so config.Load/Save never touch the real
-// developer machine's ~/.config/relay.
+// developer machine's ~/.config/zuano.
 func withTempHome(t *testing.T) {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())

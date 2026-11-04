@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/patrikmichi/relay/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 // WhoamiResponse is the JSON returned by /api/cli/whoami.
@@ -34,7 +34,7 @@ func Whoami(c *client.Client, full bool) (*WhoamiResponse, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("token expired or revoked — run `relay login` to re-authenticate")
+		return nil, fmt.Errorf("token expired or revoked — run `zuano login` to re-authenticate")
 	}
 
 	if resp.StatusCode != http.StatusOK {

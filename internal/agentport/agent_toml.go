@@ -300,7 +300,7 @@ func parseFlatTOML(raw []byte) (values map[string]interface{}, warnings []string
 			continue
 		}
 		if strings.HasPrefix(line, "[") {
-			warnings = append(warnings, fmt.Sprintf("skipping table %s (not supported by relay's flat-TOML agent codec)", line))
+			warnings = append(warnings, fmt.Sprintf("skipping table %s (not supported by zuano's flat-TOML agent codec)", line))
 			break // everything after a table header is that table's content
 		}
 
@@ -312,7 +312,7 @@ func parseFlatTOML(raw []byte) (values map[string]interface{}, warnings []string
 		rest := strings.TrimSpace(line[eq+1:])
 
 		if strings.Contains(key, ".") {
-			warnings = append(warnings, fmt.Sprintf("skipping dotted key %q (not supported by relay's flat-TOML agent codec)", key))
+			warnings = append(warnings, fmt.Sprintf("skipping dotted key %q (not supported by zuano's flat-TOML agent codec)", key))
 			continue
 		}
 

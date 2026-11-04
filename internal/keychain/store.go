@@ -12,6 +12,7 @@ import (
 	"github.com/zalando/go-keyring"
 )
 
+// Keep the existing keychain namespace so installed sessions survive the rename.
 const serviceName = "relay-cli"
 
 // TokenData holds the OAuth token pair and metadata stored in the keychain.

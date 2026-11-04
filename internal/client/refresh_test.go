@@ -10,9 +10,9 @@ import (
 
 	"github.com/zalando/go-keyring"
 
-	"github.com/patrikmichi/relay/internal/client"
-	"github.com/patrikmichi/relay/internal/config"
-	"github.com/patrikmichi/relay/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 // init installs a mock keyring so these tests never touch the real OS keychain.
@@ -22,7 +22,7 @@ func init() {
 
 // withTempHome redirects os.UserHomeDir (via $HOME) to an isolated temp dir
 // for the duration of the test, so config.Load/Save never touch the real
-// developer machine's ~/.config/relay.
+// developer machine's ~/.config/zuano.
 func withTempHome(t *testing.T) {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())
@@ -43,7 +43,7 @@ func seedSession(t *testing.T, email string, tok keychain.TokenData) {
 func TestResolve_GatewayAPIKeyTakesPrecedence(t *testing.T) {
 	withTempHome(t)
 	t.Setenv("GATEWAY_API_KEY", "static-bearer-key")
-	t.Setenv("RELAY_EMAIL", "someone@example.com") // present but must be ignored
+	t.Setenv("ZUANO_EMAIL", "someone@example.com") // present but must be ignored
 
 	c, err := client.Resolve("https://gw.example.com")
 	if err != nil {
@@ -57,10 +57,23 @@ func TestResolve_GatewayAPIKeyTakesPrecedence(t *testing.T) {
 	}
 }
 
+func TestResolve_ZuanoAPIKeyOverridesLegacyKey(t *testing.T) {
+	withTempHome(t)
+	t.Setenv("ZUANO_API_KEY", "new-key")
+	t.Setenv("GATEWAY_API_KEY", "old-key")
+	c, err := client.Resolve("https://example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.AccessToken != "new-key" {
+		t.Fatal("Zuano API key did not take precedence")
+	}
+}
+
 func TestResolve_NoSessionReturnsErrNotLoggedIn(t *testing.T) {
 	withTempHome(t)
 	t.Setenv("GATEWAY_API_KEY", "")
-	t.Setenv("RELAY_EMAIL", "")
+	t.Setenv("ZUANO_EMAIL", "")
 
 	_, err := client.Resolve("https://gw.example.com")
 	if err != client.ErrNotLoggedIn {
@@ -71,7 +84,7 @@ func TestResolve_NoSessionReturnsErrNotLoggedIn(t *testing.T) {
 func TestResolve_UsesPersistedLoginEmail(t *testing.T) {
 	withTempHome(t)
 	t.Setenv("GATEWAY_API_KEY", "")
-	t.Setenv("RELAY_EMAIL", "")
+	t.Setenv("ZUANO_EMAIL", "")
 
 	seedSession(t, "persisted@example.com", keychain.TokenData{
 		AccessToken:  "access-1",
@@ -93,7 +106,7 @@ func TestResolve_UsesPersistedLoginEmail(t *testing.T) {
 	}
 }
 
-func TestResolve_RelayEmailOverridesPersistedEmail(t *testing.T) {
+func TestResolve_ZuanoEmailOverridesPersistedEmail(t *testing.T) {
 	withTempHome(t)
 	t.Setenv("GATEWAY_API_KEY", "")
 
@@ -105,7 +118,7 @@ func TestResolve_RelayEmailOverridesPersistedEmail(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("seed override token: %v", err)
 	}
-	t.Setenv("RELAY_EMAIL", "override@example.com")
+	t.Setenv("ZUANO_EMAIL", "override@example.com")
 
 	c, err := client.Resolve("https://gw.example.com")
 	if err != nil {

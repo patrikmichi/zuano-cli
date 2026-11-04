@@ -12,7 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 // DiscoveryTool mirrors one tool entry returned by GET /api/integrations
@@ -50,8 +50,8 @@ type IntegrationsResponse struct {
 // This REPLACES the previous discovery path, which called `gateway.catalog`
 // via the aggregate `POST /api/mcp` JSON-RPC endpoint. That endpoint 503s
 // whenever AGGREGATE_MCP_ENABLED != 'true' (default OFF — see gateway
-// app/api/mcp/route.ts), which silently broke `relay services`,
-// `relay help-tools`, and dynamic per-service sub-command registration on
+// app/api/mcp/route.ts), which silently broke `zuano services`,
+// `zuano help-tools`, and dynamic per-service sub-command registration on
 // any gateway that hadn't explicitly opted into the (intentional) aggregate
 // kill-switch. /api/integrations is a dedicated, dispatch-free, always-on
 // discovery endpoint (auth: verifyMcpAuth, same as every MCP surface) that
@@ -61,7 +61,7 @@ type IntegrationsResponse struct {
 // Returns (nil, nil) — not an error — when the caller is unauthenticated
 // (401, i.e. c.Do's transparent refresh-and-retry ALSO failed), matching the
 // previous fetchCatalog behavior: callers that want a hard auth failure
-// (e.g. `relay services`) perform their own request instead of going
+// (e.g. `zuano services`) perform their own request instead of going
 // through this helper so they can print the re-authenticate prompt and
 // exit(1).
 func fetchIntegrations(c *client.Client) (*IntegrationsResponse, error) {
@@ -90,16 +90,16 @@ func fetchIntegrations(c *client.Client) (*IntegrationsResponse, error) {
 	return &out, nil
 }
 
-// callTool is the shared execution path for both `relay <service> <tool>
+// callTool is the shared execution path for both `zuano <service> <tool>
 // [--arg key=value...]` (dynamic sub-commands, see buildToolCmd) and
-// `relay call <service> <tool> [--arg key=value...]` (CallCmd, call.go).
+// `zuano call <service> <tool> [--arg key=value...]` (CallCmd, call.go).
 //
 // EXECUTION REPOINT: previously POSTed to the REST `/api/<service>/call`
 // endpoint with a flat `{tool, arguments}` body. Now POSTs to the canonical
 // per-service MCP JSON-RPC endpoint (`/api/<service>/mcp`, method
 // "tools/call") with `{name, arguments}` params, so CLI execution goes
 // through the SAME transport as any other MCP client — matching
-// `relay help-tools` / discovery, which already used the per-service MCP
+// `zuano help-tools` / discovery, which already used the per-service MCP
 // surface for tools/list. Governance (rate-limit, allow/block policy,
 // prompt-injection, schema validation, egress/SSRF, audit, redaction —
 // lib/dispatch/run-tool.ts) is byte-for-byte identical either way; only the
@@ -148,7 +148,7 @@ func callTool(c *client.Client, service, tool string, rawArgs []string) error {
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		fmt.Fprintln(os.Stderr, "Token expired or revoked — run `relay login` to re-authenticate.")
+		fmt.Fprintln(os.Stderr, "Token expired or revoked — run `zuano login` to re-authenticate.")
 		os.Exit(1)
 	}
 
@@ -215,7 +215,7 @@ func callTool(c *client.Client, service, tool string, rawArgs []string) error {
 //
 // gatewayURL here is already the resolved URL BuildServiceCommands used to
 // discover this tool in the first place (it only runs when !cli.Offline(),
-// see cmd/relay/main.go's PersistentPreRunE) — but RunE re-resolves through
+// see cmd/zuano/main.go's PersistentPreRunE) — but RunE re-resolves through
 // resolveGatewayURLOrFailClosed anyway rather than closing over gatewayURL
 // directly, so a dynamic tool command built during an earlier (online)
 // invocation can never dial the gateway if --offline is passed to a later
@@ -272,7 +272,7 @@ func BuildServiceCommands(root *cobra.Command, gatewayURL string) {
 			Use:   serviceID,
 			Short: fmt.Sprintf("Commands for the %s service", svc.Name),
 			Long: fmt.Sprintf(
-				"Auto-generated sub-commands for the %s gateway service.\n\nUse `relay %s <tool> --arg key=value` to call a tool.",
+				"Auto-generated sub-commands for the %s gateway service.\n\nUse `zuano %s <tool> --arg key=value` to call a tool.",
 				svc.Name, serviceID,
 			),
 		}

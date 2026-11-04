@@ -9,17 +9,17 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/agentport"
-	"github.com/patrikmichi/relay/internal/catalog"
-	"github.com/patrikmichi/relay/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/catalog"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
-// SkillInstallCmd returns the `relay skill install <path|catalog-id>` cobra
+// SkillInstallCmd returns the `zuano skill install <path|catalog-id>` cobra
 // command — loads a skill either from an arbitrary LOCAL directory (or a
 // direct path to a SKILL.md file), or from the gateway CATALOG by resource
 // id/slug, and projects it into one or more --to providers, printing a
 // fidelity-loss report for each. Unless --dry-run, files are written and a
-// manifest entry is recorded — the same engine as 'relay skill migrate'.
+// manifest entry is recorded — the same engine as 'zuano skill migrate'.
 //
 // If --to is omitted, installs to every provider detected as installed on
 // this machine.
@@ -42,7 +42,7 @@ to a SKILL.md file), or — when the argument is not an existing local path —
 from the gateway catalog by resource id (res_…) or slug, and project it into
 one or more --to providers, printing a fidelity-loss report for each. Unless
 --dry-run, files are written and a manifest entry is recorded — the same
-engine as 'relay skill migrate'.
+engine as 'zuano skill migrate'.
 
 Source disambiguation: if <path|catalog-id> exists on disk, it is treated as
 a LOCAL path (agentport.LoadGenericSkill). Otherwise it is treated as a
@@ -51,7 +51,7 @@ like a path (contains a path separator) but doesn't exist on disk is
 reported as a missing local path rather than guessed at as a catalog id.
 
 A catalog-id install requires a reachable, authenticated gateway
-(GATEWAY_URL/GATEWAY_API_KEY env vars, or a prior 'relay login') and fails
+(GATEWAY_URL/GATEWAY_API_KEY env vars, or a prior 'zuano login') and fails
 closed — no partial writes — on: no gateway configured / --offline, a
 content-hash mismatch, a missing/failed scan verdict, or a malformed bundle.
 
@@ -59,10 +59,10 @@ If --to is omitted, installs to every provider detected as installed on
 this machine.
 
 Examples:
-  relay skill install ./my-skill --to claude
-  relay skill install ./my-skill/SKILL.md --to codex --to cursor
-  relay skill install res_abc123 --to claude
-  relay skill install pr-triage --version 1.4.2 --channel beta --to claude`,
+  zuano skill install ./my-skill --to claude
+  zuano skill install ./my-skill/SKILL.md --to codex --to cursor
+  zuano skill install res_abc123 --to claude
+  zuano skill install pr-triage --version 1.4.2 --channel beta --to claude`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSkillInstall(cmd, args[0], skillInstallOpts{
@@ -188,9 +188,9 @@ func translateGatewayFetchError(catalogID string, err error) error {
 	case errors.Is(err, catalog.ErrNoAccess):
 		return fmt.Errorf("you don't have access to %q — request access via the catalog UI or gateway.request_access: %w", catalogID, err)
 	case errors.Is(err, catalog.ErrNotFound):
-		return fmt.Errorf("catalog resource %q not found (or no downloadable version) — try `relay skill search` or an explicit --version: %w", catalogID, err)
+		return fmt.Errorf("catalog resource %q not found (or no downloadable version) — try `zuano skill search` or an explicit --version: %w", catalogID, err)
 	case errors.Is(err, catalog.ErrNotDownloadable):
-		return fmt.Errorf("catalog resource %q's resolved version is not downloadable — try `relay skill search` or an explicit --version: %w", catalogID, err)
+		return fmt.Errorf("catalog resource %q's resolved version is not downloadable — try `zuano skill search` or an explicit --version: %w", catalogID, err)
 	case errors.Is(err, catalog.ErrUnauthorized):
 		return fmt.Errorf("%w — %s", err, offlineGuidance)
 	default:

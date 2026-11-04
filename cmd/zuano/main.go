@@ -1,4 +1,4 @@
-// Package main is the entrypoint for the relay CLI (gateway client).
+// Package main is the entrypoint for the zuano CLI (gateway client).
 // Auth subcommands: login, logout, whoami, authorize.
 // Service subcommands: call, services, tokens, config, help-tools.
 // Dynamic service sub-commands are built lazily from the gateway catalog.
@@ -13,8 +13,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/cli"
-	"github.com/patrikmichi/relay/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/cli"
+	"github.com/patrikmichi/zuano-cli/internal/config"
 )
 
 // version, commit, and date are injected at build time via -ldflags (see
@@ -120,14 +120,14 @@ func rewriteOfflineUnknownCommandErr(err error, args []string) error {
 	return errors.New(cli.OfflineGuidance())
 }
 
-// newRootCmd builds the relay root cobra command with every static
+// newRootCmd builds the zuano root cobra command with every static
 // sub-command registered and the dynamic-registration PersistentPreRunE
 // wired up. Extracted from main() so tests can Execute() the full command
 // tree (e.g. to prove --offline never dials the gateway) without needing a
 // built binary.
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:     "relay",
+		Use:     "zuano",
 		Short:   "Gateway CLI — unified access to integrated services",
 		Version: buildVersionString(moduleVersion(version, readBuildInfo()), commit, date),
 		// Don't print usage on error (cleaner output for auth errors), and

@@ -7,11 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/agentport"
+	"github.com/patrikmichi/zuano-cli/internal/agentport"
 )
 
-// AgentDiffCmd returns the `relay agent diff <name>` cobra command — a
-// preview of `relay agent migrate` that writes nothing. The Agent-IR
+// AgentDiffCmd returns the `zuano agent diff <name>` cobra command — a
+// preview of `zuano agent migrate` that writes nothing. The Agent-IR
 // analogue of SkillDiffCmd.
 func AgentDiffCmd() *cobra.Command {
 	var (
@@ -26,7 +26,7 @@ func AgentDiffCmd() *cobra.Command {
 		Long: fmt.Sprintf(`Load <name> from --from's directory (in the given --scope), project it
 to --to, and print the field-level differences plus the fidelity-loss
 report — without writing anything to --to's real agent directory or
-recording a manifest entry. This is a preview of 'relay agent migrate'.
+recording a manifest entry. This is a preview of 'zuano agent migrate'.
 
 Supported providers: %s.`, agentProviderIDsCSV()),
 		Args: cobra.ExactArgs(1),
@@ -88,7 +88,7 @@ func runAgentDiff(cmd *cobra.Command, name string, opts agentDiffOpts) error {
 	// Project into a scratch temp dir (never plan.TargetPaths) so we can
 	// re-Load it and report field-level differences without writing
 	// anything under the real target directory or touching the manifest.
-	tmp, err := os.MkdirTemp("", "relay-agent-diff-*")
+	tmp, err := os.MkdirTemp("", "zuano-agent-diff-*")
 	if err != nil {
 		return fmt.Errorf("create scratch dir: %w", err)
 	}

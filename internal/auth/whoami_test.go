@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/relay/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 func TestWhoami_Success(t *testing.T) {
@@ -81,7 +81,7 @@ func TestWhoami_Unauthorized(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if !strings.Contains(err.Error(), "relay login") {
+	if !strings.Contains(err.Error(), "zuano login") {
 		t.Errorf("expected re-auth guidance in error, got: %v", err)
 	}
 }

@@ -1,4 +1,4 @@
-module github.com/patrikmichi/relay
+module github.com/patrikmichi/zuano-cli
 
 go 1.22
 

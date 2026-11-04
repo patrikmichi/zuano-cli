@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ServicesCmd returns the `relay services` cobra command.
+// ServicesCmd returns the `zuano services` cobra command.
 // Lists available services and their tool counts from GET /api/integrations.
 //
 // Repointed off GET /api/mcp (aggregate MCP endpoint), which 503s whenever
@@ -43,7 +43,7 @@ func ServicesCmd() *cobra.Command {
 				return fmt.Errorf("services failed: %w", err)
 			}
 			if info == nil {
-				fmt.Fprintln(os.Stderr, "Token expired or revoked — run `relay login` to re-authenticate.")
+				fmt.Fprintln(os.Stderr, "Token expired or revoked — run `zuano login` to re-authenticate.")
 				os.Exit(1)
 			}
 

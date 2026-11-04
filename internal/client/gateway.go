@@ -27,14 +27,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/patrikmichi/relay/internal/config"
-	"github.com/patrikmichi/relay/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/config"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
 // ErrNotLoggedIn is returned by Resolve when neither GATEWAY_API_KEY nor a
-// usable CLI session (RELAY_EMAIL / persisted login email + a matching OS
+// usable CLI session (ZUANO_EMAIL / persisted login email + a matching OS
 // keychain entry) can be found.
-var ErrNotLoggedIn = errors.New("not logged in — run `relay login` first, or set GATEWAY_API_KEY for non-interactive auth")
+var ErrNotLoggedIn = errors.New("not logged in — run `zuano login` first, or set GATEWAY_API_KEY for non-interactive auth")
 
 // refreshSkew is how far ahead of the recorded expiry Client proactively
 // refreshes — avoids a request racing an access token that expires mid-flight.
@@ -73,13 +73,17 @@ func New(gatewayURL, accessToken string) *Client {
 //     CI). Mirrors the gateway's own bearer-key fallback (lib/api-keys.ts /
 //     verifyMcpAuth). No refresh capability: API keys don't rotate through
 //     the OAuth flow, so there's nothing to refresh.
-//  2. RELAY_EMAIL env var, or the email persisted at the last successful
-//     `relay login` (config.ResolveEmail) → the matching OS keychain OAuth
+//  2. ZUANO_EMAIL env var, or the email persisted at the last successful
+//     `zuano login` (config.ResolveEmail) → the matching OS keychain OAuth
 //     pair, wrapped in a Client with automatic pre-expiry / on-401 refresh.
 //
 // Returns ErrNotLoggedIn when neither path resolves to usable credentials.
 func Resolve(gatewayURL string) (*Client, error) {
-	if apiKey := os.Getenv("GATEWAY_API_KEY"); apiKey != "" {
+	apiKey := os.Getenv("ZUANO_API_KEY")
+	if apiKey == "" {
+		apiKey = os.Getenv("GATEWAY_API_KEY")
+	}
+	if apiKey != "" {
 		return New(gatewayURL, apiKey), nil
 	}
 
@@ -133,7 +137,7 @@ func (c *Client) refreshLocked() error {
 	// lib/oauth/token-store.ts): if we update AccessToken/RefreshToken here
 	// but the keychain write then fails, this process's next call would
 	// still work (in-memory pair is valid), but every OTHER process reading
-	// the keychain (a concurrently-running `relay` invocation, or the very
+	// the keychain (a concurrently-running `zuano` invocation, or the very
 	// next command) would present the now-spent old refresh token and get
 	// its whole token family revoked. Failing the refresh outright on a
 	// write error is safer than risking that.
@@ -222,7 +226,7 @@ func cloneRequest(req *http.Request) (*http.Request, error) {
 // re-sent, the response returned is a 401 — indistinguishable in status
 // from "no refresh was attempted" — so every existing call site's
 //
-//	if resp.StatusCode == http.StatusUnauthorized { ...run `relay login`... }
+//	if resp.StatusCode == http.StatusUnauthorized { ...run `zuano login`... }
 //
 // keeps working with zero changes; it now means "refresh was attempted and
 // did not resolve the problem" rather than "no refresh capability existed".
@@ -282,7 +286,7 @@ func (c *Client) Get(path string) (*http.Response, error) {
 // the gateway never responds. Use with context.WithTimeout for any call site
 // that must be bounded (internal/catalog's download/search calls; see m3 in
 // the Go review) — this deliberately does NOT change the shared http.Client
-// itself (no Client-wide Timeout), so unrelated long-running relay dispatch
+// itself (no Client-wide Timeout), so unrelated long-running zuano dispatch
 // calls through Post/Get are unaffected.
 func (c *Client) PostContext(ctx context.Context, path, contentType string, body io.Reader) (*http.Response, error) {
 	url := c.GatewayURL + path

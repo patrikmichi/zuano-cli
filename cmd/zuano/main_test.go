@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrikmichi/relay/internal/cli"
+	"github.com/patrikmichi/zuano-cli/internal/cli"
 )
 
 func TestOfflineFlagPresent(t *testing.T) {
@@ -33,7 +33,7 @@ func TestOfflineFlagPresent(t *testing.T) {
 }
 
 func TestRewriteOfflineUnknownCommandErr_RewritesWhenOfflineAndUnknownCommand(t *testing.T) {
-	err := errors.New(`unknown command "clockify" for "relay"`)
+	err := errors.New(`unknown command "clockify" for "zuano"`)
 	got := rewriteOfflineUnknownCommandErr(err, []string{"--offline", "clockify", "list_time_entries"})
 	if got.Error() != cli.OfflineGuidance() {
 		t.Fatalf("got %q, want the offline guidance message", got.Error())
@@ -49,7 +49,7 @@ func TestRewriteOfflineUnknownCommandErr_LeavesNonUnknownCommandErrorsUntouched(
 }
 
 func TestRewriteOfflineUnknownCommandErr_LeavesUnknownCommandUntouchedWithoutOfflineFlag(t *testing.T) {
-	err := errors.New(`unknown command "clockify" for "relay"`)
+	err := errors.New(`unknown command "clockify" for "zuano"`)
 	got := rewriteOfflineUnknownCommandErr(err, []string{"clockify", "list_time_entries"})
 	if got != err {
 		t.Fatalf("got %v, want the original error untouched (no --offline present)", got)

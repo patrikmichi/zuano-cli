@@ -7,11 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/auth"
-	"github.com/patrikmichi/relay/internal/keychain"
+	"github.com/patrikmichi/zuano-cli/internal/auth"
+	"github.com/patrikmichi/zuano-cli/internal/keychain"
 )
 
-// LogoutCmd returns the `relay logout` cobra command.
+// LogoutCmd returns the `zuano logout` cobra command.
 //
 // logout has two halves: deleting the local OS keychain entry (no network,
 // always safe) and revoking the token family server-side (auth.Logout's
@@ -22,7 +22,7 @@ import (
 // user should always be able to clear a stale local session (e.g. after a
 // laptop loses network, or the gateway is decommissioned) even with no
 // gateway reachable, so the local half runs unconditionally once we know
-// which email's keychain entry to delete. `relay tokens revoke`
+// which email's keychain entry to delete. `zuano tokens revoke`
 // (tokens.go) is the other command surface for this exact operation and
 // intentionally mirrors this same two-halves design.
 func LogoutCmd() *cobra.Command {

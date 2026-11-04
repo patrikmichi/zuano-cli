@@ -5,10 +5,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// CallCmd returns the `relay call <service> <tool> [--arg key=value...]` cobra command.
+// CallCmd returns the `zuano call <service> <tool> [--arg key=value...]` cobra command.
 //
 // Delegates to callTool (service_cmd.go) — the same execution path the
-// dynamic `relay <service> <tool>` sub-commands use — which POSTs a JSON-RPC
+// dynamic `zuano <service> <tool>` sub-commands use — which POSTs a JSON-RPC
 // tools/call request to /api/<service>/mcp. Previously this command built
 // its own REST POST /api/<service>/call request inline; that duplicated
 // callTool's logic and used the REST surface instead of the canonical MCP
@@ -25,8 +25,8 @@ func CallCmd() *cobra.Command {
 Arguments are passed as key=value pairs via --arg flags.
 
 Example:
-  relay call clockify list_time_entries
-  relay call google-workspace search_emails --arg query="is:unread" --arg maxResults=10`,
+  zuano call clockify list_time_entries
+  zuano call google-workspace search_emails --arg query="is:unread" --arg maxResults=10`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			gURL, err := resolveGatewayURLOrFailClosed(gatewayURL)

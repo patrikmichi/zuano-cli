@@ -175,7 +175,7 @@ func ResolveSkillPath(a Adapter, scope Scope, name string) (string, error) {
 // ResolveSkillPath, by contrast, is a READ-path resolver used by
 // migrate/scan/diff and deliberately searches every documented
 // compatibility-read fallback directory too — using it for a destructive
-// delete would let e.g. `relay skill uninstall foo --from cursor` remove a
+// delete would let e.g. `zuano skill uninstall foo --from cursor` remove a
 // Claude-owned skill it merely reads for compatibility.
 func ResolveOwnSkillPath(a Adapter, scope Scope, name string) (string, error) {
 	if err := ValidateName(name); err != nil {

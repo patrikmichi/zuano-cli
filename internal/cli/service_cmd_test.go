@@ -20,7 +20,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 // ---- fetchIntegrations (discovery repoint) ----
@@ -288,13 +288,13 @@ func captureStdout(t *testing.T, fn func()) string {
 
 func TestBuildServiceCommands_RegistersOnlyAccessibleServicesWithTools(t *testing.T) {
 	// BuildServiceCommands resolves a client.Client (GATEWAY_API_KEY /
-	// RELAY_EMAIL+keychain / persisted login email+keychain) before it does
+	// ZUANO_EMAIL+keychain / persisted login email+keychain) before it does
 	// anything network-related; without any of those it must no-op.
-	t.Setenv("HOME", t.TempDir()) // isolate from any real ~/.config/relay/config.json
-	t.Setenv("RELAY_EMAIL", "")
+	t.Setenv("HOME", t.TempDir()) // isolate from any real ~/.config/zuano/config.json
+	t.Setenv("ZUANO_EMAIL", "")
 	t.Setenv("GATEWAY_API_KEY", "")
 
-	root := &cobra.Command{Use: "relay"}
+	root := &cobra.Command{Use: "zuano"}
 	BuildServiceCommands(root, "http://example.invalid")
 
 	if len(root.Commands()) != 0 {
@@ -305,7 +305,7 @@ func TestBuildServiceCommands_RegistersOnlyAccessibleServicesWithTools(t *testin
 // ---- buildToolCmd offline fail-closed (Fix 1) ----
 
 // TestBuildToolCmd_OfflineFlag_FailsClosedWithoutNetworkCall confirms a
-// dynamic tool leaf command built by BuildServiceCommands (e.g. `relay
+// dynamic tool leaf command built by BuildServiceCommands (e.g. `zuano
 // clockify list_time_entries`) refuses to dial the gateway when --offline
 // is set — even though it already has a concrete, non-empty gatewayURL
 // closed over from discovery time. Points gatewayURL at a server that would

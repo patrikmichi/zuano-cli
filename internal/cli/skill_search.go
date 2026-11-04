@@ -13,7 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/patrikmichi/relay/internal/client"
+	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
 // aggregateMcpPath is the aggregate MCP JSON-RPC endpoint. management.* tools
@@ -67,11 +67,11 @@ type skillSearchDoer interface {
 
 // searchTimeout bounds a single search request end to end — shorter than
 // catalog.downloadTimeout since a search payload is small and interactive
-// (m3 in the Go review: a hanging gateway must not hang `relay skill
+// (m3 in the Go review: a hanging gateway must not hang `zuano skill
 // search` forever). A package-level var so tests can shrink it.
 var searchTimeout = 30 * time.Second
 
-// SkillSearchCmd returns the `relay skill search <query>` cobra command —
+// SkillSearchCmd returns the `zuano skill search <query>` cobra command —
 // calls the gateway's management.search_skills MCP tool (aggregate
 // /api/mcp endpoint) and prints matching catalog skills (id, slug,
 // version, trust score, description).
@@ -86,16 +86,16 @@ func SkillSearchCmd() *cobra.Command {
 		Short: "Search the gateway catalog for installable skills",
 		Long: `Search the gateway catalog for skills by keyword (name/summary), printing
 each match's catalog id, slug, latest version, and trust score — feed the
-id/slug directly into 'relay skill install <catalog-id>'.
+id/slug directly into 'zuano skill install <catalog-id>'.
 
 Requires a reachable, authenticated gateway with the aggregate MCP endpoint
 enabled server-side (AGGREGATE_MCP_ENABLED) — degrades with guidance if
 either is unavailable.
 
 Examples:
-  relay skill search
-  relay skill search "pr triage"
-  relay skill search --json triage`,
+  zuano skill search
+  zuano skill search "pr triage"
+  zuano skill search --json triage`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			query := ""
@@ -181,7 +181,7 @@ func searchSkills(doer skillSearchDoer, query string) ([]skillSearchEntry, error
 	}
 
 	if resp.StatusCode == http.StatusServiceUnavailable {
-		return nil, fmt.Errorf("skill search is unavailable on this gateway (aggregate MCP endpoint disabled) — try `relay skill install <catalog-id>` directly if you already know the id/slug")
+		return nil, fmt.Errorf("skill search is unavailable on this gateway (aggregate MCP endpoint disabled) — try `zuano skill install <catalog-id>` directly if you already know the id/slug")
 	}
 	if resp.StatusCode == http.StatusUnauthorized {
 		return nil, fmt.Errorf("%s", offlineGuidance)

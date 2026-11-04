@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// HelpToolsCmd returns the `relay help-tools [service]` cobra command.
+// HelpToolsCmd returns the `zuano help-tools [service]` cobra command.
 // Prints all available tools (and their descriptions) for one or all services.
 //
 // Repointed off the aggregate `gateway.catalog` MCP call (POST /api/mcp),
@@ -27,9 +27,9 @@ func HelpToolsCmd() *cobra.Command {
 If no service is specified, prints tools for every accessible service.
 
 Examples:
-  relay help-tools                     # all services
-  relay help-tools clockify            # only clockify tools
-  relay help-tools google-workspace    # only Google Workspace tools`,
+  zuano help-tools                     # all services
+  zuano help-tools clockify            # only clockify tools
+  zuano help-tools google-workspace    # only Google Workspace tools`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			gURL, err := resolveGatewayURLOrFailClosed(gatewayURL)
@@ -48,7 +48,7 @@ Examples:
 				// rather than hard-failing (mirrors fetchIntegrations' 401
 				// contract: nil info, nil error).
 				fmt.Println("No accessible services found.")
-				fmt.Println("You can still use: relay services")
+				fmt.Println("You can still use: zuano services")
 				return nil
 			}
 
@@ -81,7 +81,7 @@ Examples:
 				// check that must gate the fallback message.
 				if len(targets) == 0 {
 					fmt.Println("No accessible services found.")
-					fmt.Println("You can still use: relay services")
+					fmt.Println("You can still use: zuano services")
 					return nil
 				}
 			}

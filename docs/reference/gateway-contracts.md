@@ -492,29 +492,37 @@ the preview "explains the decision for a principal".
 
 ## Billing
 
-`GET /api/billing/status` (Bearer, any member; a member without billing rights
-gets `"view": "reduced"`). Fixture: `billing-status.json`,
-`billing-status-simulated.json`.
+`GET /api/v1/billing/status` (Bearer, any member). Fixture:
+`billing-status.json`, `billing-status-simulated.json`. Amounts are nano-euros.
+Source: the gateway's `lib/billing/status.ts`.
 
 ```json
-{"orgId", "orgSlug", "orgName", "view": "full|reduced",
- "plan": {"key", "displayName", "source": "default|stripe|admin|simulated",
-          "status": "active|trialing|past_due|canceled|none",
-          "trialEndsAt"?, "periodStart", "periodEnd", "cancelAtPeriodEnd"},
- "verified", "suspended", "overageEnabled", "spendCapMicros": null|int,
- "currency"?: "EUR", "seats": {"used", "purchased", "max": null|int},
- "billingUrl"}
+{"plan": {"key", "display_name", "source": "default|stripe|admin|simulated",
+          "status": "active|trialing|past_due|canceled|none"},
+ "period": {"start", "end"}, "trial": {"ends_at": null|text, "used"},
+ "cancel_at_period_end", "scheduled_plan": null|text,
+ "verified", "verification": {...}, "suspended", "past_due",
+ "dunning": null|{"started_at", "day", "grace_ends_at"},
+ "payment_action_url": null|text, "overage_enabled", "spend_cap_nano": null|int,
+ "credit": {"granted_nano", "source", "expires_at": null|text},
+ "over_limit": {"<limit>": {"since", "grace_ends_at"}}, "billing_configured"}
 ```
 
-`GET /api/billing/usage?meter=&period=current|previous&by=member|service|tool`
-(Bearer). Fixture: `billing-usage.json`, `billing-usage-by-service.json`.
+`GET /api/v1/billing/usage?meter=&by=member|service|tool|source` (Bearer; `meter`
+picks the meter of the daily series, `by` the grouping of the tool calls).
+Fixture: `billing-usage.json`, `billing-usage-by-service.json`. Source:
+`lib/billing/usage-report.ts`.
 
 ```json
-{"period": {"key", "start", "end"}, "by": null|"member"|"service"|"tool",
- "currency": "EUR",
- "meters": [{"meter", "unit", "used", "included": null|int, "percent": null|number,
-             "projected", "projectedCostMicros", "overage": "block|bill|none",
-             "breakdown": [{"key", "used"}]}]}
+{"period": {"start", "end"},
+ "meters": [{"meter", "unit", "used", "included": null|number, "overage": "block|bill|none",
+             "percent": null|number, "projected", "projected_cost_nano", "meter_cap": null|number}],
+ "spend": {"billable_nano", "credit_nano", "credit_used_nano", "credit_remaining_nano",
+           "credit_source", "credit_expires_at": null|text, "beyond_credit_nano",
+           "cap_nano": null|int, "overage_enabled"},
+ "meta_tool_calls", "app_split": [...], "daily": {"meter", "days": [{"day", "quantity"}]},
+ "breakdown": {"by", "scope": "organization|member", "rows": [{"key", "label", "quantity"}]},
+ "over_limit": [{"key", "since", "grace_ends_at"}]}
 ```
 
 `GET /api/v1/billing/credits` (Bearer, a personal session of an owner or

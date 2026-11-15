@@ -9,28 +9,29 @@ no billing credential and cannot spend money.
 
 | Command | Request |
 |---|---|
-| `zuano billing status [--json]` | `GET /api/billing/status` |
-| `zuano billing usage [--meter KEY] [--period current\|previous] [--by member\|service\|tool] [--json]` | `GET /api/billing/usage?meter=&period=&by=` |
+| `zuano billing status [--json]` | `GET /api/v1/billing/status` |
+| `zuano billing usage [--meter KEY] [--by member\|service\|tool\|source] [--json]` | `GET /api/v1/billing/usage?meter=&by=` |
 | `zuano billing credits [--json]` | `GET /api/v1/billing/credits` |
-| `zuano billing open [--no-browser]` | none: opens `<gateway>/settings/billing` |
+| `zuano billing open [--no-browser]` | none: opens `<gateway>/admin/billing` |
 | `zuano usage [--from DAY] [--to DAY] [--json]` | `GET /api/org/usage?from=&to=` |
 
 All of them accept the personal and the agent session (they only read), except `billing credits`, which needs a personal session, and
 `--json` prints the response body unchanged. The request and response shapes
 are in [gateway-contracts.md](gateway-contracts.md).
 
-`status` prints the organisation, the plan with where it comes from (a
-subscription, the default plan, assigned by an administrator, or simulated by a
-platform administrator), the subscription state and trial end, the billing
-period, whether it cancels at the end of the period, seats used, purchased and
-allowed, whether the organisation is verified, whether overage is on and the
-spend cap. A member without billing rights gets the gateway's reduced view and
-zuano says so.
+`status` prints the plan with where it comes from (a subscription, the default
+plan, assigned by an administrator, or simulated by a platform administrator),
+the subscription state and trial end, a failing payment with the day the
+organisation moves to Free, the billing period, whether it cancels or moves to
+another plan at the end of the period, whether the organisation is verified,
+whether overage is on and the spend cap, the credit of the plan, the limits it
+is over and the link that confirms a payment the bank is waiting on.
 
 `billing usage` prints one row per meter: used, included (or `unlimited`),
 percent of the allowance, the projection to the end of the period and its cost
-(only for a meter billed beyond its allowance). `--by` adds rows under each
-meter for the member, service or tool that used it. `usage` is the quota view:
+(only for a meter billed beyond its allowance), then the spend and the tool
+calls grouped by `--by` (the source of the call by default; an administrator
+sees the organisation, a member only their own). `usage` is the quota view:
 each metric with its soft limit (a warning) and hard limit (a block) and when
 the window resets.
 
@@ -55,7 +56,7 @@ quota resets, and the upgrade link.
 | Status | Gateway error codes | HTTP |
 |---|---|---|
 | 30 | `plan_required`, `limit_reached`, `verification_required` | 402 |
-| 31 | `quota_exceeded`, `spend_cap_reached`, daily caps (`daily_cap`) | 402, or 429 for a metered quota |
+| 31 | `quota_exceeded`, `spend_cap_reached`, daily caps (`daily_cap`) | 402 |
 | 32 | `billing_unavailable` (the message says when to retry) | 503 |
 | 33 | `org_suspended`, `seat_suspended` | 403 |
 | 13 | `rate_limited`: too many requests, wait and retry | 429 |

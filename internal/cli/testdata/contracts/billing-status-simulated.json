@@ -1,21 +1,18 @@
 {
-  "orgId": "org_abc123",
-  "orgSlug": "acme",
-  "orgName": "Acme",
-  "view": "reduced",
-  "plan": {
-    "key": "expert",
-    "displayName": "Expert",
-    "source": "simulated",
-    "status": "none",
-    "periodStart": "2026-10-01T00:00:00Z",
-    "periodEnd": "2026-11-01T00:00:00Z",
-    "cancelAtPeriodEnd": true
-  },
+  "plan": { "key": "expert", "display_name": "Expert", "source": "simulated", "status": "past_due" },
+  "period": { "start": "2026-10-16T12:00:00.000Z", "end": "2026-11-16T12:00:00.000Z" },
+  "trial": { "ends_at": null, "used": false },
+  "cancel_at_period_end": true,
+  "scheduled_plan": "free",
   "verified": false,
+  "verification": { "verified": false },
   "suspended": false,
-  "overageEnabled": true,
-  "spendCapMicros": 25000000,
-  "seats": { "used": 2, "purchased": 0, "max": null },
-  "billingUrl": "https://gateway.example/settings/billing"
+  "past_due": true,
+  "dunning": { "started_at": "2026-11-01T00:00:00.000Z", "day": 4, "grace_ends_at": "2026-11-15T00:00:00.000Z" },
+  "payment_action_url": "https://gateway.example/admin/billing?pay=1",
+  "overage_enabled": true,
+  "spend_cap_nano": 25000000000,
+  "credit": { "granted_nano": 0, "source": "none", "expires_at": null },
+  "over_limit": { "groups": { "since": "2026-11-02T00:00:00.000Z", "grace_ends_at": "2026-11-09T00:00:00.000Z" } },
+  "billing_configured": true
 }

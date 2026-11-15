@@ -8,18 +8,18 @@ import (
 	"testing"
 )
 
-func TestBillingStatus_PrintsThePlanSeatsAndBillingLink(t *testing.T) {
+func TestBillingStatus_PrintsThePlanPeriodAndCredit(t *testing.T) {
 	approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
-		"GET /api/billing/status": reply(200, contractFixture(t, "billing-status.json")),
+		"GET /api/v1/billing/status": reply(200, contractFixture(t, "billing-status.json")),
 	})
 	out, err := runCommand(t, BillingCmd(), "status")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"Acme (acme)", "Pro — subscription", "trialing, trial ends 2026-10-30T12:00:00Z",
-		"2026-10-16T12:00:00Z to 2026-11-16T12:00:00Z", "3 used, 5 purchased, 10 at most",
-		"Verified:  yes", "Overage:   off", "https://gateway.example/settings/billing",
+		"Pro — subscription", "trialing, trial ends 2026-10-30T12:00:00.000Z",
+		"2026-10-16T12:00:00.000Z to 2026-11-16T12:00:00.000Z",
+		"Verified:  yes", "Overage:   off", "Credit:    5.00 EUR (plan), until 2026-11-16T12:00:00.000Z",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
@@ -30,28 +30,28 @@ func TestBillingStatus_PrintsThePlanSeatsAndBillingLink(t *testing.T) {
 	}
 }
 
-func TestBillingStatus_SimulatedPlanWithSpendCapAndMemberView(t *testing.T) {
+func TestBillingStatus_SimulatedPlanPaymentFailingWithSpendCap(t *testing.T) {
 	approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
-		"GET /api/billing/status": reply(200, contractFixture(t, "billing-status-simulated.json")),
+		"GET /api/v1/billing/status": reply(200, contractFixture(t, "billing-status-simulated.json")),
 	})
 	out, err := runCommand(t, BillingCmd(), "status")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Expert — simulated", "Cancels:   at the end of the period", "Verified:  no", "Overage:   on, spend cap 25.00 EUR", "2 used, 0 purchased", "a member's view"} {
+	for _, want := range []string{"Expert — simulated", "payment failing since 2026-11-01T00:00:00.000Z (day 4)", "Cancels:   at the end of the period", "Moves to:  free", "Verified:  no", "Overage:   on, spend cap 25.00 EUR", "Over limit: groups since 2026-11-02T00:00:00.000Z, until 2026-11-09T00:00:00.000Z", "Pay:       https://gateway.example/admin/billing?pay=1"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
 	}
-	if strings.Contains(out, "at most") {
-		t.Errorf("an unlimited seat count printed a maximum:\n%s", out)
+	if strings.Contains(out, "Credit:") {
+		t.Errorf("an organisation without credit printed a credit line:\n%s", out)
 	}
 }
 
 func TestBillingStatus_JSONIsTheBodyUnchanged(t *testing.T) {
 	body := contractFixture(t, "billing-status.json")
 	approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
-		"GET /api/billing/status": reply(200, body),
+		"GET /api/v1/billing/status": reply(200, body),
 	})
 	out, err := runCommand(t, BillingCmd(), "status", "--json")
 	if err != nil || strings.TrimSpace(out) != strings.TrimSpace(body) {
@@ -61,13 +61,13 @@ func TestBillingStatus_JSONIsTheBodyUnchanged(t *testing.T) {
 
 func TestBillingUsage_PrintsATableWithPercentAndProjectedCost(t *testing.T) {
 	approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
-		"GET /api/billing/usage?period=current": reply(200, contractFixture(t, "billing-usage.json")),
+		"GET /api/v1/billing/usage": reply(200, contractFixture(t, "billing-usage.json")),
 	})
 	out, err := runCommand(t, BillingCmd(), "usage")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"METER", "PROJECTED COST", "tool_calls", "41000", "50000", "82%", "62000", "6.00 EUR", "trace_spans", "unlimited"} {
+	for _, want := range []string{"METER", "PROJECTED COST", "tool_calls", "41000", "50000", "82%", "62000", "6.00 EUR", "trace_spans", "unlimited", "Spend:  0.00 EUR (credit left 5.00 EUR)", "Tool calls by source (organization):", "  mcp  41000"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
@@ -77,18 +77,18 @@ func TestBillingUsage_PrintsATableWithPercentAndProjectedCost(t *testing.T) {
 func TestBillingUsage_ByServiceMatchesTheFixtureAndSendsTheQuery(t *testing.T) {
 	body := contractFixture(t, "billing-usage-by-service.json")
 	approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
-		"GET /api/billing/usage?by=service&meter=tool_calls&period=previous": reply(200, body),
+		"GET /api/v1/billing/usage?by=service&meter=tool_calls": reply(200, body),
 	})
-	out, err := runCommand(t, BillingCmd(), "usage", "--by", "service", "--meter", "tool_calls", "--period", "previous")
+	out, err := runCommand(t, BillingCmd(), "usage", "--by", "service", "--meter", "tool_calls")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"  stripe", "30000", "  google-workspace", "11000"} {
+	for _, want := range []string{"  stripe  30000", "  google-workspace  11000"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
 	}
-	out, err = runCommand(t, BillingCmd(), "usage", "--by", "service", "--meter", "tool_calls", "--period", "previous", "--json")
+	out, err = runCommand(t, BillingCmd(), "usage", "--by", "service", "--meter", "tool_calls", "--json")
 	if err != nil || strings.TrimSpace(out) != strings.TrimSpace(body) {
 		t.Fatalf("--json = %q, %v", out, err)
 	}
@@ -96,7 +96,7 @@ func TestBillingUsage_ByServiceMatchesTheFixtureAndSendsTheQuery(t *testing.T) {
 
 func TestBillingUsage_RejectsBadFlagsWithoutDialing(t *testing.T) {
 	_, bodies := approvalsGateway(t, nil)
-	for _, args := range [][]string{{"usage", "--period", "next"}, {"usage", "--by", "color"}} {
+	for _, args := range [][]string{{"usage", "--by", "color"}} {
 		if _, err := runCommand(t, BillingCmd(), args...); err == nil || !strings.Contains(err.Error(), "invalid --") {
 			t.Errorf("%v: err = %v", args, err)
 		}
@@ -108,8 +108,8 @@ func TestBillingUsage_RejectsBadFlagsWithoutDialing(t *testing.T) {
 
 func TestBilling_AnAgentSessionMayRunStatusAndUsage(t *testing.T) {
 	approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
-		"GET /api/billing/status":               reply(200, contractFixture(t, "billing-status.json")),
-		"GET /api/billing/usage?period=current": reply(200, contractFixture(t, "billing-usage.json")),
+		"GET /api/v1/billing/status": reply(200, contractFixture(t, "billing-status.json")),
+		"GET /api/v1/billing/usage":  reply(200, contractFixture(t, "billing-usage.json")),
 	})
 	t.Setenv("ZUANO_AGENT", "1")
 	for _, verb := range []string{"status", "usage"} {
@@ -132,7 +132,7 @@ func TestBillingOpen_PrintsTheLinkWithoutATerminalAndOpensTheBrowserWithOne(t *t
 	opened := stubBrowserWith(t, nil)
 
 	out, err := runCommand(t, BillingCmd(), "open")
-	if err != nil || strings.TrimSpace(out) != srv.URL+"/settings/billing" {
+	if err != nil || strings.TrimSpace(out) != srv.URL+"/admin/billing" {
 		t.Fatalf("non-TTY: %q, %v", out, err)
 	}
 	if len(*opened) != 0 {
@@ -140,12 +140,12 @@ func TestBillingOpen_PrintsTheLinkWithoutATerminalAndOpensTheBrowserWithOne(t *t
 	}
 
 	out, err = runWithInput(t, BillingCmd(), "", "open")
-	if err != nil || !strings.Contains(out, "Opened "+srv.URL+"/settings/billing") || len(*opened) != 1 {
+	if err != nil || !strings.Contains(out, "Opened "+srv.URL+"/admin/billing") || len(*opened) != 1 {
 		t.Fatalf("TTY: %q, %v, opened %v", out, err, *opened)
 	}
 
 	out, err = runWithInput(t, BillingCmd(), "", "open", "--no-browser")
-	if err != nil || strings.TrimSpace(out) != srv.URL+"/settings/billing" || len(*opened) != 1 {
+	if err != nil || strings.TrimSpace(out) != srv.URL+"/admin/billing" || len(*opened) != 1 {
 		t.Fatalf("--no-browser: %q, %v, opened %v", out, err, *opened)
 	}
 }
@@ -158,7 +158,7 @@ func TestBillingFixturesAreValidJSON(t *testing.T) {
 		}
 	}
 	var buf bytes.Buffer
-	printBillingUsage(&buf, billingUsage{})
+	printBillingUsage(&buf, billingUsage{}, "")
 	if !strings.Contains(buf.String(), "No metered usage") {
 		t.Errorf("empty usage printed %q", buf.String())
 	}

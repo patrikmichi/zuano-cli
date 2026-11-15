@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"maps"
 	"net/url"
 	"slices"
 	"strings"
@@ -14,63 +15,79 @@ import (
 	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
-var (
-	billingPeriods = []string{"current", "previous"}
-	billingGroups  = []string{"member", "service", "tool"}
-)
+var billingGroups = []string{"member", "service", "tool", "source"}
 
-// billingStatus mirrors GET /api/billing/status.
+// billingStatus mirrors GET /api/v1/billing/status; amounts are nano-euros.
 type billingStatus struct {
-	OrgID   string `json:"orgId"`
-	OrgSlug string `json:"orgSlug"`
-	OrgName string `json:"orgName"`
-	View    string `json:"view"`
-	Plan    struct {
-		Key               string `json:"key"`
-		DisplayName       string `json:"displayName"`
-		Source            string `json:"source"`
-		Status            string `json:"status"`
-		TrialEndsAt       string `json:"trialEndsAt"`
-		PeriodStart       string `json:"periodStart"`
-		PeriodEnd         string `json:"periodEnd"`
-		CancelAtPeriodEnd bool   `json:"cancelAtPeriodEnd"`
+	Plan struct {
+		Key         string `json:"key"`
+		DisplayName string `json:"display_name"`
+		Source      string `json:"source"`
+		Status      string `json:"status"`
 	} `json:"plan"`
-	Verified       bool   `json:"verified"`
-	Suspended      bool   `json:"suspended"`
-	OverageEnabled bool   `json:"overageEnabled"`
-	SpendCapMicros *int64 `json:"spendCapMicros"`
-	Currency       string `json:"currency"`
-	Seats          struct {
-		Used      int  `json:"used"`
-		Purchased int  `json:"purchased"`
-		Max       *int `json:"max"`
-	} `json:"seats"`
-	BillingURL string `json:"billingUrl"`
-}
-
-// billingUsage mirrors GET /api/billing/usage.
-type billingUsage struct {
 	Period struct {
-		Key   string `json:"key"`
 		Start string `json:"start"`
 		End   string `json:"end"`
 	} `json:"period"`
-	By       *string `json:"by"`
-	Currency string  `json:"currency"`
-	Meters   []struct {
-		Meter               string   `json:"meter"`
-		Unit                string   `json:"unit"`
-		Used                int64    `json:"used"`
-		Included            *int64   `json:"included"`
-		Percent             *float64 `json:"percent"`
-		Projected           int64    `json:"projected"`
-		ProjectedCostMicros int64    `json:"projectedCostMicros"`
-		Overage             string   `json:"overage"`
-		Breakdown           []struct {
-			Key  string `json:"key"`
-			Used int64  `json:"used"`
-		} `json:"breakdown"`
+	Trial struct {
+		EndsAt *string `json:"ends_at"`
+		Used   bool    `json:"used"`
+	} `json:"trial"`
+	CancelAtPeriodEnd bool    `json:"cancel_at_period_end"`
+	ScheduledPlan     *string `json:"scheduled_plan"`
+	Verified          bool    `json:"verified"`
+	Suspended         bool    `json:"suspended"`
+	PastDue           bool    `json:"past_due"`
+	Dunning           *struct {
+		StartedAt   string `json:"started_at"`
+		Day         int    `json:"day"`
+		GraceEndsAt string `json:"grace_ends_at"`
+	} `json:"dunning"`
+	PaymentActionURL *string `json:"payment_action_url"`
+	OverageEnabled   bool    `json:"overage_enabled"`
+	SpendCapNano     *int64  `json:"spend_cap_nano"`
+	Credit           struct {
+		GrantedNano int64   `json:"granted_nano"`
+		Source      string  `json:"source"`
+		ExpiresAt   *string `json:"expires_at"`
+	} `json:"credit"`
+	OverLimit map[string]struct {
+		Since       string `json:"since"`
+		GraceEndsAt string `json:"grace_ends_at"`
+	} `json:"over_limit"`
+	BillingConfigured bool `json:"billing_configured"`
+}
+
+// billingUsage mirrors GET /api/v1/billing/usage; amounts are nano-euros.
+type billingUsage struct {
+	Period struct {
+		Start string `json:"start"`
+		End   string `json:"end"`
+	} `json:"period"`
+	Meters []struct {
+		Meter             string   `json:"meter"`
+		Unit              string   `json:"unit"`
+		Used              float64  `json:"used"`
+		Included          *float64 `json:"included"`
+		Percent           *float64 `json:"percent"`
+		Projected         float64  `json:"projected"`
+		ProjectedCostNano float64  `json:"projected_cost_nano"`
+		Overage           string   `json:"overage"`
 	} `json:"meters"`
+	Spend struct {
+		BillableNano        float64 `json:"billable_nano"`
+		CreditRemainingNano float64 `json:"credit_remaining_nano"`
+		BeyondCreditNano    float64 `json:"beyond_credit_nano"`
+		CapNano             *int64  `json:"cap_nano"`
+	} `json:"spend"`
+	Breakdown struct {
+		By    string `json:"by"`
+		Scope string `json:"scope"`
+		Rows  []struct {
+			Label    string  `json:"label"`
+			Quantity float64 `json:"quantity"`
+		} `json:"rows"`
+	} `json:"breakdown"`
 }
 
 // BillingCmd returns `zuano billing`.
@@ -97,7 +114,7 @@ func billingStatusCmd() *cobra.Command {
 	var f approvalFlags
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "Show the plan, subscription state, seats and spend cap",
+		Short: "Show the plan, subscription state, credit and spend cap",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := approvalsClient(f.gatewayURL)
@@ -105,7 +122,7 @@ func billingStatusCmd() *cobra.Command {
 				return err
 			}
 			var s billingStatus
-			raw, err := gatewayJSON(cmd.Context(), c, "GET", "/api/billing/status", nil, &s)
+			raw, err := gatewayJSON(cmd.Context(), c, "GET", "/api/v1/billing/status", nil, &s)
 			if err != nil {
 				return err
 			}
@@ -130,52 +147,54 @@ var planSources = map[string]string{
 
 func printBillingStatus(out io.Writer, s billingStatus) {
 	clean := textsafe.Clean
-	name := clean(s.OrgName)
-	if s.OrgSlug != "" {
-		name += " (" + clean(s.OrgSlug) + ")"
-	}
-	fmt.Fprintf(out, "Org:       %s\n", name)
 	plan := clean(s.Plan.DisplayName)
 	if src, ok := planSources[s.Plan.Source]; ok {
 		plan += " — " + src
 	}
 	fmt.Fprintf(out, "Plan:      %s\n", plan)
-	if s.Suspended {
+	switch {
+	case s.Suspended:
 		fmt.Fprintln(out, "Status:    suspended")
-	} else if s.Plan.Status != "" && s.Plan.Status != "none" {
+	case s.PastDue && s.Dunning != nil:
+		fmt.Fprintf(out, "Status:    payment failing since %s (day %d); the organisation moves to Free on %s unless it is paid\n", clean(s.Dunning.StartedAt), s.Dunning.Day, clean(s.Dunning.GraceEndsAt))
+	case s.Plan.Status != "" && s.Plan.Status != "none":
 		status := clean(s.Plan.Status)
-		if s.Plan.Status == "trialing" && s.Plan.TrialEndsAt != "" {
-			status += ", trial ends " + clean(s.Plan.TrialEndsAt)
+		if s.Plan.Status == "trialing" && s.Trial.EndsAt != nil {
+			status += ", trial ends " + clean(*s.Trial.EndsAt)
 		}
 		fmt.Fprintf(out, "Status:    %s\n", status)
 	}
-	if s.Plan.PeriodEnd != "" {
-		fmt.Fprintf(out, "Period:    %s to %s\n", clean(s.Plan.PeriodStart), clean(s.Plan.PeriodEnd))
+	if s.Period.End != "" {
+		fmt.Fprintf(out, "Period:    %s to %s\n", clean(s.Period.Start), clean(s.Period.End))
 	}
-	if s.Plan.CancelAtPeriodEnd {
+	if s.CancelAtPeriodEnd {
 		fmt.Fprintln(out, "Cancels:   at the end of the period")
 	}
-	seats := fmt.Sprintf("%d used, %d purchased", s.Seats.Used, s.Seats.Purchased)
-	if s.Seats.Max != nil {
-		seats += fmt.Sprintf(", %d at most", *s.Seats.Max)
+	if s.ScheduledPlan != nil {
+		fmt.Fprintf(out, "Moves to:  %s at the end of the period\n", clean(*s.ScheduledPlan))
 	}
-	fmt.Fprintf(out, "Seats:     %s\n", seats)
 	fmt.Fprintf(out, "Verified:  %s\n", yesNo(s.Verified))
 	overage := "off"
 	if s.OverageEnabled {
-		overage = "on"
-		if s.SpendCapMicros != nil {
-			overage += ", spend cap " + formatMicros(*s.SpendCapMicros, s.Currency)
-		} else {
-			overage += ", no spend cap"
+		overage = "on, no spend cap"
+		if s.SpendCapNano != nil {
+			overage = "on, spend cap " + formatNanoEuros(*s.SpendCapNano)
 		}
 	}
 	fmt.Fprintf(out, "Overage:   %s\n", overage)
-	if s.View == "reduced" {
-		fmt.Fprintln(out, "           (a member's view: ask an org owner or admin for billing details)")
+	if s.Credit.GrantedNano > 0 {
+		credit := formatNanoEuros(s.Credit.GrantedNano) + " (" + clean(s.Credit.Source) + ")"
+		if s.Credit.ExpiresAt != nil {
+			credit += ", until " + clean(*s.Credit.ExpiresAt)
+		}
+		fmt.Fprintf(out, "Credit:    %s\n", credit)
 	}
-	if s.BillingURL != "" {
-		fmt.Fprintf(out, "Billing:   %s\n", clean(s.BillingURL))
+	for _, key := range slices.Sorted(maps.Keys(s.OverLimit)) {
+		o := s.OverLimit[key]
+		fmt.Fprintf(out, "Over limit: %s since %s, until %s\n", clean(key), clean(o.Since), clean(o.GraceEndsAt))
+	}
+	if s.PaymentActionURL != nil && *s.PaymentActionURL != "" {
+		fmt.Fprintf(out, "Pay:       %s\n", clean(*s.PaymentActionURL))
 	}
 }
 
@@ -186,31 +205,14 @@ func yesNo(b bool) string {
 	return "no"
 }
 
-// formatMicros renders millionths of a currency unit, such as 25000000 as
-// "25.00 EUR". The currency defaults to EUR, the one the gateway prices in.
-func formatMicros(micros int64, currency string) string {
-	if currency == "" {
-		currency = "EUR"
-	}
-	sign := ""
-	if micros < 0 {
-		sign, micros = "-", -micros
-	}
-	cents := (micros + 5000) / 10000
-	return fmt.Sprintf("%s%d.%02d %s", sign, cents/100, cents%100, textsafe.Clean(currency))
-}
-
 func billingUsageCmd() *cobra.Command {
 	var f approvalFlags
-	var meter, period, by string
+	var meter, by string
 	cmd := &cobra.Command{
 		Use:   "usage",
-		Short: "Show metered usage against the plan's allowances",
+		Short: "Show this period's metered usage against the plan's allowances",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			if !slices.Contains(billingPeriods, period) {
-				return fmt.Errorf("invalid --period %q: use one of %s", period, strings.Join(billingPeriods, ", "))
-			}
 			if by != "" && !slices.Contains(billingGroups, by) {
 				return fmt.Errorf("invalid --by %q: use one of %s", by, strings.Join(billingGroups, ", "))
 			}
@@ -218,15 +220,19 @@ func billingUsageCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			q := url.Values{"period": {period}}
+			q := url.Values{}
 			if meter != "" {
 				q.Set("meter", meter)
 			}
 			if by != "" {
 				q.Set("by", by)
 			}
+			path := "/api/v1/billing/usage"
+			if len(q) > 0 {
+				path += "?" + q.Encode()
+			}
 			var u billingUsage
-			raw, err := gatewayJSON(cmd.Context(), c, "GET", "/api/billing/usage?"+q.Encode(), nil, &u)
+			raw, err := gatewayJSON(cmd.Context(), c, "GET", path, nil, &u)
 			if err != nil {
 				return err
 			}
@@ -234,43 +240,60 @@ func billingUsageCmd() *cobra.Command {
 				printRaw(cmd.OutOrStdout(), raw)
 				return nil
 			}
-			printBillingUsage(cmd.OutOrStdout(), u)
+			printBillingUsage(cmd.OutOrStdout(), u, meter)
 			return nil
 		},
 	}
 	f.bind(cmd, "Print the response body unchanged")
 	cmd.Flags().StringVar(&meter, "meter", "", "Only this meter, such as tool_calls")
-	cmd.Flags().StringVar(&period, "period", "current", "Billing period: "+strings.Join(billingPeriods, " or "))
-	cmd.Flags().StringVar(&by, "by", "", "Break usage down by "+strings.Join(billingGroups, ", "))
+	cmd.Flags().StringVar(&by, "by", "", "Break the tool calls down by "+strings.Join(billingGroups, ", ")+" (default source)")
 	return cmd
 }
 
-func printBillingUsage(out io.Writer, u billingUsage) {
+func printBillingUsage(out io.Writer, u billingUsage, only string) {
 	fmt.Fprintf(out, "Period: %s to %s\n", textsafe.Clean(u.Period.Start), textsafe.Clean(u.Period.End))
-	if len(u.Meters) == 0 {
-		fmt.Fprintln(out, "No metered usage in this period")
-		return
-	}
 	tw := tabwriter.NewWriter(out, 0, 2, 2, ' ', 0)
-	fmt.Fprintln(tw, "METER\tUSED\tINCLUDED\tPERCENT\tPROJECTED\tPROJECTED COST")
+	shown := 0
 	for _, m := range u.Meters {
+		if only != "" && m.Meter != only {
+			continue
+		}
+		if shown == 0 {
+			fmt.Fprintln(tw, "METER\tUSED\tINCLUDED\tPERCENT\tPROJECTED\tPROJECTED COST")
+		}
+		shown++
 		included, percent := "unlimited", "-"
 		if m.Included != nil {
-			included = fmt.Sprint(*m.Included)
+			included = fmt.Sprintf("%.0f", *m.Included)
 		}
 		if m.Percent != nil {
 			percent = fmt.Sprintf("%.0f%%", *m.Percent)
 		}
 		cost := "-"
 		if m.Overage == "bill" {
-			cost = formatMicros(m.ProjectedCostMicros, u.Currency)
+			cost = formatNanoEuros(int64(m.ProjectedCostNano))
 		}
-		fmt.Fprintf(tw, "%s\t%d\t%s\t%s\t%d\t%s\n", textsafe.Clean(m.Meter), m.Used, included, percent, m.Projected, cost)
-		for _, b := range m.Breakdown {
-			fmt.Fprintf(tw, "  %s\t%d\t\t\t\t\n", textsafe.Clean(b.Key), b.Used)
-		}
+		fmt.Fprintf(tw, "%s\t%.0f\t%s\t%s\t%.0f\t%s\n", textsafe.Clean(m.Meter), m.Used, included, percent, m.Projected, cost)
+	}
+	if shown == 0 {
+		fmt.Fprintln(out, "No metered usage in this period")
+		return
 	}
 	_ = tw.Flush()
+	spend := "Spend:  " + formatNanoEuros(int64(u.Spend.BillableNano)) + " (credit left " + formatNanoEuros(int64(u.Spend.CreditRemainingNano))
+	if u.Spend.BeyondCreditNano > 0 {
+		spend += ", beyond credit " + formatNanoEuros(int64(u.Spend.BeyondCreditNano))
+	}
+	if u.Spend.CapNano != nil {
+		spend += ", cap " + formatNanoEuros(*u.Spend.CapNano)
+	}
+	fmt.Fprintln(out, spend+")")
+	if len(u.Breakdown.Rows) > 0 {
+		fmt.Fprintf(out, "Tool calls by %s (%s):\n", textsafe.Clean(u.Breakdown.By), textsafe.Clean(u.Breakdown.Scope))
+		for _, r := range u.Breakdown.Rows {
+			fmt.Fprintf(out, "  %s  %.0f\n", textsafe.Clean(r.Label), r.Quantity)
+		}
+	}
 }
 
 func billingOpenCmd() *cobra.Command {
@@ -289,7 +312,7 @@ func billingOpenCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			page := origin + "/settings/billing"
+			page := origin + "/admin/billing"
 			out := cmd.OutOrStdout()
 			if canOpenBrowser(cmd, noBrowser) {
 				if err := openBrowserURL(page); err == nil {

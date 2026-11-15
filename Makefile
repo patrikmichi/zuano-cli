@@ -2,10 +2,11 @@ BINARY   = zuano
 VERSION := $(shell git describe --tags --always --dirty)
 GIT_SHA := $(shell git rev-parse --short HEAD)
 DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-GOFLAGS  = -trimpath -ldflags "-s -w -X main.version=$(VERSION) -X main.commit=$(GIT_SHA) -X main.date=$(DATE)"
+# Not named GOFLAGS: with one in the environment make exports this value, and `go test` rejects the linker flags.
+BUILDFLAGS = -trimpath -ldflags "-s -w -X main.version=$(VERSION) -X main.commit=$(GIT_SHA) -X main.date=$(DATE)"
 
 build:
-	go build $(GOFLAGS) -o $(BINARY) ./cmd/zuano
+	go build $(BUILDFLAGS) -o $(BINARY) ./cmd/zuano
 
 install: build
 	mkdir -p ~/.local/bin

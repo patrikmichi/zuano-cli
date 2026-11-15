@@ -302,7 +302,8 @@ func TestEmbeddedSchemaMatchesTheGatewaysWhenProvided(t *testing.T) {
 	if dir == "" {
 		t.Skip("no gateway fixtures")
 	}
-	theirs, err := os.ReadFile(filepath.Join(dir, "policy-v1.json"))
+	// The fixtures are the gateway's gateway/contract-fixtures; its schema is published beside them.
+	theirs, err := os.ReadFile(filepath.Join(dir, "..", "public", "schemas", "policy", "v1.json"))
 	if err != nil {
 		t.Fatal(err)
 	}

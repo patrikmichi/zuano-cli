@@ -223,6 +223,20 @@ var builderInvocations = []struct {
 	{name: "market publisher verify email code", cmd: MarketCmd, args: []string{"publisher", "verify", "email", "--code", "abcdefghijklmnopqrst"}},
 	{name: "market publisher verify domain", cmd: MarketCmd, args: []string{"publisher", "verify", "domain", "acme.test"}},
 	{name: "market publisher verify domain check", cmd: MarketCmd, args: []string{"publisher", "verify", "domain", "--check"}},
+	{name: "a2a agents list", cmd: A2ACmd, args: []string{"agents", "list", "--kind", "external", "--external"}},
+	{name: "a2a agents show", cmd: A2ACmd, args: []string{"agents", "show", "acme-billing"}},
+	{name: "a2a agents register", cmd: A2ACmd, args: []string{"agents", "register", "--card-url", "https://agent.example/card.json", "--auth", "per-user", "--internal"}},
+	{name: "a2a agents changes", cmd: A2ACmd, args: []string{"agents", "changes", "acme-billing"}},
+	{name: "a2a card", cmd: A2ACmd, args: []string{"card", "acme-billing", "--live"}},
+	{name: "a2a call", cmd: A2ACmd, args: []string{"call", "acme-billing", "--skill", "s", "--message", "hi", "--context", "ctx_1", "--wait", "5"}},
+	{name: "a2a chains list", cmd: A2ACmd, args: []string{"chains", "list", "--mine", "--status", "active", "--agent", "acme-billing"}},
+	{name: "a2a chains show", cmd: A2ACmd, args: []string{"chains", "show", "chn_1"}},
+	{name: "a2a chains kill", cmd: A2ACmd, args: []string{"chains", "kill", "chn_1", "--reason", "stop"}},
+	{name: "a2a graph", cmd: A2ACmd, args: []string{"graph", "--format", "json", "--from", "a", "--to", "b", "--window", "7d"}},
+	{name: "a2a explain", cmd: A2ACmd, args: []string{"explain", "--from", "a", "--to", "acme-billing", "--skill", "s"}},
+	{name: "approvals trusts list", cmd: ApprovalsCmd, args: []string{"trusts", "list", "--org"}},
+	{name: "approvals trusts revoke", cmd: ApprovalsCmd, args: []string{"trusts", "revoke", "sgr_1"}},
+	{name: "approvals trusts revoke-all", cmd: ApprovalsCmd, args: []string{"trusts", "revoke-all", "--org", "--yes"}},
 }
 
 func TestContract_BuilderRequestsMatchTheOpenAPI(t *testing.T) {

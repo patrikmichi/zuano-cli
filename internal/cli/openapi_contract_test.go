@@ -234,6 +234,7 @@ var builderInvocations = []struct {
 	{name: "a2a chains kill", cmd: A2ACmd, args: []string{"chains", "kill", "chn_1", "--reason", "stop"}},
 	{name: "a2a graph", cmd: A2ACmd, args: []string{"graph", "--format", "json", "--from", "a", "--to", "b", "--window", "7d"}},
 	{name: "a2a explain", cmd: A2ACmd, args: []string{"explain", "--from", "a", "--to", "acme-billing", "--skill", "s"}},
+	{name: "skill from-session", stdin: `{"type":"user","timestamp":"2026-10-01T10:00:00Z","message":{"role":"user","content":"hello"}}` + "\n", cmd: SkillCmd, args: []string{"from-session", "-", "--consent"}},
 	{name: "approvals trusts list", cmd: ApprovalsCmd, args: []string{"trusts", "list", "--org"}},
 	{name: "approvals trusts revoke", cmd: ApprovalsCmd, args: []string{"trusts", "revoke", "sgr_1"}},
 	{name: "approvals trusts revoke-all", cmd: ApprovalsCmd, args: []string{"trusts", "revoke-all", "--org", "--yes"}},

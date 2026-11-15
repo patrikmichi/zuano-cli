@@ -1,7 +1,7 @@
 // Package redact removes secrets and personal data from a session on this
 // machine, before anything is uploaded. The rules are the file
-// redaction-rules.json; the gateway applies the same file again to what it
-// receives.
+// redaction-rules.json; the gateway redacts again with its own detectors, and
+// nothing here relies on that.
 package redact
 
 import (
@@ -19,7 +19,7 @@ import (
 //go:embed redaction-rules.json
 var rulesJSON []byte
 
-// RulesJSON is the rule file as embedded, for comparing with the gateway's copy.
+// RulesJSON is the rule file as embedded.
 func RulesJSON() []byte { return rulesJSON }
 
 type rules struct {
@@ -155,6 +155,8 @@ func (r *Redactor) placeholder(class, value string) string {
 
 // Text redacts one string.
 func (r *Redactor) Text(s string) string {
+	// A placeholder already in the source could pass for one of ours and shield the value inside it.
+	s = strings.NewReplacer("⟦", "[", "⟧", "]").Replace(s)
 	for _, t := range r.terms {
 		s = replaceFold(s, t, func(m string) string { return r.placeholder(ClassTerm, strings.ToLower(m)) })
 	}
@@ -163,7 +165,7 @@ func (r *Redactor) Text(s string) string {
 	}
 	s = rule.urlCred.ReplaceAllStringFunc(s, func(m string) string {
 		sub := rule.urlCred.FindStringSubmatch(m)
-		return sub[1] + r.placeholder(ClassURL, sub[2]+":"+sub[3]) + "@"
+		return sub[1] + r.placeholder(ClassURL, sub[2]) + "@"
 	})
 	s = replaceGroup(s, rule.urlParam, func(v string) string { return r.placeholder(ClassURL, v) })
 	s = replaceGroup(s, rule.assignment, func(v string) string {

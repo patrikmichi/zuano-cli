@@ -19,8 +19,8 @@
   "assignment": "(?i)([A-Za-z0-9_.-]*(?:password|passwd|secret|token|api[_-]?key|private[_-]?key)[A-Za-z0-9_.-]*[\"']?\\s*[:=]\\s*[\"']?)([^\\s\"',;&}]{4,})",
   "secretKey": "(?i)(password|passwd|secret|token|api[_-]?key|private[_-]?key|authorization|credential)",
   "entropy": { "minLength": 24, "minBits": 4.0, "window": 60 },
-  "urlCredential": "([A-Za-z][A-Za-z0-9+.-]*://)([^/\\s:@]+):([^/\\s@]+)@",
-  "urlParam": "(?i)([?&](?:token|key|sig|signature|access_token|apikey|api_key|auth)=)([^&\\s\"'#]+)",
+  "urlCredential": "([A-Za-z][A-Za-z0-9+.-]*://)([^/\\s:@]+(?::[^/\\s@]*)?)@",
+  "urlParam": "(?i)([?&](?:token|key|sig|signature|access_token|api[_-]?key|auth|secret|password|passwd|client_secret)=)([^&\\s\"'#]+)",
   "pathUser": [
     "/home/[^/\\s\"']+",
     "/Users/[^/\\s\"']+",

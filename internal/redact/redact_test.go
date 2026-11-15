@@ -2,8 +2,6 @@ package redact
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -160,19 +158,30 @@ func TestSessionRedactsEverythingAndReports(t *testing.T) {
 	}
 }
 
-// The gateway applies the same rule file again to what it receives; when its
-// fixtures are provided, the two copies must match byte for byte.
-func TestRulesMatchTheGatewaysCopy(t *testing.T) {
-	dir := os.Getenv("ZUANO_CONTRACT_FIXTURES")
-	if dir == "" {
-		t.Skip("no gateway fixtures")
+// A placeholder written in the source must not pass for one of ours: the
+// assignment rule skips values that already are placeholders.
+func TestPlaceholdersInTheSourceAreNeutralised(t *testing.T) {
+	secret := join("hunter", "2-real-value")
+	got := New(nil).Text("password=⟦" + secret + "⟧ and ⟦SECRET_9⟧")
+	if strings.Contains(got, secret) || strings.Contains(got, "⟦SECRET_9⟧") || !strings.Contains(got, "[SECRET_9]") {
+		t.Errorf("got %q", got)
 	}
-	theirs, err := os.ReadFile(filepath.Join(dir, "redaction-rules.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(theirs) != string(RulesJSON()) {
-		t.Error("the embedded redaction rules differ from the gateway's")
+}
+
+func TestURLUserinfoAndSecretParametersAreRemoved(t *testing.T) {
+	for name, text := range map[string]string{
+		"user only":     "clone https://octocat-user@git.example.test/x.git",
+		"user and pass": "clone https://octocat-user:p4ssw0rd-x@git.example.test/x.git",
+		"password":      "GET /cb?password=hunter2value&x=1",
+		"secret":        "GET /cb?secret=hunter2value&x=1",
+		"api-key":       "GET /cb?api-key=hunter2value",
+	} {
+		got := New(nil).Text(text)
+		for _, leaked := range []string{"octocat-user", "p4ssw0rd-x", "hunter2value"} {
+			if strings.Contains(got, leaked) {
+				t.Errorf("%s: %q leaks %q", name, got, leaked)
+			}
+		}
 	}
 }
 

@@ -12,7 +12,7 @@ chain, and can stop the whole chain. `zuano a2a` is the command-line side.
 | `zuano a2a agents changes <slug>` | changes to a card that wait for review |
 | `zuano a2a agents review <slug>` | opens the page where a card or a change is approved with a passkey |
 | `zuano a2a card <slug> [--live]` | the pinned card (the one an administrator approved), or the card the agent publishes now |
-| `zuano a2a call <slug> --skill <id> --message <text\|@file> [--file param=@path] [--context id] [--wait s] [--stream]` | send a message through the gateway |
+| `zuano a2a call <slug> --skill <id> --message <text\|@file> [--context id] [--wait s] [--stream]` | send a message through the gateway |
 | `zuano a2a chains list [--mine] [--status S] [--agent A]` | chains, newest first |
 | `zuano a2a chains show <id>` | a chain as a tree: hops, effects, budget and the audit check |
 | `zuano a2a chains kill <id> --reason <text>` | stop a chain |
@@ -29,13 +29,14 @@ bidirectional-override and zero-width characters removed.
 
 ## Calling
 
-`a2a call` sends a message and prints the task. `--wait N` waits up to N
-seconds for the task to finish and exits 17 if it has not; `--stream` follows
-it as it runs. A hop or an effect further down the chain that needs an approval
-holds the task: the command prints the approval page link and exits 12. Decide
-it in the browser, then run the call again or collect results with
-`zuano approvals wait`. `--file param=@path` uploads the file and passes it by
-reference.
+`a2a call` sends a message and prints the task. `--wait N` (at most 120)
+waits up to N seconds for the task to finish and exits 17 if it has not;
+`--stream` follows it as it runs when the gateway streams, and prints the task
+once otherwise. A hop or an effect further down the chain that needs an
+approval holds the task: the command prints the approval page link and exits
+12. Decide it in the browser, then run the call again or collect results with
+`zuano approvals wait`. The message route takes no files; put the content in
+the message.
 
 `ZUANO_AGENT=1` sessions are refused on `register` (exit 10) and on `review`
 (exit 14); they may stop a chain.

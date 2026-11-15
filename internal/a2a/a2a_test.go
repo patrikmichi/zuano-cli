@@ -11,7 +11,7 @@ func sampleChain() Chain {
 	c.Budget = Budget{Limits: Counters{Tokens: 400000, CostEUR: 5, ToolCalls: 200}, Used: Counters{Tokens: 1200, CostEUR: 0.12, ToolCalls: 3}}
 	c.Audit.Verified = true
 	c.Hops = []Hop{
-		{ID: "h2", Parent: "h1", Depth: 2, Caller: "invoice-checker", Callee: "acme-billing", Skill: "issue_credit_note", External: true, State: "input_required", DurationMs: 1500, Tokens: 300, CostEUR: 0.02, DLPFindings: 2, InjectionFlags: 1,
+		{ID: "h2", Parent: "h1", Depth: 2, Caller: "invoice-checker", Callee: "acme-billing", Skill: "issue_credit_note", External: true, State: "input_required", DurationMs: 1500, Tokens: 300, CostEUR: 0.02, DLPFindings: []Finding{{Class: "iban", Count: 2}}, InjectionFlags: []string{"hidden_text"},
 			Effects: []Effect{{Service: "stripe", Tool: "create_refund", Risk: "outward", Approval: "apr_9", Outcome: "held"}}},
 		{ID: "h1", Parent: "", Depth: 1, Caller: "claude", Callee: "invoice-checker", Skill: "check", State: "completed", DurationMs: 900, Tokens: 900, CostEUR: 0.1},
 		{ID: "h3", Parent: "missing", Depth: 1, Caller: "claude", Callee: "orphan", Skill: "x", State: "completed"},

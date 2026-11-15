@@ -129,7 +129,7 @@ func TestA2AChainsEmpty(t *testing.T) {
 func TestA2AGraphAndExplain(t *testing.T) {
 	gw := a2aGateway(t, routeFns{
 		"GET /api/a2a/graph":   jsonReply(200, `{"nodes":[{"id":"claude","kind":"mcp_client"},{"id":"acme","kind":"external","external":true}],"edges":[{"from":"claude","to":"acme","allowed":true,"rule":"clients-to-billing","calls":4,"refusals":1}]}`),
-		"GET /api/a2a/explain": jsonReply(200, `{"decision":{"result":"approval","reasons":["edge allows issue_credit_note","hop is outward"],"approvals":["first use of this edge"],"ceilings":["max_risk write"],"edge":{"id":"finance-to-billing","file":"policy/a2a.yaml","line":14}}}`),
+		"GET /api/a2a/explain": jsonReply(200, `{"decision":{"result":"approval","reasons":["edge allows issue_credit_note","hop is outward"],"approvals":["first use of this edge"],"ceilings":{"max_risk":"write"},"edge":{"id":"finance-to-billing","file":"policy/a2a.yaml","line":14}}}`),
 	})
 	out, err := runCommand(t, A2ACmd(), "graph", "--from", "claude", "--to", "acme", "--window", "7d")
 	if err != nil || !strings.Contains(out, "digraph agents") || !strings.Contains(out, `"acme" [label="acme (external)" shape=box]`) || !strings.Contains(out, "color=red") {
@@ -150,7 +150,7 @@ func TestA2AGraphAndExplain(t *testing.T) {
 
 	out, err = runCommand(t, A2ACmd(), "explain", "--from", "claude", "--to", "acme", "--skill", "issue_credit_note")
 	if err != nil || !strings.Contains(out, "claude → acme.issue_credit_note: APPROVAL") || !strings.Contains(out, "decided by edge finance-to-billing (policy/a2a.yaml:14)") ||
-		!strings.Contains(out, "edge allows issue_credit_note") || !strings.Contains(out, "approval needed: first use of this edge") || !strings.Contains(out, "ceiling: max_risk write") {
+		!strings.Contains(out, "edge allows issue_credit_note") || !strings.Contains(out, "approval needed: first use of this edge") || !strings.Contains(out, "ceiling: max_risk: write") {
 		t.Errorf("explain: %q %v", out, err)
 	}
 	if out, err = runCommand(t, A2ACmd(), "explain", "--from", "a", "--to", "b", "--skill", "c", "--json"); err != nil || !strings.Contains(out, `"decision"`) {

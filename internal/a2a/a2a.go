@@ -119,20 +119,35 @@ type Effect struct {
 
 // Hop is one delegation inside a chain.
 type Hop struct {
-	ID             string   `json:"id"`
-	Parent         string   `json:"parent"`
-	Depth          int      `json:"depth"`
-	Caller         string   `json:"caller"`
-	Callee         string   `json:"callee"`
-	Skill          string   `json:"skill"`
-	External       bool     `json:"external"`
-	State          string   `json:"state"`
-	DurationMs     int64    `json:"duration_ms"`
-	Tokens         int64    `json:"tokens"`
-	CostEUR        float64  `json:"cost_eur"`
-	DLPFindings    int      `json:"dlp_findings"`
-	InjectionFlags int      `json:"injection_flags"`
-	Effects        []Effect `json:"effects"`
+	ID             string    `json:"id"`
+	Parent         string    `json:"parent"`
+	Depth          int       `json:"depth"`
+	Caller         string    `json:"caller"`
+	Callee         string    `json:"callee"`
+	Skill          string    `json:"skill"`
+	External       bool      `json:"external"`
+	State          string    `json:"state"`
+	DurationMs     int64     `json:"duration_ms"`
+	Tokens         int64     `json:"tokens"`
+	CostEUR        float64   `json:"cost_eur"`
+	DLPFindings    []Finding `json:"dlp_findings"`
+	InjectionFlags []string  `json:"injection_flags"`
+	Approvals      []string  `json:"approvals"`
+	Effects        []Effect  `json:"effects"`
+}
+
+// Finding is a class of data found in a hop and how many times, never a value.
+type Finding struct {
+	Class string `json:"class"`
+	Count int    `json:"count"`
+}
+
+func (h Hop) dlpCount() int {
+	n := 0
+	for _, f := range h.DLPFindings {
+		n += f.Count
+	}
+	return n
 }
 
 // Budget is a chain's limits and what is used.
@@ -158,8 +173,8 @@ type Chain struct {
 	Hops      []Hop  `json:"hops"`
 	Budget    Budget `json:"budget"`
 	Audit     struct {
-		Verified bool   `json:"verified"`
-		Note     string `json:"note"`
+		Verified bool `json:"verified"`
+		Pending  bool `json:"pending"`
 	} `json:"audit"`
 }
 
@@ -177,6 +192,8 @@ func (c Chain) Render(w io.Writer) {
 	audit := "audit not verified"
 	if c.Audit.Verified {
 		audit = "audit verified"
+	} else if c.Audit.Pending {
+		audit = "audit not verified yet"
 	}
 	fmt.Fprintf(w, "chain %s  %s  origin %s  depth %d  %s\n", clean(c.ID), clean(c.Status), clean(c.Origin), c.Depth, audit)
 	if c.Budget.Limits.Tokens > 0 || c.Budget.Limits.CostEUR > 0 {
@@ -216,13 +233,16 @@ func (c Chain) Render(w io.Writer) {
 				where = "EXTERNAL"
 			}
 			fmt.Fprintf(w, "%s%s%s → %s.%s  %s  %s  %s  tokens %d  %.2f EUR", prefix, branch, clean(h.Caller), clean(h.Callee), clean(h.Skill), where, clean(h.State), dur(h.DurationMs), h.Tokens, h.CostEUR)
-			if h.DLPFindings > 0 {
-				fmt.Fprintf(w, "  dlp %d", h.DLPFindings)
+			if n := h.dlpCount(); n > 0 {
+				fmt.Fprintf(w, "  dlp %d", n)
 			}
-			if h.InjectionFlags > 0 {
-				fmt.Fprintf(w, "  injection %d", h.InjectionFlags)
+			if n := len(h.InjectionFlags); n > 0 {
+				fmt.Fprintf(w, "  injection %d", n)
 			}
 			fmt.Fprintln(w)
+			for _, id := range h.Approvals {
+				fmt.Fprintf(w, "%s   approval %s\n", next, clean(id))
+			}
 			for _, e := range h.Effects {
 				held := ""
 				if e.Approval != "" {

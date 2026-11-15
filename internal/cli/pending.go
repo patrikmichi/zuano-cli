@@ -50,8 +50,19 @@ func preferWait(total time.Duration) http.Header {
 
 func parsePending(raw []byte) *pendingApproval {
 	var p pendingApproval
-	if json.Unmarshal(raw, &p) != nil || p.Status != pendingApprovalStatus || p.ApprovalID == "" {
+	if json.Unmarshal(raw, &p) != nil || p.Status != pendingApprovalStatus {
 		return nil
+	}
+	if p.ApprovalID == "" {
+		// The a2a message route nests the approval: {status, approval, message}.
+		var nested struct {
+			Approval pendingApproval `json:"approval"`
+		}
+		if json.Unmarshal(raw, &nested) != nil || nested.Approval.ApprovalID == "" {
+			return nil
+		}
+		p = nested.Approval
+		p.Status = pendingApprovalStatus
 	}
 	return &p
 }

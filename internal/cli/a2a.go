@@ -8,9 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,6 +27,9 @@ import (
 
 // maxA2AMessage bounds a message read from a file.
 const maxA2AMessage = 1 << 20
+
+// maxA2AWaitSeconds is the longest the gateway holds a message open for the task.
+const maxA2AWaitSeconds = 120
 
 // A2ACmd returns `zuano a2a`, the client for agent-to-agent governance.
 func A2ACmd() *cobra.Command {
@@ -453,7 +459,6 @@ func readMessage(arg string) (string, error) {
 func a2aCallCmd() *cobra.Command {
 	var f approvalFlags
 	var skill, message, contextID string
-	var files []string
 	var wait int
 	var stream bool
 	cmd := &cobra.Command{
@@ -463,7 +468,7 @@ func a2aCallCmd() *cobra.Command {
 and holds the call for an approval when the hop or an effect further down needs
 one (exit 12, with the approval page link). --wait waits that many seconds for
 the task to finish and exits 17 if it does not. --stream follows the task as it
-runs. --file param=@path uploads a file and passes it by reference.`,
+runs.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			slug, err := a2aSlug(args[0])
@@ -473,8 +478,8 @@ runs. --file param=@path uploads a file and passes it by reference.`,
 			if skill == "" || message == "" {
 				return errors.New("--skill and --message are required")
 			}
-			if wait < 0 || wait > 280 {
-				return errors.New("--wait must be between 0 and 280 seconds")
+			if wait < 0 || wait > maxA2AWaitSeconds {
+				return fmt.Errorf("--wait must be between 0 and %d seconds", maxA2AWaitSeconds)
 			}
 			text, err := readMessage(message)
 			if err != nil {
@@ -490,18 +495,6 @@ runs. --file param=@path uploads a file and passes it by reference.`,
 			}
 			if wait > 0 {
 				body["wait_seconds"] = wait
-			}
-			if len(files) > 0 {
-				refs, err := uploadCallFiles(cmd.Context(), c, files, nil, nil)
-				if err != nil {
-					return err
-				}
-				var list []map[string]string
-				for _, r := range refs {
-					param, ref, _ := strings.Cut(r, "=file:")
-					list = append(list, map[string]string{"param": param, "file_id": ref})
-				}
-				body["files"] = list
 			}
 			path := "/api/a2a/agents/" + slug + "/messages"
 			var task a2a.Task
@@ -530,7 +523,6 @@ runs. --file param=@path uploads a file and passes it by reference.`,
 	fl := cmd.Flags()
 	fl.StringVar(&skill, "skill", "", "The skill id on the agent's pinned card")
 	fl.StringVar(&message, "message", "", "The message, or @file to read it from a file")
-	fl.StringArrayVar(&files, "file", nil, "param=@path: upload a file and pass it by reference (repeatable)")
 	fl.StringVar(&contextID, "context", "", "Continue an earlier conversation")
 	fl.IntVar(&wait, "wait", 0, "Wait up to this many seconds for the task to finish")
 	fl.BoolVar(&stream, "stream", false, "Follow the task's progress as it runs")
@@ -549,7 +541,11 @@ func finishTask(cmd *cobra.Command, t a2a.Task, jsonOut, waited, printBody bool)
 	case "INPUT_REQUIRED":
 		if t.Approval != nil {
 			if !jsonOut {
-				fmt.Fprintf(out, "Approval required: %s.%s (%s) is held.\n  approval: %s\n  page:     %s\n", textsafe.Strict(t.Approval.Effect.Service), textsafe.Strict(t.Approval.Effect.Tool), textsafe.Strict(t.Approval.Effect.Risk), textsafe.Strict(t.Approval.ID), textsafe.Strict(t.Approval.URL))
+				held := "A step"
+				if e := t.Approval.Effect; e.Service != "" || e.Tool != "" {
+					held = fmt.Sprintf("%s.%s (%s)", textsafe.Strict(e.Service), textsafe.Strict(e.Tool), textsafe.Strict(e.Risk))
+				}
+				fmt.Fprintf(out, "Approval required: %s is held.\n  approval: %s\n  page:     %s\n", held, textsafe.Strict(t.Approval.ID), textsafe.Strict(t.Approval.URL))
 				fmt.Fprintf(out, "Decide it in the browser, then run the call again, or collect results with `%s`.\n", brand.Cmd("approvals wait "+t.Approval.ID))
 			}
 			return &ExitError{Code: exitPending}
@@ -637,6 +633,25 @@ func a2aStream(cmd *cobra.Command, c *client.Client, path string, body map[strin
 		return a2a.Task{}, gatewayStatusError(resp.StatusCode, b)
 	}
 	out := cmd.OutOrStdout()
+	// The messages route answers a plain JSON task when it does not stream.
+	if strings.HasPrefix(resp.Header.Get("Content-Type"), "application/json") {
+		raw, err := io.ReadAll(io.LimitReader(resp.Body, maxApprovalBody))
+		if err != nil {
+			return a2a.Task{}, err
+		}
+		var doc struct {
+			Task a2a.Task `json:"task"`
+		}
+		if err := json.Unmarshal(raw, &doc); err != nil || doc.Task.ID == "" {
+			return a2a.Task{}, errors.New("the gateway answered without a task")
+		}
+		if jsonOut {
+			printRaw(out, raw)
+		} else {
+			printTask(out, doc.Task)
+		}
+		return doc.Task, nil
+	}
 	sc := bufio.NewScanner(resp.Body)
 	sc.Buffer(make([]byte, 64<<10), 4<<20)
 	var last a2a.Task
@@ -752,7 +767,7 @@ func a2aChainsListCmd() *cobra.Command {
 	}
 	f.bind(cmd, "Print the response body unchanged")
 	cmd.Flags().BoolVar(&mine, "mine", false, "Only chains you started")
-	cmd.Flags().StringVar(&status, "status", "", "Only chains in this state (running, completed, killed, failed)")
+	cmd.Flags().StringVar(&status, "status", "", "Only chains in this state (active, completed, failed, killed, budget_exhausted)")
 	cmd.Flags().StringVar(&agent, "agent", "", "Only chains that include this agent")
 	return cmd
 }
@@ -871,6 +886,26 @@ func a2aGraphCmd() *cobra.Command {
 	return cmd
 }
 
+// ceilingText renders one ceiling of a decision: a word, a number or a list;
+// a limit that is not set (null, empty) gives "".
+func ceilingText(v any) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case float64:
+		return strconv.FormatFloat(t, 'f', -1, 64)
+	case []any:
+		parts := make([]string, 0, len(t))
+		for _, x := range t {
+			if s := ceilingText(x); s != "" {
+				parts = append(parts, s)
+			}
+		}
+		return strings.Join(parts, ", ")
+	}
+	return ""
+}
+
 func a2aExplainCmd() *cobra.Command {
 	var f approvalFlags
 	var from, to, skill string
@@ -889,10 +924,10 @@ func a2aExplainCmd() *cobra.Command {
 			q := url.Values{"from": {from}, "to": {to}, "skill": {skill}}
 			var doc struct {
 				Decision struct {
-					Result    string   `json:"result"`
-					Reasons   []string `json:"reasons"`
-					Approvals []string `json:"approvals"`
-					Ceilings  []string `json:"ceilings"`
+					Result    string         `json:"result"`
+					Reasons   []string       `json:"reasons"`
+					Approvals []string       `json:"approvals"`
+					Ceilings  map[string]any `json:"ceilings"`
 					Edge      struct {
 						ID   string `json:"id"`
 						File string `json:"file"`
@@ -924,8 +959,10 @@ func a2aExplainCmd() *cobra.Command {
 			for _, a := range d.Approvals {
 				fmt.Fprintf(out, "  approval needed: %s\n", shortText(a, 200))
 			}
-			for _, cl := range d.Ceilings {
-				fmt.Fprintf(out, "  ceiling: %s\n", shortText(cl, 200))
+			for _, name := range slices.Sorted(maps.Keys(d.Ceilings)) {
+				if v := ceilingText(d.Ceilings[name]); v != "" {
+					fmt.Fprintf(out, "  ceiling: %s: %s\n", shortText(name, 40), shortText(v, 200))
+				}
 			}
 			return nil
 		},

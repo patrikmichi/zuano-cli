@@ -27,7 +27,7 @@ so a fixture changes only when a route's shape does.
 The gateway's OpenAPI document (`gateway/openapi/v1.json`) is vendored as
 `internal/cli/testdata/contracts/openapi-v1.json`; `ZUANO_GATEWAY_OPENAPI`
 names the gateway's own copy. The vendored copy is the integration branch's
-document as it stands (9d8687c), unedited: the run, firewall, knowledge base,
+document as it stood at c1e5a24, unedited (`make gen-openapi` copies it): the run, firewall, knowledge base,
 approval and SDK session routes are all in it, so nothing is merged in by
 hand. Regenerate it by copying `gateway/openapi/v1.json` from the integration
 branch. An operation names its own `servers` entry when it is not under

@@ -87,6 +87,48 @@ func TestBillingUnavailableCarriesRetryAfter(t *testing.T) {
 	}
 }
 
+func TestAnOfflinePrivateNetworkIsExit34(t *testing.T) {
+	for _, code := range []string{"network_offline", "target_not_served", "egress_unavailable"} {
+		body := `{"ok":false,"error":"HQ is offline: no connector agent connected yet.","network":{"error":"` + code + `","network":"HQ"}}`
+		c := refusalServer(t, 503, map[string]string{"Retry-After": "30"}, body)
+		resp, err := c.Get("/x")
+		var off *NetworkOfflineError
+		if !errors.As(err, &off) || resp != nil {
+			t.Fatalf("%s: resp = %v, err = %v, want a *NetworkOfflineError", code, resp, err)
+		}
+		if off.ExitCode() != ExitNetworkOffline || ExitNetworkOffline != 34 {
+			t.Errorf("%s: exit code = %d", code, off.ExitCode())
+		}
+		if msg := off.Error(); !strings.Contains(msg, "HQ is offline") || !strings.Contains(msg, "retry after 30s") {
+			t.Errorf("%s: message = %q", code, msg)
+		}
+	}
+}
+
+func TestOtherNetworkFailuresAreNotOffline(t *testing.T) {
+	c := refusalServer(t, 503, nil, `{"ok":false,"error":"Private networks are not available on this deployment.","network":{"error":"network_not_configured"}}`)
+	resp, err := c.Get("/x")
+	if err != nil || resp == nil {
+		t.Fatalf("resp = %v, err = %v, want the response untouched", resp, err)
+	}
+	_ = resp.Body.Close()
+}
+
+func TestAnUnacceptedCredentialIsExit5AndNamesTheSignInCommand(t *testing.T) {
+	for name, err := range map[string]error{"not signed in": &NotSignedInError{}, "reauth required": &ReauthRequiredError{}} {
+		var coded interface{ ExitCode() int }
+		if !errors.As(err, &coded) || coded.ExitCode() != ExitNotSignedIn || ExitNotSignedIn != 5 {
+			t.Errorf("%s: not exit 5", name)
+		}
+		if !strings.Contains(err.Error(), "zuano login") {
+			t.Errorf("%s: %q does not name the sign-in command", name, err)
+		}
+	}
+	if msg := (&NotSignedInError{}).Error(); !strings.Contains(msg, "ZUANO_API_KEY") || strings.Contains(msg, "Bearer") {
+		t.Errorf("message = %q", msg)
+	}
+}
+
 func TestQuotaExceededOn429IsExit31(t *testing.T) {
 	c := refusalServer(t, 429, nil, `{"error":"quota_exceeded","message":"agent runs used up","metric":"agent_runs","limit":100,"resets_at":"2026-10-17T00:00:00Z"}`)
 	_, err := c.Get("/x")

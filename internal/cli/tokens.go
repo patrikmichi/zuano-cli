@@ -54,7 +54,7 @@ func tokensListCmd() *cobra.Command {
 			defer resp.Body.Close()
 
 			if resp.StatusCode == http.StatusUnauthorized {
-				return errors.New("token expired or revoked — run `zuano login` to re-authenticate")
+				return errTokenRevoked
 			}
 
 			if resp.StatusCode != http.StatusOK {

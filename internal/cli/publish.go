@@ -906,7 +906,7 @@ func handlePublishResponse(statusCode int, hdr http.Header, rawBody []byte, gate
 		return nil
 
 	case http.StatusUnauthorized:
-		return fmt.Errorf("not authenticated — run `zuano login` first")
+		return errTokenRevoked
 
 	case http.StatusForbidden:
 		if err := agentSessionDenied(client.ActiveProfile(), statusCode, rawBody); err != nil {

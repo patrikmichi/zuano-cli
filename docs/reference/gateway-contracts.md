@@ -75,7 +75,8 @@ its HTTP client, so no route needs to handle them separately.
 | `429` `{"error": "rate_limited", "message"}` with `Retry-After` | prints the message and the wait | 13 |
 | `429` `{"error": "quota_exceeded", "message", "metric", "limit", "resets_at"}` | prints metric, limit and reset | 31 |
 | `401` or `403` `{"error": "step_up_required", "step_up": {"action", "digest"}}` | names the action, points to the console and sends the same request again once, see below | 14 when nobody can |
-| `401` `{"error": "reauth_required"}` | treated like an expired token: `zuano login` | 1 |
+| `401` `{"error": "reauth_required"}`, or any other `401` | the credential is not accepted: `zuano login`, or a valid `ZUANO_API_KEY` | 5 |
+| `503` with `Retry-After` and `{"network": {"error": "network_offline" \| "target_not_served" \| "egress_unavailable"}}` | prints the message and the wait | 34 |
 | `200`/`403` body or MCP `structuredContent` `{"reason": "policy_off", "message"}` | prints the message | 10 |
 
 Source: billing plan section 5.8 (codes, statuses, JSON, exit 30 to 33),
@@ -102,6 +103,7 @@ the constants in the code, both ways.
 | 1 | `error` | unclassified failure; also `spec_fetch_blocked`, `federated_mode_unsupported` and the market refusals without a status of their own, such as `submission_not_found` (`404`) and `submission_not_decidable` (`409`) of the staff-only platform moderation routes, with the code in the JSON |
 | 2 | `usage` | bad flags or unreadable input; `policy plan --detailed-exitcode` also returns 2 for "changes present" |
 | 4 | `signature_invalid` | any signature or content-hash verification failure, including `signature_invalid` from the gateway when a publisher's signature does not match; never a timeout |
+| 5 | `not_signed_in` | any `401` the gateway answers with a credential it does not accept (an expired or revoked session, a stored API key it no longer knows, `reauth_required`): the message points to `zuano login` or a valid `ZUANO_API_KEY` and never shows the credential. The retired shared `GATEWAY_API_KEY` and a token without an organisation end here too |
 | 10 | `denied` | `policy_off`, DLP block, `meta_executor_blocked`, `source_not_preferred`, `agent_not_allowed`, `denied_by_policy`, `tool_not_pinned` |
 | 11 | `approval_expired` | |
 | 12 | `pending_approval` | held call |
@@ -121,7 +123,7 @@ the constants in the code, both ways.
 | 31 | `quota_exceeded` | also `spend_cap_reached`, daily caps |
 | 32 | `billing_unavailable` | |
 | 33 | `suspended` | `org_suspended`, `seat_suspended`, `ip_not_allowed`, `identity_suspended`, `identity_revoked`, `identity_expired`, `identity_refused` |
-| 34 | `network_offline` | |
+| 34 | `network_offline` | REST `503` with `Retry-After` and `{"ok": false, "error": text, "network": {"error": "network_offline" \| "target_not_served" \| "egress_unavailable", "network"?}}`; also the `reason`/`error` codes of an MCP result |
 | 40 | `policy_invalid` | also DLP policy documents |
 | 41 | `policy_conflict` | |
 | 42 | `policy_managed_in_git` | |

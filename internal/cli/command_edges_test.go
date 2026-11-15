@@ -93,7 +93,7 @@ func TestInspectMcpServer_Errors(t *testing.T) {
 		want   string
 	}{
 		{"invalid id", "../x", 200, nil, "invalid catalog resource id"},
-		{"unauthorized", "res_1", 401, nil, "authentication required"},
+		{"unauthorized", "res_1", 401, nil, "did not accept the credential"},
 		{"server error", "res_1", 502, nil, "MCP inspection failed (HTTP 502)"},
 		{"invalid descriptor", "res_1", 200, map[string]any{"transport": "smoke-signal"}, "MCP transport must be"},
 	}

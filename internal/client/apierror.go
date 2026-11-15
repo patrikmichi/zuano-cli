@@ -24,6 +24,12 @@ const (
 	ExitUsageExhausted = 31
 	ExitBillingDown    = 32
 	ExitSuspended      = 33
+	// ExitNetworkOffline is a private network with no connector agent online
+	// to carry the call.
+	ExitNetworkOffline = 34
+	// ExitNotSignedIn is a credential the gateway does not accept: the person
+	// has to sign in again or supply a valid API key.
+	ExitNotSignedIn = 5
 )
 
 // maxErrorBody bounds how much of a refusal body is read to classify it.
@@ -201,6 +207,49 @@ func (*ReauthRequiredError) Error() string {
 	return "the gateway no longer accepts this session: run `" + brand.Cmd("login") + "` to sign in again"
 }
 
+// ExitCode is the process exit status for the refusal.
+func (*ReauthRequiredError) ExitCode() int { return ExitNotSignedIn }
+
+// NotSignedInError is any 401 the gateway answers with a credential it does
+// not accept. It is the one message and exit status every command gives for
+// it; it never echoes the credential.
+type NotSignedInError struct{}
+
+func (*NotSignedInError) Error() string {
+	return "the gateway did not accept the credential: run `" + brand.Cmd("login") + "` to sign in, or set a valid ZUANO_API_KEY"
+}
+
+// ExitCode is the process exit status for the refusal.
+func (*NotSignedInError) ExitCode() int { return ExitNotSignedIn }
+
+// NetworkOfflineError is the 503 a gateway answers with when a call needs a
+// private network that has no connector agent online. It clears when an agent
+// reconnects, so a retry after the wait can succeed.
+type NetworkOfflineError struct {
+	Code       string
+	Message    string
+	RetryAfter string
+	RequestID  string
+}
+
+// ExitCode is the process exit status for the refusal.
+func (*NetworkOfflineError) ExitCode() int { return ExitNetworkOffline }
+
+func (e *NetworkOfflineError) Error() string {
+	msg := textsafe.Clean(e.Message)
+	if msg == "" {
+		msg = "the private network is offline"
+	}
+	if e.RetryAfter != "" {
+		msg += "; retry after " + textsafe.Clean(e.RetryAfter) + "s"
+	}
+	return msg + requestIDSuffix(textsafe.Clean(e.RequestID))
+}
+
+// offlineNetworkCodes are the network failures where no agent or egress proxy
+// could take the call.
+var offlineNetworkCodes = map[string]bool{"network_offline": true, "target_not_served": true, "egress_unavailable": true}
+
 // refusalBody is the union of the fields the gateway's refusals carry. Number
 // fields are raw because the gateway sends a limit key as text for a plan
 // limit and as a number for a quota.
@@ -222,6 +271,10 @@ type refusalBody struct {
 		Action string `json:"action"`
 		Digest string `json:"digest"`
 	} `json:"step_up"`
+	// Network is present when the failure is on a private network's path.
+	Network struct {
+		Error string `json:"error"`
+	} `json:"network"`
 }
 
 func rawText(raw json.RawMessage) string {
@@ -275,6 +328,8 @@ func refusalOf(resp *http.Response) error {
 		return &StepUpRequiredError{Action: b.StepUp.Action, Digest: b.StepUp.Digest, RequestID: id}
 	case resp.StatusCode == http.StatusUnauthorized && b.Error == codeReauthRequired:
 		return &ReauthRequiredError{}
+	case resp.StatusCode == http.StatusServiceUnavailable && offlineNetworkCodes[b.Network.Error]:
+		return &NetworkOfflineError{Code: b.Network.Error, Message: b.Error, RetryAfter: resp.Header.Get("Retry-After"), RequestID: id}
 	case resp.StatusCode == http.StatusTooManyRequests && b.Error == CodeQuotaExceeded:
 		return &QuotaExceededError{Metric: firstNonEmpty(b.Metric, b.Meter), Limit: rawText(b.Limit), Message: b.Message, ResetsAt: b.ResetsAt, RequestID: id}
 	case resp.StatusCode == http.StatusTooManyRequests && b.Error == CodeRateLimited:

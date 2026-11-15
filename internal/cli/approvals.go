@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -222,7 +221,7 @@ func approvalError(status int, raw []byte) error {
 	}
 	switch status {
 	case http.StatusUnauthorized:
-		return errors.New("token expired or revoked — run `zuano login` to re-authenticate")
+		return errTokenRevoked
 	case http.StatusForbidden:
 		return fmt.Errorf("%s (HTTP 403): approvals are for an org owner, admin or listed approver using their own session, not the agent profile", msg)
 	}

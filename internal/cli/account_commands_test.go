@@ -239,7 +239,7 @@ func TestWhoami_ServerErrorsAreReported(t *testing.T) {
 		status int
 		want   string
 	}{
-		{http.StatusUnauthorized, "token expired or revoked"},
+		{http.StatusUnauthorized, "did not accept the credential"},
 		{http.StatusInternalServerError, "whoami failed (500): boom"},
 	}
 	for _, tc := range cases {
@@ -330,7 +330,7 @@ func TestTokensList_ErrorResponses(t *testing.T) {
 		handler http.HandlerFunc
 		want    string
 	}{
-		{"unauthorized", jsonHandler(http.StatusUnauthorized, nil), "token expired or revoked"},
+		{"unauthorized", jsonHandler(http.StatusUnauthorized, nil), "did not accept the credential"},
 		{"server error", jsonHandler(http.StatusBadGateway, nil), "tokens list failed (HTTP 502)"},
 		{"bad body", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("<html>")) }, "decode response"},
 	}
@@ -610,7 +610,7 @@ func TestServices_ErrorResponses(t *testing.T) {
 		body   any
 		want   string
 	}{
-		{http.StatusUnauthorized, nil, "token expired or revoked"},
+		{http.StatusUnauthorized, nil, "did not accept the credential"},
 		{http.StatusServiceUnavailable, nil, "integrations request failed (503)"},
 		{http.StatusOK, IntegrationsResponse{OK: false, Error: "registry down"}, "integrations request failed: registry down"},
 	}

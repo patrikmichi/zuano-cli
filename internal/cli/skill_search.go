@@ -147,7 +147,7 @@ func searchSkills(parent context.Context, doer skillSearchDoer, query string) ([
 		return nil, fmt.Errorf("gateway does not support the dedicated skill search API; upgrade the gateway or use zuano skill install <catalog-id>")
 	}
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("%s", offlineGuidance)
+		return nil, errTokenRevoked
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("search failed (%d); retry later or use zuano skill install <catalog-id>", resp.StatusCode)

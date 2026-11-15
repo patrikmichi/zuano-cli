@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -310,7 +309,7 @@ func sendToolCall(parent context.Context, c *client.Client, service, tool string
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, errors.New("token expired or revoked — run `zuano login` to re-authenticate")
+		return nil, errTokenRevoked
 	}
 
 	env, envErr := decodeMCPEnvelope(respBody)

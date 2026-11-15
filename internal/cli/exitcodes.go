@@ -17,7 +17,8 @@ const (
 	exitEvalInconclusive = 23
 	exitEvalThreshold    = 24
 	exitDraftConflict    = 25
-	exitNetworkOffline   = 34
+	exitNetworkOffline   = client.ExitNetworkOffline
+	exitNotSignedIn      = client.ExitNotSignedIn
 	exitToolChanged      = 43
 	exitQuarantined      = 44
 	exitA2AChainRefused  = 50
@@ -53,6 +54,7 @@ var exitRegistry = []exitCodeEntry{
 	{1, "error"},
 	{exitUsage, "usage"},
 	{signing.ExitContentSignature, "signature_invalid"},
+	{exitNotSignedIn, "not_signed_in"},
 	{exitDenied, "denied"},
 	{exitExpired, "approval_expired"},
 	{exitPending, "pending_approval"},

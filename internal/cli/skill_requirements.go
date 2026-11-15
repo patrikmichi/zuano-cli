@@ -61,7 +61,7 @@ func fetchSkillRequirements(parent context.Context, doer skillSearchDoer, id str
 	case http.StatusNotFound:
 		return nil, errSkillNotFound
 	case http.StatusUnauthorized:
-		return nil, errors.New(offlineGuidance)
+		return nil, errTokenRevoked
 	default:
 		return nil, fmt.Errorf("skill requirements failed (HTTP %d)", resp.StatusCode)
 	}

@@ -151,7 +151,7 @@ func listMcpServers(parent context.Context, doer mcpListDoer) ([]mcpCatalogEntry
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("%s", offlineGuidance)
+		return nil, errTokenRevoked
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("mcp list failed (%d)", resp.StatusCode)

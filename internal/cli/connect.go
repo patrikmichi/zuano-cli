@@ -21,7 +21,7 @@ import (
 	"github.com/patrikmichi/zuano-cli/internal/textsafe"
 )
 
-var errTokenRevoked = errors.New("token expired or revoked — run `zuano login` to re-authenticate")
+var errTokenRevoked error = &client.NotSignedInError{}
 
 // openBrowserURL and connectPollInterval are variables so tests can stand in
 // for the browser and shorten the wait.

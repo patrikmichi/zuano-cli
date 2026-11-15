@@ -287,7 +287,7 @@ func requireCatalogService(cmd *cobra.Command, name, gatewayURL string) error {
 		return err
 	}
 	if info == nil {
-		return errors.New("token expired or revoked — run `zuano login` to re-authenticate")
+		return errTokenRevoked
 	}
 	for _, s := range info.Services {
 		if s.ID == name {

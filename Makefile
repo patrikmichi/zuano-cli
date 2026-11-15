@@ -55,4 +55,17 @@ gen-artifact-paths:
 	@test -n "$(GATEWAY_ARTIFACT_PATHS)" || { echo "set GATEWAY_ARTIFACT_PATHS to the gateway's artifact-paths.json" >&2; exit 2; }
 	cp "$(GATEWAY_ARTIFACT_PATHS)" internal/drop/testdata/paths.json
 
-.PHONY: build install test vet clean gen-policy-schema gen-evals-schema gen-evals-fixtures gen-evals-assertions gen-artifact-paths
+# Copies the gateway's OpenAPI document the contract tests read:
+# make gen-openapi GATEWAY_OPENAPI=/path/to/gateway/openapi/v1.json
+gen-openapi:
+	@test -n "$(GATEWAY_OPENAPI)" || { echo "set GATEWAY_OPENAPI to the gateway's openapi/v1.json" >&2; exit 2; }
+	cp "$(GATEWAY_OPENAPI)" internal/cli/testdata/contracts/openapi-v1.json
+
+# Copies the frame and seal vectors the gateway, the broker and the connector agent share:
+# make gen-network-vectors GATEWAY_PROTOCOL=/path/to/gateway/lib/networks/protocol
+gen-network-vectors:
+	@test -n "$(GATEWAY_PROTOCOL)" || { echo "set GATEWAY_PROTOCOL to the gateway's lib/networks/protocol directory" >&2; exit 2; }
+	cp "$(GATEWAY_PROTOCOL)/frames.vectors.json" internal/tunnel/testdata/frames.json
+	cp "$(GATEWAY_PROTOCOL)/seal.vectors.json" internal/tunnel/testdata/seal.json
+
+.PHONY: build install test vet clean gen-policy-schema gen-evals-schema gen-evals-fixtures gen-evals-assertions gen-artifact-paths gen-openapi gen-network-vectors

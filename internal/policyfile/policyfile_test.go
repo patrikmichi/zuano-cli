@@ -30,7 +30,7 @@ risk:
     - id: small-refunds
       tool: stripe.create_refund
       mode: approval
-      when: { all: [ { param: amount, op: lte, value: 100 } ] }
+      when: { param: amount, op: lte, value: 100 }
 `
 
 func TestLoadMergesFilesBySection(t *testing.T) {
@@ -65,6 +65,35 @@ func TestLoadMergesFilesBySection(t *testing.T) {
 	}
 	if f, _ := d.Where("/zzz"); f != "" {
 		t.Errorf("unknown pointer = %q", f)
+	}
+}
+
+func TestValidateAcceptsProjectAndNetworkSections(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, "policy.yaml", `version: 1
+org: acme
+projects:
+  billing:
+    blocked_data_classes: ["secret.*", "pii"]
+networks:
+  erp:
+    bindings:
+      - { service: custom-erp, target: erp, credentials: gateway }
+`)
+	d, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diags, err := d.Validate(); err != nil || len(diags) != 0 {
+		t.Errorf("diags = %v, %v", diags, err)
+	}
+	write(t, dir, "policy.yaml", "version: 1\norg: acme\nprojects:\n  billing:\n    blocked_data_classes: [\"Not A Class\"]\n")
+	d, err = Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diags, _ := d.Validate(); len(diags) == 0 {
+		t.Error("a malformed data class was accepted")
 	}
 }
 
@@ -117,7 +146,7 @@ func TestLoadRefusesDuplicateSectionsAndBadFiles(t *testing.T) {
 func TestValidateReportsFileAndLine(t *testing.T) {
 	dir := t.TempDir()
 	write(t, dir, "policy.yaml", `version: 1
-org: Acme Corp
+org: ""
 risk:
   matrix:
     stripe: { write: sometimes }
@@ -145,7 +174,7 @@ groups:
 		lines = append(lines, x.String())
 	}
 	all := strings.Join(lines, "\n")
-	for _, want := range []string{"policy.yaml:2:", "policy.yaml:5:", "policy.yaml:10:", "policy.yaml:11:", "policy.yaml:13:"} {
+	for _, want := range []string{"policy.yaml:2:", "policy.yaml:5:", "policy.yaml:10:", "policy.yaml:11:", "policy.yaml:12:"} {
 		if !strings.Contains(all, want) {
 			t.Errorf("no problem at %s:\n%s", want, all)
 		}

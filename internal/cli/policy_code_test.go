@@ -133,7 +133,7 @@ func TestPolicyValidate(t *testing.T) {
 	if out, err := runCommand(t, PolicyCmd(), "validate", "--dir", good, "--offline"); err != nil || !strings.Contains(out, "match the schema") || ps.count("POST /api/policy/validate") != 1 {
 		t.Errorf("offline: %q %v", out, err)
 	}
-	bad := policyDir(t, "version: 1\norg: X\nstray: 1\n")
+	bad := policyDir(t, "version: 1\norg: \"\"\nstray: 1\n")
 	out, err := runCommand(t, PolicyCmd(), "validate", "--dir", bad)
 	if exitCodeOf(err) != 40 || !strings.Contains(out, "policy.yaml:2:") || !strings.Contains(out, "policy.yaml:3: stray: unknown property") {
 		t.Errorf("invalid: exit %d %q %v", exitCodeOf(err), out, err)

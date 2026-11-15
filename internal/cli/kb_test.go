@@ -178,8 +178,9 @@ func TestKbCommandsSendWhatTheOpenAPIDescribes(t *testing.T) {
 			}
 		}
 	}
-	// The commands cover every knowledge base operation but these two.
-	notCommands := map[string]bool{"POST /kb/captures": true, "GET /kb/pages/{id}/html": true}
+	// The commands cover every knowledge base operation but these: the first
+	// two have no command, and publishing a site is browser-session only.
+	notCommands := map[string]bool{"POST /kb/captures": true, "GET /kb/pages/{id}/html": true, "POST /kb/sites": true}
 	for template, ops := range doc.Paths {
 		if !strings.HasPrefix(template, "/kb/") {
 			continue

@@ -45,7 +45,10 @@ func TestReadFlagsDoNotBlockOnFIFO(t *testing.T) {
 		done <- err
 	}()
 	select {
-	case <-done:
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("opening a FIFO with ReadFlags: %v", err)
+		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("opening a FIFO with ReadFlags blocked")
 	}

@@ -141,7 +141,9 @@ func TestShimRelaysInitializeDropsClientCapabilitiesAndRefusesServerRequests(t *
 	h.send(`{"jsonrpc":"2.0","method":"notifications/initialized"}`)
 	h.request(`{"jsonrpc":"2.0","id":2,"method":"ping"}`)
 	h.agentW.Close()
-	<-h.done
+	if err := <-h.done; err != nil {
+		t.Fatalf("the shim ended with %v", err)
+	}
 	received, sampling := st.snapshot()
 	got := strings.Join(received, ",")
 	if !strings.Contains(got, "initialize") || !strings.Contains(got, "notifications/initialized") {

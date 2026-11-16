@@ -1,0 +1,22 @@
+{
+  "packs": [
+    {
+      "slug": "finance-invoicing",
+      "displayName": "Finance and invoicing",
+      "summary": "Invoice, reconcile and chase payments with approvals.",
+      "category": "finance",
+      "source": "platform",
+      "version": "1.2.0",
+      "connectors": [
+        {
+          "slug": "stripe",
+          "required": true
+        }
+      ],
+      "installed": false,
+      "install": null,
+      "fit": "full",
+      "missing": []
+    }
+  ]
+}

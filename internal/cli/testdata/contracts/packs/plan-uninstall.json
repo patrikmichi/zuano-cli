@@ -1,0 +1,212 @@
+{
+  "planId": "ppl_FIXTURE",
+  "planHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "mode": "uninstall",
+  "pack": {
+    "slug": "finance-invoicing",
+    "version": "1.2.0",
+    "name": "Finance and invoicing"
+  },
+  "params": {},
+  "ops": [
+    {
+      "seq": 0,
+      "kind": "sync_profile.upsert",
+      "target": {
+        "name": "finance-invoicing"
+      },
+      "before": {
+        "audience": {
+          "kind": "org"
+        },
+        "bundles": [
+          {
+            "name": "finance-toolkit",
+            "resourceId": "res_bundle",
+            "versionId": "rev_bundle"
+          }
+        ],
+        "rules": [
+          {
+            "agents": [
+              "all"
+            ],
+            "alwaysApply": true,
+            "body": "Amounts are in EUR.",
+            "description": "Never send documents without a human.",
+            "globs": null,
+            "name": "money-safety",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "skills": [
+          {
+            "name": "invoice-reconcile",
+            "resourceId": "res_skill",
+            "versionId": "rev_skill"
+          }
+        ]
+      },
+      "after": null,
+      "status": "apply",
+      "loosens": false,
+      "targetKey": "sync_profile.upsert:name=finance-invoicing"
+    },
+    {
+      "seq": 1,
+      "kind": "workflow.create",
+      "target": {
+        "key": "invoice-check"
+      },
+      "before": {
+        "params": {
+          "watch_domain": "acme.com"
+        },
+        "resourceId": "res_wf",
+        "version": "1.1.0"
+      },
+      "after": null,
+      "status": "apply",
+      "loosens": false,
+      "targetKey": "workflow.create:key=invoice-check"
+    },
+    {
+      "seq": 2,
+      "kind": "risk.override",
+      "target": {
+        "service": "stripe",
+        "tool": "create_refund"
+      },
+      "before": {
+        "mode": "approval",
+        "note": null,
+        "peopleRequireApproval": true,
+        "predicate": {
+          "op": "gt",
+          "param": "amount",
+          "value": 1000
+        }
+      },
+      "after": null,
+      "status": "apply",
+      "loosens": false,
+      "targetKey": "risk.override:service=stripe,tool=create_refund"
+    },
+    {
+      "seq": 3,
+      "kind": "risk.cell",
+      "target": {
+        "risk": "read",
+        "service": "stripe"
+      },
+      "before": {
+        "mode": "allowed",
+        "peopleRequireApproval": false
+      },
+      "after": null,
+      "status": "apply",
+      "loosens": false,
+      "targetKey": "risk.cell:risk=read,service=stripe"
+    },
+    {
+      "seq": 4,
+      "kind": "risk.cell",
+      "target": {
+        "risk": "write",
+        "service": "stripe"
+      },
+      "before": {
+        "mode": "approval",
+        "peopleRequireApproval": false
+      },
+      "after": null,
+      "status": "apply",
+      "loosens": false,
+      "targetKey": "risk.cell:risk=write,service=stripe"
+    },
+    {
+      "seq": 5,
+      "kind": "resource.assign",
+      "target": {
+        "resourceId": "res_skill",
+        "subject": "ug:Finance"
+      },
+      "before": {
+        "channel": null,
+        "versionPin": "rev_skill"
+      },
+      "after": null,
+      "status": "apply",
+      "loosens": false,
+      "targetKey": "resource.assign:resourceId=res_skill,subject=ug:Finance"
+    },
+    {
+      "seq": 6,
+      "kind": "resource.enable",
+      "target": {
+        "resourceId": "res_bundle"
+      },
+      "before": {
+        "enabled": true
+      },
+      "after": null,
+      "status": "apply",
+      "loosens": false,
+      "targetKey": "resource.enable:resourceId=res_bundle"
+    },
+    {
+      "seq": 7,
+      "kind": "resource.enable",
+      "target": {
+        "resourceId": "res_skill"
+      },
+      "before": {
+        "enabled": true
+      },
+      "after": null,
+      "status": "apply",
+      "loosens": false,
+      "targetKey": "resource.enable:resourceId=res_skill"
+    },
+    {
+      "seq": 8,
+      "kind": "connector.enable",
+      "target": {
+        "resourceId": "res_svc_stripe",
+        "slug": "stripe"
+      },
+      "before": {
+        "enabled": true
+      },
+      "after": null,
+      "status": "noop",
+      "loosens": false,
+      "reason": "the connector stays on; its credentials are never removed",
+      "targetKey": "connector.enable:resourceId=res_svc_stripe,slug=stripe"
+    },
+    {
+      "seq": 9,
+      "kind": "group.create",
+      "target": {
+        "name": "Finance"
+      },
+      "before": {
+        "exists": true
+      },
+      "after": null,
+      "status": "noop",
+      "loosens": false,
+      "reason": "the group is kept; remove it under Members when nobody needs it",
+      "targetKey": "group.create:name=Finance"
+    }
+  ],
+  "credentialPrompts": [],
+  "summary": {
+    "apply": 8,
+    "noop": 2,
+    "conflict": 0,
+    "skipped": 0,
+    "loosening": 0
+  },
+  "expiresAt": "2026-01-01T00:00:00.000Z"
+}

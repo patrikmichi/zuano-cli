@@ -1,0 +1,134 @@
+{
+  "install": {
+    "id": "pki_FIXTURE",
+    "status": "installed",
+    "channel": "stable",
+    "error": null,
+    "installedBy": "usr_ct",
+    "installedVia": "dashboard",
+    "installedAt": "2026-01-01T00:00:00.000Z",
+    "jobId": "job_FIXTURE",
+    "pack": {
+      "slug": "finance-invoicing",
+      "version": "1.2.0",
+      "name": "Finance and invoicing"
+    },
+    "ops": [
+      {
+        "applySeq": 1,
+        "seq": 0,
+        "kind": "group.create",
+        "target": {
+          "name": "Finance"
+        },
+        "status": "applied",
+        "loosens": false
+      },
+      {
+        "applySeq": 1,
+        "seq": 1,
+        "kind": "connector.enable",
+        "target": {
+          "slug": "stripe",
+          "resourceId": "res_svc_stripe"
+        },
+        "status": "applied",
+        "loosens": false
+      },
+      {
+        "applySeq": 1,
+        "seq": 2,
+        "kind": "connector.prompt",
+        "target": {
+          "slug": "stripe"
+        },
+        "status": "noop",
+        "loosens": false
+      },
+      {
+        "applySeq": 1,
+        "seq": 3,
+        "kind": "resource.enable",
+        "target": {
+          "resourceId": "res_skill"
+        },
+        "status": "applied",
+        "loosens": false
+      },
+      {
+        "applySeq": 1,
+        "seq": 4,
+        "kind": "resource.enable",
+        "target": {
+          "resourceId": "res_bundle"
+        },
+        "status": "applied",
+        "loosens": false
+      },
+      {
+        "applySeq": 1,
+        "seq": 5,
+        "kind": "resource.assign",
+        "target": {
+          "subject": "ug:Finance",
+          "resourceId": "res_skill"
+        },
+        "status": "applied",
+        "loosens": false
+      },
+      {
+        "applySeq": 1,
+        "seq": 6,
+        "kind": "risk.cell",
+        "target": {
+          "risk": "write",
+          "service": "stripe"
+        },
+        "status": "applied",
+        "loosens": false
+      },
+      {
+        "applySeq": 1,
+        "seq": 7,
+        "kind": "risk.cell",
+        "target": {
+          "risk": "read",
+          "service": "stripe"
+        },
+        "status": "applied",
+        "loosens": false
+      },
+      {
+        "applySeq": 1,
+        "seq": 8,
+        "kind": "risk.override",
+        "target": {
+          "tool": "create_refund",
+          "service": "stripe"
+        },
+        "status": "applied",
+        "loosens": false
+      },
+      {
+        "applySeq": 1,
+        "seq": 9,
+        "kind": "workflow.create",
+        "target": {
+          "key": "invoice-check"
+        },
+        "status": "applied",
+        "loosens": false
+      },
+      {
+        "applySeq": 1,
+        "seq": 10,
+        "kind": "sync_profile.upsert",
+        "target": {
+          "name": "finance-invoicing"
+        },
+        "status": "applied",
+        "loosens": false
+      }
+    ]
+  }
+}

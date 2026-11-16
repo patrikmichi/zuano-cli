@@ -1,0 +1,49 @@
+{
+  "connectRequired": [
+    {
+      "reason": "Needed by: invoice-reconcile",
+      "scope": "personal",
+      "slug": "stripe"
+    }
+  ],
+  "profiles": [
+    {
+      "bundles": [
+        {
+          "channel": "stable",
+          "name": "finance-toolkit",
+          "version": "1.4.0"
+        }
+      ],
+      "id": "spf_FIXTURE",
+      "name": "finance-invoicing",
+      "pack": {
+        "slug": "finance-invoicing",
+        "version": "1.2.0"
+      },
+      "rules": [
+        {
+          "agents": [
+            "all"
+          ],
+          "alwaysApply": true,
+          "body": "Amounts are in EUR.",
+          "description": "Never send documents without a human.",
+          "globs": null,
+          "name": "money-safety",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "skills": [
+        {
+          "name": "invoice-reconcile",
+          "resourceId": "res_skill",
+          "version": "2.1.0",
+          "versionId": "rev_skill"
+        }
+      ],
+      "source": "pack"
+    }
+  ],
+  "revision": 5
+}

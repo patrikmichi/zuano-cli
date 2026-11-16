@@ -1,0 +1,260 @@
+{
+  "credentialPrompts": [
+    {
+      "authType": "api_key",
+      "category": "Payments",
+      "cliCommand": "zuano connect stripe",
+      "connectUrl": "https://app.zuano.ai/settings/connections?connect=stripe",
+      "docsUrl": "https://docs.stripe.com/api",
+      "fields": [
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "label": "Restricted secret key",
+          "secret": true
+        }
+      ],
+      "managedAppAvailable": false,
+      "name": "Stripe",
+      "neededBy": [
+        "invoice-reconcile"
+      ],
+      "required": true,
+      "scope": "org",
+      "slug": "stripe",
+      "status": "connected"
+    }
+  ],
+  "expiresAt": "2026-01-01T00:00:00.000Z",
+  "mode": "install",
+  "ops": [
+    {
+      "after": {
+        "exists": true
+      },
+      "before": null,
+      "kind": "group.create",
+      "loosens": false,
+      "seq": 0,
+      "status": "apply",
+      "target": {
+        "name": "Finance"
+      },
+      "targetKey": "group.create:name=Finance"
+    },
+    {
+      "after": {
+        "enabled": true
+      },
+      "before": null,
+      "kind": "connector.enable",
+      "loosens": false,
+      "seq": 1,
+      "status": "apply",
+      "target": {
+        "resourceId": "res_svc_stripe",
+        "slug": "stripe"
+      },
+      "targetKey": "connector.enable:resourceId=res_svc_stripe,slug=stripe"
+    },
+    {
+      "after": {
+        "authType": "api_key",
+        "required": true,
+        "scope": "org"
+      },
+      "before": null,
+      "kind": "connector.prompt",
+      "loosens": false,
+      "seq": 2,
+      "status": "noop",
+      "target": {
+        "slug": "stripe"
+      },
+      "targetKey": "connector.prompt:slug=stripe"
+    },
+    {
+      "after": {
+        "enabled": true
+      },
+      "before": null,
+      "kind": "resource.enable",
+      "label": "invoice-reconcile",
+      "loosens": false,
+      "seq": 3,
+      "status": "apply",
+      "target": {
+        "resourceId": "res_skill"
+      },
+      "targetKey": "resource.enable:resourceId=res_skill"
+    },
+    {
+      "after": {
+        "enabled": true
+      },
+      "before": null,
+      "kind": "resource.enable",
+      "label": "finance-toolkit",
+      "loosens": false,
+      "seq": 4,
+      "status": "apply",
+      "target": {
+        "resourceId": "res_bundle"
+      },
+      "targetKey": "resource.enable:resourceId=res_bundle"
+    },
+    {
+      "after": {
+        "channel": null,
+        "versionPin": "rev_skill"
+      },
+      "before": null,
+      "kind": "resource.assign",
+      "label": "invoice-reconcile",
+      "loosens": false,
+      "seq": 5,
+      "status": "apply",
+      "target": {
+        "resourceId": "res_skill",
+        "subject": "ug:Finance"
+      },
+      "targetKey": "resource.assign:resourceId=res_skill,subject=ug:Finance"
+    },
+    {
+      "after": {
+        "mode": "approval",
+        "peopleRequireApproval": false
+      },
+      "before": null,
+      "kind": "risk.cell",
+      "loosens": false,
+      "seq": 6,
+      "status": "apply",
+      "target": {
+        "risk": "write",
+        "service": "stripe"
+      },
+      "targetKey": "risk.cell:risk=write,service=stripe"
+    },
+    {
+      "after": {
+        "mode": "allowed",
+        "peopleRequireApproval": false
+      },
+      "before": null,
+      "kind": "risk.cell",
+      "loosens": false,
+      "seq": 7,
+      "status": "apply",
+      "target": {
+        "risk": "read",
+        "service": "stripe"
+      },
+      "targetKey": "risk.cell:risk=read,service=stripe"
+    },
+    {
+      "after": {
+        "mode": "approval",
+        "note": null,
+        "peopleRequireApproval": true,
+        "predicate": {
+          "op": "gt",
+          "param": "amount",
+          "value": 1000
+        }
+      },
+      "before": null,
+      "kind": "risk.override",
+      "loosens": false,
+      "seq": 8,
+      "status": "apply",
+      "target": {
+        "service": "stripe",
+        "tool": "create_refund"
+      },
+      "targetKey": "risk.override:service=stripe,tool=create_refund"
+    },
+    {
+      "after": {
+        "params": {
+          "watch_domain": "acme.com"
+        },
+        "resourceId": "res_wf",
+        "version": "1.1.0"
+      },
+      "before": null,
+      "kind": "workflow.create",
+      "label": "invoice-check",
+      "loosens": false,
+      "seq": 9,
+      "status": "apply",
+      "target": {
+        "key": "invoice-check"
+      },
+      "targetKey": "workflow.create:key=invoice-check"
+    },
+    {
+      "after": {
+        "audience": {
+          "kind": "org"
+        },
+        "bundles": [
+          {
+            "name": "finance-toolkit",
+            "resourceId": "res_bundle",
+            "versionId": "rev_bundle"
+          }
+        ],
+        "rules": [
+          {
+            "agents": [
+              "all"
+            ],
+            "alwaysApply": true,
+            "body": "Amounts are in EUR.",
+            "description": "Never send documents without a human.",
+            "globs": null,
+            "name": "money-safety",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "skills": [
+          {
+            "name": "invoice-reconcile",
+            "resourceId": "res_skill",
+            "versionId": "rev_skill"
+          }
+        ]
+      },
+      "before": null,
+      "kind": "sync_profile.upsert",
+      "loosens": false,
+      "seq": 10,
+      "status": "apply",
+      "target": {
+        "name": "finance-invoicing"
+      },
+      "targetKey": "sync_profile.upsert:name=finance-invoicing"
+    }
+  ],
+  "pack": {
+    "name": "Finance and invoicing",
+    "slug": "finance-invoicing",
+    "version": "1.2.0"
+  },
+  "params": {
+    "approval_threshold": 1000,
+    "currency": "EUR",
+    "finance_group": {
+      "create": "Finance"
+    }
+  },
+  "planHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "planId": "ppl_FIXTURE",
+  "summary": {
+    "apply": 10,
+    "conflict": 0,
+    "loosening": 0,
+    "noop": 1,
+    "skipped": 0
+  }
+}

@@ -160,6 +160,17 @@ func fetchPackPlan(ctx context.Context, c *client.Client, path string, body any)
 	return &plan, r.Body, nil
 }
 
+// packPlanRequest is the body of a request for a plan. A version nobody named
+// is left out so the gateway takes the newest stable one: an empty version
+// would be looked for by that name.
+func packPlanRequest(version string, params map[string]any, mode string) map[string]any {
+	body := map[string]any{"params": params, "mode": mode}
+	if version != "" {
+		body["version"] = version
+	}
+	return body
+}
+
 func packPath(slug string, rest ...string) string {
 	return strings.Join(append([]string{"/api/packs", url.PathEscape(slug)}, rest...), "/")
 }
@@ -384,7 +395,7 @@ func packPlanCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			plan, raw, err := fetchPackPlan(cmd.Context(), c, packPath(ref.slug, "plans"), map[string]any{"version": ref.version, "params": params, "mode": "install"})
+			plan, raw, err := fetchPackPlan(cmd.Context(), c, packPath(ref.slug, "plans"), packPlanRequest(ref.version, params, "install"))
 			if err != nil {
 				return err
 			}
@@ -538,7 +549,7 @@ func packInstallCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			plan, raw, err := fetchPackPlan(cmd.Context(), c, packPath(ref.slug, "plans"), map[string]any{"version": ref.version, "params": params, "mode": "install"})
+			plan, raw, err := fetchPackPlan(cmd.Context(), c, packPath(ref.slug, "plans"), packPlanRequest(ref.version, params, "install"))
 			if err != nil {
 				return err
 			}
@@ -572,7 +583,7 @@ func packUpdateCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			plan, raw, err := fetchPackPlan(cmd.Context(), c, packPath(ref.slug, "plans"), map[string]any{"version": toVersion, "params": params, "mode": "update"})
+			plan, raw, err := fetchPackPlan(cmd.Context(), c, packPath(ref.slug, "plans"), packPlanRequest(toVersion, params, "update"))
 			if err != nil {
 				return err
 			}

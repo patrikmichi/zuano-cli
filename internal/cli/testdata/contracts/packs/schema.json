@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "required": [
+    "format",
+    "name",
+    "version",
+    "displayName",
+    "summary",
+    "category"
+  ],
+  "properties": [
+    "approvals",
+    "basedOn",
+    "bundles",
+    "category",
+    "connectors",
+    "displayName",
+    "format",
+    "groups",
+    "icon",
+    "locales",
+    "name",
+    "params",
+    "risk",
+    "rules",
+    "skills",
+    "summary",
+    "version",
+    "workflows"
+  ]
+}

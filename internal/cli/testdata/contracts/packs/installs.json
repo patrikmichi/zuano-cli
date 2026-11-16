@@ -1,0 +1,19 @@
+{
+  "installs": [
+    {
+      "id": "pki_FIXTURE",
+      "status": "installed",
+      "channel": "stable",
+      "error": null,
+      "installedBy": "usr_ct",
+      "installedVia": "dashboard",
+      "installedAt": "2026-01-01T00:00:00.000Z",
+      "jobId": "job_FIXTURE",
+      "pack": {
+        "slug": "finance-invoicing",
+        "version": "1.2.0",
+        "name": "Finance and invoicing"
+      }
+    }
+  ]
+}

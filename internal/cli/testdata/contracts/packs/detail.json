@@ -1,0 +1,63 @@
+{
+  "pack": {
+    "slug": "finance-invoicing",
+    "displayName": "Finance and invoicing",
+    "summary": "Invoice, reconcile and chase payments with approvals.",
+    "category": "finance",
+    "source": "platform",
+    "version": "1.2.0",
+    "connectors": [
+      {
+        "slug": "stripe",
+        "required": true,
+        "credentialScope": "org",
+        "why": "Payments.",
+        "alternatives": []
+      }
+    ],
+    "installed": false,
+    "install": null,
+    "fit": "full",
+    "missing": [],
+    "readme": null,
+    "versions": [
+      "1.2.0"
+    ],
+    "params": [
+      {
+        "key": "currency",
+        "label": "Currency",
+        "type": "enum",
+        "options": [
+          "EUR",
+          "CZK"
+        ],
+        "default": "EUR"
+      },
+      {
+        "key": "approval_threshold",
+        "label": "Threshold",
+        "type": "number",
+        "min": 0,
+        "default": 1000
+      },
+      {
+        "key": "finance_group",
+        "label": "Approver group",
+        "type": "group",
+        "default": {
+          "create": "Finance"
+        }
+      }
+    ],
+    "skills": [
+      "invoice-reconcile"
+    ],
+    "bundles": [
+      "finance-toolkit"
+    ],
+    "rules": [
+      "money-safety"
+    ]
+  }
+}

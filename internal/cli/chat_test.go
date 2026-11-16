@@ -2,30 +2,52 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-const routeJSON = `{"id":"rte_1","name":"Finance writes","priority":10,"match":{"services":["stripe","fakturoid"],"tools":["create_*"],"risks":["write","outward"],"sources":["agent"],"routeHints":["finance"]},
-"targets":[{"kind":"dm_requester"},{"kind":"dm_group","groupId":"grp_fin"},{"kind":"channel","installationId":"chi_1","conversationId":"C1","name":"#finance"}],
-"restrictDeciders":true,"fourEyes":true,"detail":"keys","reminders":[0.5]}`
+// chatFixture reads a response document of the chat and approval-route
+// routes. The gateway ships no fixtures for them; these follow the response
+// schemas of its OpenAPI document.
+func chatFixture(t *testing.T, name string) string {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("testdata", "chat", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw)
+}
+
+// firstRoute is the stored route of the approval-routes fixture, the body of
+// the route read.
+func firstRoute(t *testing.T) string {
+	t.Helper()
+	var doc struct {
+		Routes []json.RawMessage `json:"routes"`
+	}
+	if err := json.Unmarshal([]byte(chatFixture(t, "approval-routes.json")), &doc); err != nil || len(doc.Routes) == 0 {
+		t.Fatalf("fixture: %v", err)
+	}
+	return string(doc.Routes[0])
+}
 
 func TestApprovalsRoutes(t *testing.T) {
 	var testBody map[string]any
 	ps := packGateway(t, routeMap{
-		"GET /api/admin/approval-routes":       jsonReply(200, `{"routes":[`+routeJSON+`,{"id":"rte_d","name":"Default","priority":999,"default":true,"match":{},"targets":[{"kind":"dm_requester"}]}]}`),
-		"GET /api/admin/approval-routes/rte_1": jsonReply(200, `{"route":`+routeJSON+`}`),
-		"POST /api/admin/approval-routes/test": jsonReply(200, `{"route":{"name":"Finance writes","detail":"keys"},
-		 "recipients":[{"kind":"dm_requester","name":"Ann","channel":"slack","status":"mapped"},{"kind":"dm_group","name":"Bob","channel":"","status":"unmapped"}],
-		 "channels":[{"installation":"chi_1","name":"#finance","warning":"public channel: detail limited"}]}`),
+		"GET /api/admin/approval-routes":       jsonReply(200, chatFixture(t, "approval-routes.json")),
+		"GET /api/admin/approval-routes/rte_1": jsonReply(200, `{"route":`+firstRoute(t)+`}`),
+		"POST /api/admin/approval-routes/test": jsonReply(200, chatFixture(t, "approval-route-test.json")),
 	})
 	out, err := runCommand(t, ApprovalsCmd(), "routes", "list")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"rte_1", "Finance writes", "stripe,fakturoid", "write,outward", "dm_requester, dm_group grp_fin, channel #finance", "Default (default)", "any"} {
+	for _, want := range []string{"rte_1", "Finance writes", "stripe,fakturoid", "write,outward", "dm_requester, dm_group grp_fin, channel C1 (chi_1)", "Default (default)", "any"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("list lacks %q:\n%s", want, out)
 		}
@@ -47,7 +69,7 @@ func TestApprovalsRoutes(t *testing.T) {
 	if testBody["service"] != "stripe" || testBody["tool"] != "create_refund" || testBody["risk"] != "write" || testBody["source"] != "agent" || testBody["requester"] != "ann@example.com" {
 		t.Errorf("body = %v", testBody)
 	}
-	for _, want := range []string{`Matches route "Finance writes"`, "dm_requester Ann via slack: mapped", "dm_group Bob via -: unmapped", "channel #finance (chi_1): public channel", "Nothing was sent."} {
+	for _, want := range []string{`Matches route "Finance writes" (detail keys)`, "requester ann@acme.test: mapped", "group bob@acme.test (group grp_fin): unmapped", "channel C1 (chi_1)", "groups without a reachable member: grp_empty", "Nothing was sent."} {
 		if !strings.Contains(out, want) {
 			t.Errorf("test lacks %q:\n%s", want, out)
 		}
@@ -57,9 +79,26 @@ func TestApprovalsRoutes(t *testing.T) {
 			t.Errorf("%v: %q %v", args, out, err)
 		}
 	}
-	for _, args := range [][]string{{"test"}, {"test", "--service", "a", "--tool", "b", "--risk", "bogus"}} {
+	for _, args := range [][]string{{"test"}, {"test", "--service", "a", "--tool", "b", "--risk", "bogus"}, {"test", "--service", "a", "--tool", "b", "--risk", "read", "--source", "automation"}} {
 		if _, err := runCommand(t, ApprovalsCmd(), append([]string{"routes"}, args...)...); err == nil {
 			t.Errorf("%v accepted", args)
+		}
+	}
+}
+
+func TestApprovalsRoutes_PlanAndQuotaRefusalsEndWithTheirRegisteredStatus(t *testing.T) {
+	for name, tc := range map[string]struct {
+		status int
+		body   string
+		want   int
+	}{
+		"plan":  {402, `{"error":"plan_required","message":"approval routes need a higher plan","upgrade_url":"https://gateway.example/settings/billing/plans"}`, 30},
+		"quota": {429, `{"error":"quota_exceeded","metric":"api_requests","limit":1000,"resets_at":"2026-11-17T00:00:00Z"}`, 31},
+		"rate":  {429, `{"error":"rate_limited","message":"slow down","retry_after":3}`, 13},
+	} {
+		refusingGateway(t, tc.status, nil, tc.body)
+		if _, err := runCommand(t, ApprovalsCmd(), "routes", "list"); exitCodeOf(err) != tc.want {
+			t.Errorf("%s: exit %d (%v), want %d", name, exitCodeOf(err), err, tc.want)
 		}
 	}
 }
@@ -74,12 +113,12 @@ func TestApprovalsRoutes_AgentSessionsMayRead(t *testing.T) {
 
 func TestApprovalsShow_PrintsWhereItWasSent(t *testing.T) {
 	packGateway(t, routeMap{"GET /api/approvals/apr_1": jsonReply(200, `{"approval":{"approval_id":"apr_1","status":"pending","service":"stripe","tool":"create_refund","risk":"write",
-	 "notified":[{"channel":"slack","target":"#finance","state":"delivered"},{"channel":"email","state":""}]},"args_preview":null}`)})
+	 "notified":[{"channel":"slack","target":"#finance","state":"delivered"},{"channel":"push","state":"sent"},{"channel":"email","state":""}]},"args_preview":null}`)})
 	out, err := runCommand(t, ApprovalsCmd(), "show", "apr_1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Sent to:   slack #finance: delivered", "           email: -"} {
+	for _, want := range []string{"Sent to:   slack #finance: delivered", "           push: sent", "           email: -"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("show lacks %q:\n%s", want, out)
 		}
@@ -90,23 +129,26 @@ func chatRoutes(installs, identities string) routeMap {
 	return routeMap{
 		"GET /api/me/chat-identities":       jsonReply(200, `{"identities":`+identities+`}`),
 		"GET /api/admin/chat/installations": jsonReply(200, `{"installations":`+installs+`}`),
-		"GET /api/admin/chat/reachability":  jsonReply(200, `{"eligible":5,"reachable":3}`),
+		"GET /api/admin/chat/reachability":  jsonReply(200, `{"approvers":[],"reachable":3,"total":5}`),
 	}
 }
 
 func TestChatStatus(t *testing.T) {
-	packGateway(t, chatRoutes(`[{"id":"chi_1","provider":"slack","workspace":"Acme","status":"active"},{"id":"chi_2","provider":"teams","workspace":"Acme Tenant","status":"consent_pending","detail":"admin consent needed"}]`,
-		`[{"id":"cid_1","provider":"slack","workspace":"Acme","name":"ann","dmOptOut":true}]`))
+	packGateway(t, routeMap{
+		"GET /api/me/chat-identities":       jsonReply(200, chatFixture(t, "chat-identities.json")),
+		"GET /api/admin/chat/installations": jsonReply(200, chatFixture(t, "chat-installations.json")),
+		"GET /api/admin/chat/reachability":  jsonReply(200, chatFixture(t, "chat-reachability.json")),
+	})
 	out, err := runCommand(t, ChatCmd(), "status")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Slack", "Acme", "Microsoft Teams", "admin consent needed", "3 of 5 approvers can be reached", "Linked: Slack as ann in Acme (direct messages off)"} {
+	for _, want := range []string{"Slack", "Acme", "Microsoft Teams", "0a1b2c3d-0000-4000-8000-123456789abc", "admin consent needed", "3 of 5 approvers can be reached", "Linked: Slack as U0ANN in Acme (direct messages off)"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("status lacks %q:\n%s", want, out)
 		}
 	}
-	if out, err := runCommand(t, ChatCmd(), "status", "--json"); err != nil || !strings.Contains(out, `"reachability":{"eligible":5`) {
+	if out, err := runCommand(t, ChatCmd(), "status", "--json"); err != nil || !strings.Contains(out, `"reachability":{"total":5,"reachable":3}`) {
 		t.Errorf("json: %q %v", out, err)
 	}
 }

@@ -18,24 +18,25 @@ type approvalRoute struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Priority int    `json:"priority"`
-	Default  bool   `json:"default"`
+	Default  bool   `json:"isDefault"`
+	Enabled  bool   `json:"enabled"`
 	Match    struct {
-		Services   []string `json:"services"`
-		Tools      []string `json:"tools"`
-		Risks      []string `json:"risks"`
-		Sources    []string `json:"sources"`
-		RouteHints []string `json:"routeHints"`
+		Services        []string `json:"services"`
+		Tools           []string `json:"tools"`
+		Risks           []string `json:"risks"`
+		Sources         []string `json:"sources"`
+		RouteHints      []string `json:"routeHints"`
+		RequesterGroups []string `json:"requesterGroups"`
 	} `json:"match"`
 	Targets []struct {
 		Kind         string `json:"kind"`
 		GroupID      string `json:"groupId"`
 		Installation string `json:"installationId"`
 		Conversation string `json:"conversationId"`
-		Name         string `json:"name"`
 	} `json:"targets"`
 	RestrictDeciders bool      `json:"restrictDeciders"`
 	FourEyes         bool      `json:"fourEyes"`
-	Detail           string    `json:"detail"`
+	Detail           *string   `json:"detail"`
 	Reminders        []float64 `json:"reminders"`
 }
 
@@ -50,8 +51,8 @@ func (r approvalRoute) targetsText() string {
 	var parts []string
 	for _, t := range r.Targets {
 		switch {
-		case t.Kind == "channel" && t.Name != "":
-			parts = append(parts, "channel "+t.Name)
+		case t.Kind == "channel" && t.Conversation != "":
+			parts = append(parts, "channel "+t.Conversation+" ("+t.Installation+")")
 		case t.GroupID != "":
 			parts = append(parts, t.Kind+" "+t.GroupID)
 		default:
@@ -121,7 +122,7 @@ func printRoute(out io.Writer, r approvalRoute) {
 		fmt.Fprintf(out, "Hints:     %s\n", listText(r.Match.RouteHints))
 	}
 	fmt.Fprintf(out, "Sent to:   %s\n", r.targetsText())
-	fmt.Fprintf(out, "Detail:    %s\n", orDash(textsafe.Clean(r.Detail)))
+	fmt.Fprintf(out, "Detail:    %s\n", orDash(textsafe.Clean(deref(r.Detail))))
 	fmt.Fprintf(out, "Deciders:  %s\n", map[bool]string{true: "only the route's groups", false: "any eligible approver"}[r.RestrictDeciders])
 	fmt.Fprintf(out, "Four eyes: %s\n", map[bool]string{true: "the requester cannot decide their own call", false: "off"}[r.FourEyes])
 }
@@ -160,7 +161,7 @@ func routesTestCmd() *cobra.Command {
 	var f approvalFlags
 	var service, tool, risk, source, requester string
 	cmd := &cobra.Command{
-		Use:   "test --service S --tool T --risk R [--source agent|automation|cli|run_code] [--requester EMAIL]",
+		Use:   "test --service S --tool T --risk R [--source agent|workflow|cli] [--requester EMAIL]",
 		Short: "Show which route a call would take and who would be asked, without sending anything",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -171,6 +172,11 @@ func routesTestCmd() *cobra.Command {
 			case "read", "write", "destructive", "outward":
 			default:
 				return fmt.Errorf("invalid --risk %q: use read, write, destructive or outward", textsafe.Clean(risk))
+			}
+			switch source {
+			case "", "agent", "workflow", "cli":
+			default:
+				return fmt.Errorf("invalid --source %q: use agent, workflow or cli", textsafe.Clean(source))
 			}
 			c, err := approvalsClient(f.gatewayURL)
 			if err != nil {
@@ -184,18 +190,21 @@ func routesTestCmd() *cobra.Command {
 				body["requester"] = requester
 			}
 			var doc struct {
-				Route      approvalRoute `json:"route"`
+				Route struct {
+					Name string `json:"name"`
+				} `json:"route"`
+				Detail     *string `json:"detail"`
 				Recipients []struct {
-					Kind    string `json:"kind"`
-					Name    string `json:"name"`
-					Channel string `json:"channel"`
+					Email   string `json:"email"`
+					Via     string `json:"via"`
+					GroupID string `json:"groupId"`
 					Status  string `json:"status"`
 				} `json:"recipients"`
 				Channels []struct {
-					Installation string `json:"installation"`
-					Name         string `json:"name"`
-					Warning      string `json:"warning"`
+					Installation string `json:"installationId"`
+					Conversation string `json:"conversationId"`
 				} `json:"channels"`
+				DroppedGroups []string `json:"droppedGroups"`
 			}
 			raw, err := gatewayJSON(cmd.Context(), c, http.MethodPost, "/api/admin/approval-routes/test", body, &doc)
 			if err != nil {
@@ -206,16 +215,19 @@ func routesTestCmd() *cobra.Command {
 				printRaw(out, raw)
 				return nil
 			}
-			fmt.Fprintf(out, "Matches route %q (detail %s)\n", textsafe.Clean(doc.Route.Name), orDash(textsafe.Clean(doc.Route.Detail)))
+			fmt.Fprintf(out, "Matches route %q (detail %s)\n", textsafe.Clean(doc.Route.Name), orDash(textsafe.Clean(deref(doc.Detail))))
 			for _, r := range doc.Recipients {
-				fmt.Fprintf(out, "  %s %s via %s: %s\n", textsafe.Clean(r.Kind), textsafe.Clean(r.Name), orDash(textsafe.Clean(r.Channel)), orDash(textsafe.Clean(r.Status)))
+				who := textsafe.Clean(r.Email)
+				if r.GroupID != "" {
+					who += " (group " + textsafe.Clean(r.GroupID) + ")"
+				}
+				fmt.Fprintf(out, "  %s %s: %s\n", orDash(textsafe.Clean(r.Via)), who, orDash(textsafe.Clean(r.Status)))
 			}
 			for _, ch := range doc.Channels {
-				line := fmt.Sprintf("  channel %s (%s)", textsafe.Clean(ch.Name), textsafe.Clean(ch.Installation))
-				if ch.Warning != "" {
-					line += ": " + textsafe.Clean(ch.Warning)
-				}
-				fmt.Fprintln(out, line)
+				fmt.Fprintf(out, "  channel %s (%s)\n", textsafe.Clean(ch.Conversation), textsafe.Clean(ch.Installation))
+			}
+			if len(doc.DroppedGroups) > 0 {
+				fmt.Fprintf(out, "  groups without a reachable member: %s\n", textsafe.Clean(strings.Join(doc.DroppedGroups, ", ")))
 			}
 			fmt.Fprintln(out, "Nothing was sent.")
 			return nil
@@ -225,7 +237,7 @@ func routesTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&service, "service", "", "The call's service")
 	cmd.Flags().StringVar(&tool, "tool", "", "The call's tool")
 	cmd.Flags().StringVar(&risk, "risk", "", "The call's risk: read, write, destructive or outward")
-	cmd.Flags().StringVar(&source, "source", "", "Where the call comes from: agent, automation, cli or run_code")
+	cmd.Flags().StringVar(&source, "source", "", "Where the call comes from: agent (default), workflow or cli")
 	cmd.Flags().StringVar(&requester, "requester", "", "The member who asked (default: you)")
 	return cmd
 }

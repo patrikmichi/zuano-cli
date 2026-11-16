@@ -12,11 +12,11 @@ decides and never edits the routes.
 |---|---|
 | `zuano chat status [--json]` | `GET /api/me/chat-identities`, and for administrators `GET /api/admin/chat/installations` and `/reachability` |
 | `zuano chat link slack\|teams [--tenant ID] [--no-browser]` | none: opens `/api/chat/link/{provider}/start`; `--tenant` (teams only) is the Microsoft Entra tenant to sign in to when the organisation connected more than one, sent as `?tenant=`; without it the gateway uses the first connected tenant, and answers `409` for a tenant the organisation did not connect |
-| `zuano approvals show <id>` | `GET /api/approvals/{id}`; prints where it was sent (`notified`) and how far it got |
+| `zuano approvals show <id>` | `GET /api/approvals/{id}`; prints where it was sent (`notified`: inbox, email, push, slack or teams) and how far it got |
 | `zuano approvals routes list\|show <id>` | `GET /api/admin/approval-routes[/{id}]` |
-| `zuano approvals routes test --service S --tool T --risk R [--source agent\|automation\|cli\|run_code] [--requester EMAIL]` | `POST /api/admin/approval-routes/test` |
+| `zuano approvals routes test --service S --tool T --risk R [--source agent\|workflow\|cli] [--requester EMAIL]` | `POST /api/admin/approval-routes/test` |
 
-`status` lists the chat apps (workspace, state), how many approvers can be
+`status` lists the chat apps (workspace or tenant, state), how many approvers can be
 reached in chat, and your own links; a member who is not an administrator sees
 only their links. `link` opens the page that proves you own both accounts: you
 sign in to the chat app, then confirm with your passkey. `routes test` shows

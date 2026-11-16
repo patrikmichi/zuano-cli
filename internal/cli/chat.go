@@ -24,23 +24,32 @@ var entraTenant = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[
 var chatProviders = map[string]string{"slack": "Slack", "teams": "Microsoft Teams"}
 
 type chatInstallation struct {
-	ID        string `json:"id"`
-	Provider  string `json:"provider"`
-	Workspace string `json:"workspace"`
-	Status    string `json:"status"`
-	Detail    string `json:"detail"`
+	ID          string  `json:"id"`
+	Provider    string  `json:"provider"`
+	TenantID    string  `json:"tenantId"`
+	DisplayName *string `json:"displayName"`
+	Status      string  `json:"status"`
+	Detail      *string `json:"statusDetail"`
+}
+
+// label names the workspace or tenant: its display name, else its tenant id.
+func (i chatInstallation) label() string {
+	if i.DisplayName != nil && *i.DisplayName != "" {
+		return textsafe.Clean(*i.DisplayName)
+	}
+	return textsafe.Clean(i.TenantID)
 }
 
 type chatIdentity struct {
-	ID        string `json:"id"`
-	Provider  string `json:"provider"`
-	Workspace string `json:"workspace"`
-	Name      string `json:"name"`
-	DMOptOut  bool   `json:"dmOptOut"`
+	ID             string  `json:"id"`
+	Provider       string  `json:"provider"`
+	Workspace      *string `json:"workspace"`
+	ExternalUserID string  `json:"externalUserId"`
+	DMOptOut       bool    `json:"dmOptOut"`
 }
 
 type chatReachability struct {
-	Eligible  int `json:"eligible"`
+	Total     int `json:"total"`
 	Reachable int `json:"reachable"`
 }
 
@@ -105,12 +114,12 @@ func chatStatusCmd() *cobra.Command {
 				tw := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
 				fmt.Fprintln(tw, "APP\tWORKSPACE\tSTATUS\tDETAIL")
 				for _, i := range insts {
-					fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", chatName(i.Provider), textsafe.Clean(i.Workspace), textsafe.Clean(i.Status), orDash(textsafe.Clean(i.Detail)))
+					fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", chatName(i.Provider), i.label(), textsafe.Clean(i.Status), orDash(textsafe.Clean(deref(i.Detail))))
 				}
 				_ = tw.Flush()
 			}
 			if reach != nil {
-				fmt.Fprintf(out, "%d of %d approvers can be reached in chat.\n", reach.Reachable, reach.Eligible)
+				fmt.Fprintf(out, "%d of %d approvers can be reached in chat.\n", reach.Reachable, reach.Total)
 			}
 			if len(ids) == 0 {
 				fmt.Fprintf(out, "You have not linked a chat account. Link one with `%s`.\n", brand.Cmd("chat link slack"))
@@ -120,7 +129,7 @@ func chatStatusCmd() *cobra.Command {
 				if id.DMOptOut {
 					note = " (direct messages off)"
 				}
-				fmt.Fprintf(out, "Linked: %s as %s in %s%s\n", chatName(id.Provider), textsafe.Clean(id.Name), textsafe.Clean(id.Workspace), note)
+				fmt.Fprintf(out, "Linked: %s as %s in %s%s\n", chatName(id.Provider), textsafe.Clean(id.ExternalUserID), orDash(textsafe.Clean(deref(id.Workspace))), note)
 			}
 			return nil
 		},

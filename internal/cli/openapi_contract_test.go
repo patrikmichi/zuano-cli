@@ -251,6 +251,14 @@ var builderInvocations = []struct {
 	{name: "approvals trusts list", cmd: ApprovalsCmd, args: []string{"trusts", "list", "--org"}},
 	{name: "approvals trusts revoke", cmd: ApprovalsCmd, args: []string{"trusts", "revoke", "sgr_1"}},
 	{name: "approvals trusts revoke-all", cmd: ApprovalsCmd, args: []string{"trusts", "revoke-all", "--org", "--yes"}},
+	{name: "approvals routes list", cmd: ApprovalsCmd, args: []string{"routes", "list"}},
+	{name: "approvals routes show", cmd: ApprovalsCmd, args: []string{"routes", "show", "apr_1"}},
+	{name: "approvals routes test", cmd: ApprovalsCmd, args: []string{"routes", "test", "--service", "stripe", "--tool", "refund", "--risk", "outward", "--source", "agent", "--requester", "a@acme.test"}},
+	{name: "chat status", cmd: ChatCmd, args: []string{"status"}},
+	{name: "billing status", cmd: BillingCmd, args: []string{"status"}},
+	{name: "billing usage", cmd: BillingCmd, args: []string{"usage", "--meter", "tool_calls", "--by", "service"}},
+	{name: "billing credits", cmd: BillingCmd, args: []string{"credits"}},
+	{name: "usage", cmd: UsageCmd},
 }
 
 func TestContract_BuilderRequestsMatchTheOpenAPI(t *testing.T) {

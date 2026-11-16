@@ -147,6 +147,11 @@ func TestPolicyValidate(t *testing.T) {
 	if exitCodeOf(err) != 40 || !strings.Contains(out, "policy.yaml:4: unknown service nope") {
 		t.Errorf("online invalid: exit %d %q %v", exitCodeOf(err), out, err)
 	}
+	policyGateway(t, routeMap{"POST /api/policy/validate": jsonReply(422, `{"error":"policy_invalid","errors":[{"code":"policy_unknown_category","message":"not a data category","file":"policy.yaml","line":6}]}`)})
+	out, err = runCommand(t, PolicyCmd(), "validate", "--dir", good)
+	if exitCodeOf(err) != 40 || !strings.Contains(out, "policy.yaml:6: not a data category") {
+		t.Errorf("unknown category: exit %d %q %v", exitCodeOf(err), out, err)
+	}
 	SetOffline(true)
 	t.Cleanup(func() { SetOffline(false) })
 	if out, err := runCommand(t, PolicyCmd(), "validate", "--dir", good); err != nil || !strings.Contains(out, "match the schema") {

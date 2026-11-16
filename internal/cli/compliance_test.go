@@ -467,6 +467,23 @@ func TestComplianceVerifyOffline(t *testing.T) {
 	}
 }
 
+// The bundles in the evidence package's testdata come from the gateway's own writer.
+func TestComplianceVerifyTheGatewaysFixtureBundle(t *testing.T) {
+	dir := filepath.Join("..", "evidence", "testdata")
+	keys := filepath.Join(dir, "evidence-keys.json")
+	out, err := runCommand(t, ComplianceCmd(), "verify", filepath.Join(dir, "bundle.zip"), "--keys", keys)
+	if err != nil || !strings.Contains(out, "Valid: ") {
+		t.Fatalf("bundle: %q %v", out, err)
+	}
+	if _, err := runCommand(t, ComplianceCmd(), "verify", filepath.Join(dir, "tampered.zip"), "--keys", keys); exitCodeOf(err) != 45 {
+		t.Errorf("tampered: exit %d", exitCodeOf(err))
+	}
+	other := writeKeys(t, map[string]any{"keys": []signing.Key{signingtest.New("fixture-evidence").Key}})
+	if _, err := runCommand(t, ComplianceCmd(), "verify", filepath.Join(dir, "bundle.zip"), "--keys", other); exitCodeOf(err) != 45 {
+		t.Errorf("different key: exit %d", exitCodeOf(err))
+	}
+}
+
 func TestComplianceVerifyWarnsAboutHoursWithoutACheckpoint(t *testing.T) {
 	b := evidencetest.New(t, evidencetest.Options{SkipCheckpoint: map[int]bool{2: true}})
 	keys := writeKeys(t, map[string]any{"evidence": []signing.Key{b.Evidence.Key}})

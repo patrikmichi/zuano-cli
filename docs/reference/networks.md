@@ -19,6 +19,7 @@ sent and `--gateway-url` names the gateway.
 | `zuano networks delete <name> [--yes]` | delete it; its bindings are removed and its agents revoked |
 | `zuano networks token create <name> [--uses N] [--ttl D] [--require-approval]` | mint an enrollment token (1 to 10 uses, up to 24h) and print it with the install commands; the token is shown once |
 | `zuano networks token list <name>` | the enrollment tokens that can still be used: id, created, expires, uses left, whether new agents need approval; never the token itself |
+| `zuano networks token revoke <name> <token-id> [--yes]` | `DELETE /api/admin/networks/{id}/enrollment-tokens/{tid}`: revoke a token nobody has used up; a used-up, expired or unknown token is `404` |
 | `zuano networks agents <name>` | a network's connector agents with their live status |
 | `zuano networks approve <name> <agent> [--reason R]` | let a pending agent in |
 | `zuano networks rotate <name> <agent> [--reason R]` | have an agent replace its key |

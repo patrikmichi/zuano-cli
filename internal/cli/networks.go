@@ -294,7 +294,47 @@ ZUANO_AGENT is set. A single-use token lasts an hour by default; a token with
 	create.Flags().IntVar(&uses, "uses", 1, "How many agents may enroll with it (1 to 10)")
 	create.Flags().DurationVar(&ttl, "ttl", time.Hour, "How long it stays valid (up to 24h)")
 	create.Flags().BoolVar(&requireApproval, "require-approval", false, "New agents wait for approval (the default when --uses is above 1)")
-	cmd.AddCommand(create, networksTokenListCmd())
+	cmd.AddCommand(create, networksTokenListCmd(), networksTokenRevokeCmd())
+	return cmd
+}
+
+func networksTokenRevokeCmd() *cobra.Command {
+	var f approvalFlags
+	var yes bool
+	cmd := &cobra.Command{
+		Use:   "revoke <name> <token-id>",
+		Short: "Revoke an enrollment token nobody has used up",
+		Long:  "Takes the token's id from `networks token list`. A token already used up or revoked is not found.",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := refuseAgentChange(brand.Cmd("networks token revoke")); err != nil {
+				return err
+			}
+			c, err := approvalsClient(f.gatewayURL)
+			if err != nil {
+				return err
+			}
+			n, err := resolveNetwork(cmd.Context(), c, args[0])
+			if err != nil {
+				return err
+			}
+			if err := confirmOrYes(cmd, yes, fmt.Sprintf("Revoke enrollment token %s of %s?", textsafe.Clean(args[1]), textsafe.Clean(n.Name))); err != nil {
+				return err
+			}
+			raw, err := gatewayWrite(cmd, c, f.jsonOut, http.MethodDelete, networkPath(n, "/enrollment-tokens/", url.PathEscape(args[1])), nil, nil)
+			if err != nil {
+				return err
+			}
+			if f.jsonOut {
+				printRaw(cmd.OutOrStdout(), raw)
+				return nil
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Revoked enrollment token %s.\n", textsafe.Clean(args[1]))
+			return nil
+		},
+	}
+	f.bind(cmd, "Print the response body unchanged")
+	cmd.Flags().BoolVar(&yes, "yes", false, "Revoke without asking")
 	return cmd
 }
 

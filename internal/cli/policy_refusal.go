@@ -33,6 +33,7 @@ var refusalCodes = map[string]int{
 	"a2a_loop":                   exitA2AChainRefused,
 	"a2a_depth_exceeded":         exitA2AChainRefused,
 	"a2a_chain_limit":            exitA2AChainRefused,
+	"a2a_scope_exceeded":         exitA2AChainRefused,
 	"chain_killed":               exitChainKilled,
 	"chain_budget_exhausted":     exitChainBudget,
 	"agent_card_changed":         exitAgentCardChanged,

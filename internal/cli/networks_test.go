@@ -306,11 +306,34 @@ func TestNetworksTestCommandExitStatuses(t *testing.T) {
 	}
 }
 
+func TestNetworksTokenRevoke(t *testing.T) {
+	gw := networksGateway(t, map[string]func(*packServer, http.ResponseWriter, *http.Request){
+		"DELETE /api/admin/networks/net_1/enrollment-tokens/ent_1": jsonReply(200, `{"revoked":true}`),
+		"DELETE /api/admin/networks/net_1/enrollment-tokens/ent_2": jsonReply(404, `{"error":"not_found","message":"Token not found or already used."}`),
+	})
+	if _, err := runCommand(t, NetworksCmd(), "token", "revoke", "dc1", "ent_1"); err == nil {
+		t.Error("revoke without --yes and without a terminal was accepted")
+	}
+	if gw.count("DELETE /api/admin/networks/net_1/enrollment-tokens/ent_1") != 0 {
+		t.Error("an unconfirmed revoke reached the gateway")
+	}
+	out, err := runCommand(t, NetworksCmd(), "token", "revoke", "dc1", "ent_1", "--yes")
+	if err != nil || !strings.Contains(out, "Revoked enrollment token ent_1") {
+		t.Fatalf("revoke: %q %v", out, err)
+	}
+	if out, err = runCommand(t, NetworksCmd(), "token", "revoke", "dc1", "ent_1", "--yes", "--json"); err != nil || !strings.Contains(out, `"revoked"`) {
+		t.Errorf("--json: %q %v", out, err)
+	}
+	if _, err = runCommand(t, NetworksCmd(), "token", "revoke", "dc1", "ent_2", "--yes"); err == nil || !strings.Contains(err.Error(), "already used") {
+		t.Errorf("a used-up token: %v", err)
+	}
+}
+
 func TestNetworksMutationsAreRefusedForAgents(t *testing.T) {
 	networksGateway(t, nil)
 	t.Setenv("ZUANO_AGENT", "1")
 	for _, args := range [][]string{
-		{"create", "x"}, {"delete", "dc1", "--yes"}, {"token", "create", "dc1"}, {"approve", "dc1", "a"}, {"rotate", "dc1", "a"},
+		{"create", "x"}, {"delete", "dc1", "--yes"}, {"token", "create", "dc1"}, {"token", "revoke", "dc1", "ent_1", "--yes"}, {"approve", "dc1", "a"}, {"rotate", "dc1", "a"},
 		{"revoke", "dc1", "a", "--yes"}, {"bind", "x", "--network", "dc1", "--target", "t"}, {"unbind", "x", "--network", "dc1"},
 	} {
 		if _, err := runCommand(t, NetworksCmd(), args...); exitCodeOf(err) != exitDenied {

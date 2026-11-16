@@ -227,7 +227,7 @@ func TestA2ACallExitStatuses(t *testing.T) {
 	for name, want := range map[string]int{
 		"held": 12, "input": 12, "input-nothing": 12, "auth": 1, "working": 0,
 		"http-budget": 52, "http-quota": 31, "http-rate": 13, "http-other": 1,
-		"failed:a2a_loop": 50, "failed:a2a_depth_exceeded": 50, "failed:a2a_chain_limit": 50, "failed:chain_killed": 51,
+		"failed:a2a_loop": 50, "failed:a2a_depth_exceeded": 50, "failed:a2a_chain_limit": 50, "failed:a2a_scope_exceeded": 50, "failed:chain_killed": 51,
 		"failed:chain_budget_exhausted": 52, "failed:agent_card_changed": 53, "failed:a2a_dlp_blocked": 10, "failed:approval_denied": 10,
 		"failed:approval_expired": 11, "failed:identity_suspended": 33, "failed:something_else": 1,
 	} {

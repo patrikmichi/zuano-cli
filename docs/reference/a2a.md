@@ -10,7 +10,7 @@ chain, and can stop the whole chain. `zuano a2a` is the command-line side.
 | `zuano a2a agents show <slug>` | an agent, its endpoint and the skills its pinned card describes |
 | `zuano a2a agents register --card-url <url> [--auth none\|stored\|per-user] [--internal]` | administrators: register an agent from its card; prints the review link |
 | `zuano a2a agents changes <slug>` | changes to a card that wait for review |
-| `zuano a2a agents review <slug>` | opens the page where a card or a change is approved with a passkey |
+| `zuano a2a agents review <slug> [--no-browser]` | opens the page where a card or a change is approved with a passkey |
 | `zuano a2a card <slug> [--live]` | the pinned card (the one an administrator approved), or the card the agent publishes now |
 | `zuano a2a call <slug> --skill <id> --message <text\|@file> [--context id] [--wait s] [--stream]` | send a message through the gateway |
 | `zuano a2a chains list [--mine] [--status S] [--agent A]` | chains, newest first |

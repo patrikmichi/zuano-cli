@@ -18,7 +18,9 @@ apply; members receive the pack's rules, skills and bundles on their next
 | `zuano pack uninstall <pack> [--disable-connectors]` | plan with `mode: uninstall`, then apply |
 | `zuano pack rollback <pack> --to V` | plan with `mode: rollback`, then apply |
 | `zuano pack status [<pack>] [--json]` | `GET /api/packs/installs` |
-| `zuano pack init <dir>`, `validate <dir>`, `publish <dir> [--channel stable\|beta]` | authoring |
+| `zuano pack init <dir>` | write a `pack.yaml` to start from |
+| `zuano pack validate <dir>` | check a pack against the gateway's schema, `POST /api/packs/validate` |
+| `zuano pack publish <dir> [--channel stable\|beta]` | `POST /api/packs`, then `POST /api/packs/{slug}/publish` |
 
 The request and response shapes are in [gateway-contracts.md](gateway-contracts.md).
 

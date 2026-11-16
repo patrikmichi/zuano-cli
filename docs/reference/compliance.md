@@ -13,13 +13,23 @@ legal advice and does not certify compliance.
 | `zuano compliance packs [--from D --to D]` | `GET /api/compliance/packs` |
 | `zuano compliance controls --pack P [--from D --to D] [--gaps]` | `GET /api/compliance/packs/{pack}/controls` |
 | `zuano compliance export --pack P --from D --to D [--wait [--wait-timeout T] [--out F]]` | `POST /api/compliance/exports`, the job, then `GET .../{id}/download` |
-| `zuano compliance exports list\|show <id>\|delete <id>` | `/api/compliance/exports[/{id}]` |
-| `zuano compliance schedules list\|create\|delete <id>` | `/api/compliance/schedules[/{id}]` |
+| `zuano compliance exports list` | `GET /api/compliance/exports` |
+| `zuano compliance exports show <id>` | `GET /api/compliance/exports/{id}` |
+| `zuano compliance exports delete <id> [--yes]` | `DELETE /api/compliance/exports/{id}` |
+| `zuano compliance schedules list` | `GET /api/compliance/schedules` |
+| `zuano compliance schedules create --pack P [--frequency weekly\|monthly\|quarterly] [--range-days N] [--to EMAIL]` | `POST /api/compliance/schedules` |
+| `zuano compliance schedules delete <id> [--yes]` | `DELETE /api/compliance/schedules/{id}` |
 | `zuano compliance share <export> --to EMAIL [--expires 14d]` | `POST /api/compliance/exports/{id}/shares` |
 | `zuano compliance verify <volume.zip>... [--keys F]` | none for a keys file; otherwise `GET /.well-known/zuano-evidence-keys` |
-| `zuano compliance incidents list\|show <id>\|create` | `/api/compliance/incidents` |
-| `zuano compliance dsr list\|create\|execute <id>` | `/api/compliance/dsr` |
-| `zuano compliance access-review start\|status <id>\|apply <id>` | `/api/compliance/access-reviews` |
+| `zuano compliance incidents list` | `GET /api/compliance/incidents` |
+| `zuano compliance incidents show <id>` | `GET /api/compliance/incidents/{id}` |
+| `zuano compliance incidents create --title T [--severity low\|medium\|high\|critical] [--detected-at RFC3339] [--description TEXT\|-]` | `POST /api/compliance/incidents` |
+| `zuano compliance dsr list` | `GET /api/compliance/dsr` |
+| `zuano compliance dsr create --kind access\|erasure\|rectification\|portability --subject EMAIL` | `POST /api/compliance/dsr` |
+| `zuano compliance dsr execute <id> [--yes]` | `POST /api/compliance/dsr/{id}/execute` |
+| `zuano compliance access-review start [--scope all\|admins\|agents\|group:ID] [--due-days N]` | `POST /api/compliance/access-reviews` |
+| `zuano compliance access-review status <id>` | `GET /api/compliance/access-reviews/{id}` |
+| `zuano compliance access-review apply <id> [--yes]` | `POST /api/compliance/access-reviews/{id}/apply` |
 
 Dates are `YYYY-MM-DD`; a range includes `--from` and stops before `--to`. The
 shapes are in [gateway-contracts.md](gateway-contracts.md).

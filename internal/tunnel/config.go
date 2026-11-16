@@ -121,7 +121,8 @@ type Target struct {
 	FollowSameOriginRedirects bool     `yaml:"follow_same_origin_redirects"`
 	StripRequestHeaders       []string `yaml:"strip_request_headers"`
 	StripResponseHeaders      []string `yaml:"strip_response_headers"`
-	BufferUnsafeBodies        bool     `yaml:"buffer_unsafe_bodies"`
+	// BufferUnsafeBodies is read so existing configs load; every HTTP body is now verified before it is sent.
+	BufferUnsafeBodies bool `yaml:"buffer_unsafe_bodies"`
 
 	Credentials                *Credentials `yaml:"credentials"`
 	ScrubCredentialsInResponse *bool        `yaml:"scrub_credentials_in_response"`

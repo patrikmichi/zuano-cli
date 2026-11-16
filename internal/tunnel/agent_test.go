@@ -95,7 +95,7 @@ func TestAgentLogsTheQueryAsPresentNotAsText(t *testing.T) {
 	}
 }
 
-func TestAgentStreamsLargeBodiesBothWays(t *testing.T) {
+func TestAgentCarriesLargeBodiesBothWays(t *testing.T) {
 	big := bytes.Repeat([]byte("0123456789abcdef"), 192<<10) // 3 MiB
 	sum := sha256.Sum256(big)
 	var gotSum string
@@ -266,7 +266,7 @@ func TestAgentAbortsAnUploadWhoseSignatureFails(t *testing.T) {
 	}
 	req := r.seal(RequestHeader{Target: "erp", Method: "POST", Path: "/invoices"}, chunks...)
 	res := r.conn.run(req, exchangeOpts{tamperFinal: true})
-	if res.Err == nil || res.Err.Code != "decrypt_failed" || !res.Err.Dispatched {
+	if res.Err == nil || res.Err.Code != "decrypt_failed" || res.Err.Dispatched {
 		t.Fatalf("tampered final: %+v", res.Err)
 	}
 	if done.Load() {
@@ -276,13 +276,13 @@ func TestAgentAbortsAnUploadWhoseSignatureFails(t *testing.T) {
 	req = r.seal(RequestHeader{Target: "erp", Method: "POST", Path: "/invoices"}, chunks...)
 	r.gw.badEndSig = false
 	res = r.conn.run(req, exchangeOpts{})
-	if res.Err == nil || res.Err.Code != "signature_invalid" || !res.Err.Dispatched {
+	if res.Err == nil || res.Err.Code != "signature_invalid" || res.Err.Dispatched {
 		t.Fatalf("wrong end signature: %+v", res.Err)
 	}
 	if done.Load() {
 		t.Error("the upstream received a complete body that failed verification")
 	}
-	// A small body is verified before the upstream sees any of it.
+	// Every body is verified before the upstream sees any of it.
 	var hits atomic.Int32
 	small := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { hits.Add(1) }))
 	defer small.Close()

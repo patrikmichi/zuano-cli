@@ -92,7 +92,7 @@ never sends a host, address or port.
 | `tls` | `ca_file`, `server_name`, `client_cert`, `client_key` (mTLS), `insecure_skip_verify` (needs `allow_insecure`) |
 | `follow_same_origin_redirects` | otherwise a 3xx is returned as it is; cross-origin redirects are never followed |
 | `strip_request_headers`, `strip_response_headers` | removed before sending and before returning |
-| `buffer_unsafe_bodies` | verify the whole request body (up to 8 MiB) before contacting the target |
+| `buffer_unsafe_bodies` | accepted and ignored: every HTTP request body (up to 8 MiB, larger is refused with `body_too_large`) is read and checked against the gateway's signature over the whole stream before the target is contacted, so a cut or forged stream never reaches it |
 | `credentials` | held here, never sent to the gateway: `header` with `value`, or `bearer`, or `basic` with `username` and `password`; values may be `${file:/path}` or `${env:NAME}` and are read again on every use |
 | `scrub_credentials_in_response` | replace the injected values with `[redacted]` in responses (on by default) |
 | `rate` | `per_second` and `burst` |

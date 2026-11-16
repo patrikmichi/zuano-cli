@@ -22,12 +22,13 @@ import (
 )
 
 const (
-	// bufferLimit is how much of a request body is held and verified before
-	// the upstream is contacted.
+	// bufferLimit is the largest MCP message: it is held and verified whole
+	// before the upstream is contacted.
 	bufferLimit = 1 << 20
-	// unsafeBufferLimit applies to targets that cannot take a body that might
-	// be rejected afterwards.
-	unsafeBufferLimit = 8 << 20
+	// httpBodyLimit is the largest HTTP request body. It is held and verified
+	// whole before the upstream is contacted, so a stream that is cut or forged
+	// can never leave a write half done; a larger body is refused.
+	httpBodyLimit = 8 << 20
 	responseChunk     = 32 << 10
 	initialWindow     = 1 << 20
 )
@@ -259,6 +260,10 @@ func (ex *exchange) handle(open Frame) *ExecError {
 		return cryptoError(err)
 	}
 	h := req.Header
+	// The gateway always signs the cap it will accept; a header without one would leave the response unbounded.
+	if h.MaxResponseBytes <= 0 {
+		return cryptoError(fmt.Errorf("%w: the request names no response limit", ErrDecrypt))
+	}
 	if a.paused.Load() {
 		return &ExecError{Code: "agent_paused"}
 	}
@@ -327,12 +332,13 @@ func windowFrame(credit int) Frame {
 	return Frame{Type: FrameWindow, Payload: raw}
 }
 
-// collect reads up to limit bytes. complete is true when the stream ended
-// inside the limit, which also means its signature was checked.
+// collect reads a body of at most limit bytes. complete is true when the stream
+// ended inside the limit, which also means its signature was checked; the data
+// is only to be used then.
 func (b *bodyReader) collect(limit int64) (data []byte, complete bool, err error) {
 	var out bytes.Buffer
 	chunk := make([]byte, 32<<10)
-	for int64(out.Len()) < limit {
+	for int64(out.Len()) <= limit {
 		n, rerr := b.Read(chunk)
 		out.Write(chunk[:n])
 		if errors.Is(rerr, io.EOF) {
@@ -342,7 +348,7 @@ func (b *bodyReader) collect(limit int64) (data []byte, complete bool, err error
 			return nil, false, rerr
 		}
 	}
-	return out.Bytes(), false, nil
+	return nil, false, nil
 }
 
 func bodyError(err error) *ExecError {
@@ -361,27 +367,33 @@ func bodyError(err error) *ExecError {
 	return &ExecError{Code: "upstream_reset", Msg: err.Error()}
 }
 
-func hasBody(method string) bool {
-	switch strings.ToUpper(method) {
-	case http.MethodPost, http.MethodPut, http.MethodPatch:
-		return true
+// checkBodyDigest compares a fully read body with the digest the gateway signed
+// into the header, when it named one.
+func checkBodyDigest(h RequestHeader, body []byte) *ExecError {
+	if h.BodySHA256 == "" {
+		return nil
 	}
-	return false
+	sum := sha256.Sum256(body)
+	if !strings.EqualFold(hex.EncodeToString(sum[:]), h.BodySHA256) {
+		return &ExecError{Code: "signature_invalid", Msg: "the body does not match its digest"}
+	}
+	return nil
 }
 
 func (ex *exchange) serveHTTP(t Target) *ExecError {
 	h := ex.req.Header
-	body := &bodyReader{ex: ex}
-	limit := int64(bufferLimit)
-	if t.BufferUnsafeBodies && hasBody(h.Method) {
-		limit = unsafeBufferLimit
-	}
-	pre, complete, err := body.collect(limit)
+	// The whole body is read, and the signature over the stream checked, before
+	// the service hears of the request: the service is never given a body that
+	// might be cut short or forged, whatever the method.
+	pre, complete, err := (&bodyReader{ex: ex}).collect(httpBodyLimit)
 	if err != nil {
 		return bodyError(err)
 	}
-	if !complete && t.BufferUnsafeBodies && hasBody(h.Method) {
-		return &ExecError{Code: "body_too_large", Msg: "the target buffers bodies up to 8 MiB"}
+	if !complete {
+		return &ExecError{Code: "body_too_large", Msg: "a request body is limited to 8 MiB, which is verified before it is sent on"}
+	}
+	if xerr := checkBodyDigest(h, pre); xerr != nil {
+		return xerr
 	}
 	var rd io.Reader = http.NoBody
 	switch {
@@ -393,15 +405,8 @@ func (ex *exchange) serveHTTP(t Target) *ExecError {
 		defer os.Remove(spool.Name())
 		defer spool.Close()
 		rd = spool
-	case complete && len(pre) > 0:
+	case len(pre) > 0:
 		rd = bytes.NewReader(pre)
-	case !complete:
-		rd = io.MultiReader(bytes.NewReader(pre), body)
-	}
-	if h.BodySHA256 != "" && complete {
-		if sum := sha256.Sum256(pre); hex.EncodeToString(sum[:]) != strings.ToLower(h.BodySHA256) {
-			return &ExecError{Code: "signature_invalid", Msg: "the body does not match its digest"}
-		}
 	}
 	res, err := ex.a.httpx.Do(ex.ctx, t, h, rd)
 	if err != nil {
@@ -432,6 +437,9 @@ func (ex *exchange) serveMCPHTTP(t Target) *ExecError {
 	if !complete {
 		return &ExecError{Code: "body_too_large", Msg: "an MCP message is limited to 1 MiB"}
 	}
+	if xerr := checkBodyDigest(h, pre); xerr != nil {
+		return xerr
+	}
 	if strings.EqualFold(h.Method, http.MethodPost) {
 		if _, xerr := CheckMCPBody(t, pre); xerr != nil {
 			return xerr
@@ -457,6 +465,9 @@ func (ex *exchange) serveMCPStdio(t Target) *ExecError {
 	}
 	if !complete {
 		return &ExecError{Code: "body_too_large", Msg: "an MCP message is limited to 1 MiB"}
+	}
+	if xerr := checkBodyDigest(ex.req.Header, pre); xerr != nil {
+		return xerr
 	}
 	if _, xerr := CheckMCPBody(t, pre); xerr != nil {
 		return xerr
@@ -497,6 +508,10 @@ func (ex *exchange) respond(res *Result) *ExecError {
 		default:
 			return serr
 		}
+	}
+	// A length the service announces above the cap is refused before any of the response is sent.
+	if spilled == nil && res.ContentLength > h.MaxResponseBytes {
+		return &ExecError{Code: "response_too_large", Dispatched: true}
 	}
 	hdr := http.Header{}
 	maps.Copy(hdr, res.Header)

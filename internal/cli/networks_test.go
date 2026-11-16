@@ -2,6 +2,7 @@ package cli
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -323,5 +324,90 @@ func TestOfflineNetworkRefusalExitsThirtyFour(t *testing.T) {
 		if err := policyRefusal([]byte(`{"reason":"`+reason+`","message":"DC1 is offline"}`), nil); exitCodeOf(err) != 34 {
 			t.Errorf("%s: %v", reason, err)
 		}
+	}
+}
+
+func TestNetworksTestNamesTheBrokerAsTheMeasuredHop(t *testing.T) {
+	networksGateway(t, map[string]func(*packServer, http.ResponseWriter, *http.Request){
+		"POST /api/admin/networks/net_1/test": jsonReply(200, `{"results":[{"agent":"erp-a","agent_id":"nag_1","ok":true,"rtt_ms":42}],"via":"broker"}`),
+	})
+	out, err := runCommand(t, NetworksCmd(), "test", "dc1")
+	if err != nil || !strings.Contains(out, "erp-a: ok, 42 ms") || !strings.Contains(out, "gateway to the broker") {
+		t.Errorf("the round-trip time is not tied to the gateway and the broker: %q %v", out, err)
+	}
+}
+
+func TestNetworksTestRefusals(t *testing.T) {
+	for _, tc := range []struct {
+		status int
+		body   string
+		want   string
+	}{
+		{503, `{"error":"broker_unavailable","message":"The broker did not answer in time."}`, "The broker did not answer in time."},
+		{409, `{"error":"network_disabled","message":"This network is disabled."}`, "This network is disabled."},
+	} {
+		networksGateway(t, map[string]func(*packServer, http.ResponseWriter, *http.Request){
+			"POST /api/admin/networks/net_1/test": jsonReply(tc.status, tc.body),
+		})
+		out, err := runCommand(t, NetworksCmd(), "test", "dc1")
+		if err == nil || exitCodeOf(err) != 1 || !strings.Contains(err.Error(), tc.want) || out != "" {
+			t.Errorf("%d: exit %d, %v, output %q", tc.status, exitCodeOf(err), err, out)
+		}
+	}
+}
+
+func TestNetworksLogsFiltersAndCursor(t *testing.T) {
+	var query url.Values
+	gw := networksGateway(t, map[string]func(*packServer, http.ResponseWriter, *http.Request){
+		"GET /api/admin/networks/net_1/logs": func(s *packServer, w http.ResponseWriter, r *http.Request) {
+			query = r.URL.Query()
+			jsonReply(200, `{"logs":[{"id":"nal_1","ts":"2026-10-16T09:30:00Z","agent":"erp-a","agent_id":"nag_1","level":"error","event":"exchange","target":"erp","method":"GET","path":null,"status":502,"outcome":"upstream_error","code":null,"duration_ms":12,"audit_ref":null,"message":null}],"next":"2026-10-16T09:30:00Z"}`)(s, w, r)
+		},
+	})
+	out, err := runCommand(t, NetworksCmd(), "logs", "dc1", "--limit", "5", "--before", "2026-10-17T00:00:00.250Z")
+	if err != nil || !strings.Contains(out, "--before 2026-10-16T09:30:00Z") {
+		t.Fatalf("the next page was not offered: %q %v", out, err)
+	}
+	if query.Get("limit") != "5" || query.Get("before") != "2026-10-17T00:00:00.25Z" {
+		t.Errorf("query = %v", query)
+	}
+	for _, args := range [][]string{{"--limit", "0"}, {"--limit", "201"}, {"--before", "yesterday"}} {
+		before := gw.count("GET /api/admin/networks/net_1/logs")
+		if _, err := runCommand(t, NetworksCmd(), append([]string{"logs", "dc1"}, args...)...); err == nil {
+			t.Errorf("%v was accepted", args)
+		}
+		if gw.count("GET /api/admin/networks/net_1/logs") != before {
+			t.Errorf("%v reached the gateway", args)
+		}
+	}
+	if _, err := runCommand(t, NetworksCmd(), "logs", "dc1", "--before", "2026-10-17T02:00:00+02:00"); err != nil || query.Get("before") != "2026-10-17T00:00:00Z" {
+		t.Errorf("an offset timestamp was not sent in UTC: %v (%v)", query, err)
+	}
+	if _, err := runCommand(t, NetworksCmd(), "logs", "dc1"); err != nil || query.Has("limit") || query.Has("before") {
+		t.Errorf("an unfiltered request carried %v (%v)", query, err)
+	}
+}
+
+func TestNetworksTokenList(t *testing.T) {
+	networksGateway(t, map[string]func(*packServer, http.ResponseWriter, *http.Request){
+		"GET /api/admin/networks/net_1/enrollment-tokens": jsonReply(200, `{"tokens":[{"id":"ent_1","createdAt":"2026-10-16T09:00:00Z","expiresAt":"2026-10-16T10:00:00Z","maxUses":3,"usesLeft":2,"requireApproval":true}]}`),
+	})
+	out, err := runCommand(t, NetworksCmd(), "token", "list", "dc1")
+	for _, want := range []string{"ent_1", "2026-10-16T10:00:00Z", "2 of 3", "yes"} {
+		if err != nil || !strings.Contains(out, want) {
+			t.Fatalf("token list lacks %q: %q %v", want, out, err)
+		}
+	}
+	if strings.Contains(out, "nxt_") {
+		t.Errorf("a token secret was printed: %q", out)
+	}
+	if out, err = runCommand(t, NetworksCmd(), "token", "list", "dc1", "--json"); err != nil || !strings.Contains(out, `"tokens"`) {
+		t.Errorf("--json: %q %v", out, err)
+	}
+	networksGateway(t, map[string]func(*packServer, http.ResponseWriter, *http.Request){
+		"GET /api/admin/networks/net_1/enrollment-tokens": jsonReply(200, `{"tokens":[]}`),
+	})
+	if out, err = runCommand(t, NetworksCmd(), "token", "list", "dc1"); err != nil || !strings.Contains(out, "No enrollment tokens") {
+		t.Errorf("empty: %q %v", out, err)
 	}
 }

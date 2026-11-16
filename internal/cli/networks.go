@@ -294,7 +294,62 @@ ZUANO_AGENT is set. A single-use token lasts an hour by default; a token with
 	create.Flags().IntVar(&uses, "uses", 1, "How many agents may enroll with it (1 to 10)")
 	create.Flags().DurationVar(&ttl, "ttl", time.Hour, "How long it stays valid (up to 24h)")
 	create.Flags().BoolVar(&requireApproval, "require-approval", false, "New agents wait for approval (the default when --uses is above 1)")
-	cmd.AddCommand(create)
+	cmd.AddCommand(create, networksTokenListCmd())
+	return cmd
+}
+
+func networksTokenListCmd() *cobra.Command {
+	var f approvalFlags
+	cmd := &cobra.Command{
+		Use:   "list <name>",
+		Short: "List the enrollment tokens that can still be used",
+		Long:  "Shows each token's id, when it was made and expires and how many uses are left. The token itself is shown once, when it is created, and never again.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := approvalsClient(f.gatewayURL)
+			if err != nil {
+				return err
+			}
+			n, err := resolveNetwork(cmd.Context(), c, args[0])
+			if err != nil {
+				return err
+			}
+			var doc struct {
+				Tokens []struct {
+					ID              string `json:"id"`
+					CreatedAt       string `json:"createdAt"`
+					ExpiresAt       string `json:"expiresAt"`
+					MaxUses         int    `json:"maxUses"`
+					UsesLeft        int    `json:"usesLeft"`
+					RequireApproval bool   `json:"requireApproval"`
+				} `json:"tokens"`
+			}
+			raw, err := gatewayJSON(cmd.Context(), c, http.MethodGet, networkPath(n, "/enrollment-tokens"), nil, &doc)
+			if err != nil {
+				return err
+			}
+			out := cmd.OutOrStdout()
+			if f.jsonOut {
+				printRaw(out, raw)
+				return nil
+			}
+			if len(doc.Tokens) == 0 {
+				fmt.Fprintf(out, "No enrollment tokens can be used. Mint one with `%s`.\n", brand.Cmd("networks token create "+args[0]))
+				return nil
+			}
+			var rows [][]string
+			for _, t := range doc.Tokens {
+				approval := "no"
+				if t.RequireApproval {
+					approval = "yes"
+				}
+				rows = append(rows, []string{t.ID, t.CreatedAt, t.ExpiresAt, fmt.Sprintf("%d of %d", t.UsesLeft, t.MaxUses), approval})
+			}
+			printRows(out, []string{"ID", "CREATED", "EXPIRES", "USES LEFT", "NEEDS APPROVAL"}, rows)
+			return nil
+		},
+	}
+	f.bind(cmd, "Print the response body unchanged")
 	return cmd
 }
 
@@ -535,12 +590,27 @@ func networksEventsCmd() *cobra.Command {
 
 func networksLogsCmd() *cobra.Command {
 	var f approvalFlags
-	var agent, target, outcome, since string
+	var agent, target, outcome, since, before string
+	var limit int
 	cmd := &cobra.Command{
 		Use:   "logs <name>",
-		Short: "Show the exchange logs the agents uploaded (metadata only)",
+		Short: "Show the exchange logs the agents uploaded (metadata only), newest first",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			q := url.Values{}
+			if cmd.Flags().Changed("limit") {
+				if limit < 1 || limit > 200 {
+					return errors.New("--limit must be between 1 and 200")
+				}
+				q.Set("limit", fmt.Sprint(limit))
+			}
+			if before != "" {
+				t, err := time.Parse(time.RFC3339Nano, before)
+				if err != nil {
+					return fmt.Errorf("invalid --before %q: use the timestamp the previous page printed", textsafe.Clean(before))
+				}
+				q.Set("before", t.UTC().Format(time.RFC3339Nano))
+			}
 			c, err := approvalsClient(f.gatewayURL)
 			if err != nil {
 				return err
@@ -549,7 +619,6 @@ func networksLogsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			q := url.Values{}
 			for k, v := range map[string]string{"agent": agent, "target": target, "outcome": outcome} {
 				if v != "" {
 					q.Set(k, v)
@@ -566,7 +635,10 @@ func networksLogsCmd() *cobra.Command {
 			if len(q) > 0 {
 				path += "?" + q.Encode()
 			}
-			var doc map[string]json.RawMessage
+			var doc struct {
+				Logs []map[string]any `json:"logs"`
+				Next string           `json:"next"`
+			}
 			raw, err := gatewayJSON(cmd.Context(), c, http.MethodGet, path, nil, &doc)
 			if err != nil {
 				return err
@@ -576,17 +648,21 @@ func networksLogsCmd() *cobra.Command {
 				printRaw(out, raw)
 				return nil
 			}
-			var rows []map[string]any
-			_ = json.Unmarshal(doc["logs"], &rows)
+			rows := doc.Logs
 			if len(rows) == 0 {
 				fmt.Fprintln(out, "No log lines match. Agents upload what log.upload allows (errors by default).")
 				return nil
 			}
 			printTable(out, rows, []column{{"TIME", "ts"}, {"AGENT", "agent"}, {"TARGET", "target"}, {"METHOD", "method"}, {"STATUS", "status"}, {"OUTCOME", "outcome"}, {"MS", "duration_ms"}, {"AUDIT", "audit_ref"}})
+			if doc.Next != "" {
+				fmt.Fprintf(out, "\nOlder lines: --before %s\n", textsafe.Clean(doc.Next))
+			}
 			return nil
 		},
 	}
 	f.bind(cmd, "Print the response body unchanged")
+	cmd.Flags().IntVar(&limit, "limit", 0, "How many lines (1 to 200)")
+	cmd.Flags().StringVar(&before, "before", "", "Only lines older than this timestamp (the cursor the previous page printed)")
 	cmd.Flags().StringVar(&agent, "agent", "", "Only this agent")
 	cmd.Flags().StringVar(&target, "target", "", "Only this target")
 	cmd.Flags().StringVar(&outcome, "outcome", "", "Only this outcome (ok, offline, refused, upstream_error, timeout, protocol_error)")
@@ -720,7 +796,10 @@ func networksTestCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "test <name>",
 		Short: "Send a ping through each online agent and show the round-trip time",
-		Long:  "Exits 34 when no agent is online.",
+		Long: `The gateway asks its broker to ping every connected agent, so the time shown is
+the round trip from the gateway to the broker and back, not from this machine.
+Exits 34 when no agent is online. A broker that does not answer in time is a
+refusal with its own sentence and exit 1.`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := approvalsClient(f.gatewayURL)
@@ -753,6 +832,9 @@ func networksTestCmd() *cobra.Command {
 					} else {
 						fmt.Fprintf(out, "%s: failed: %s\n", textsafe.Clean(r.Agent), textsafe.Clean(r.Error))
 					}
+				}
+				if len(res.Results) > 0 {
+					fmt.Fprintln(out, "Times are the round trip from the gateway to the broker and back, not from this machine.")
 				}
 			}
 			if len(res.Results) == 0 {

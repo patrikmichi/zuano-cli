@@ -36,7 +36,7 @@ your organisation or are mined from its usage.
 exits 4, printing none of the recipe, when it does not verify. Everything printed
 from a recipe has control and invisible characters removed.`,
 	}
-	cmd.AddCommand(recipesListCmd(), recipesShowCmd(), recipesVersionsCmd(), recipesPromoteCmd(), recipesSettingsCmd())
+	cmd.AddCommand(recipesListCmd(), recipesShowCmd(), recipesVersionsCmd(), recipesDiffCmd(), recipesPromoteCmd(), recipesSettingsCmd())
 	return cmd
 }
 
@@ -130,8 +130,9 @@ signature covers, and the recipe, version, scope and organisation must be the on
 asked for. Otherwise nothing of the recipe is printed and the exit code is 4.
 
 A platform recipe verifies for anyone. An organisation recipe verifies only for
-the organisation named by --org (or the client organisation you act for), because
-the gateway does not tell the client which organisation it belongs to.`,
+the organisation named by --org, else the client organisation you act for, else
+the one the gateway reports for your credential (GET /api/cli/whoami). When none
+is known, an organisation recipe is refused and --org says which.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ref, err := recipeRef(args[0])
@@ -153,6 +154,9 @@ the gateway does not tell the client which organisation it belongs to.`,
 			asOrg := org
 			if asOrg == "" {
 				asOrg = client.ActingClient()
+			}
+			if asOrg == "" {
+				asOrg = credentialOrgID(cmd.Context(), c)
 			}
 			r, v := recipes.Open(raw, recipes.Expect{ID: ref, Version: version, OrgID: asOrg}, func(keyID string) ([]recipes.Key, error) {
 				return recipeKeys(cmd.Context(), c.GatewayURL, keyID)
@@ -266,17 +270,30 @@ func recipesVersionsCmd() *cobra.Command {
 
 func recipesPromoteCmd() *cobra.Command {
 	var f approvalFlags
+	var version int
 	cmd := &cobra.Command{
 		Use:   "promote <id>",
 		Short: "Make a recipe into a draft skill your agents can install",
 		Long: `Builds a skill from the recipe (its steps, pitfalls and notes), keeps it private
-to you as a draft and copies the recipe's eval cases to it. The draft goes
-through the usual publish checks and review before others get it.`,
+to you as a draft and copies the recipe's eval cases to it when the plan allows
+evaluations. The draft goes through the usual publish checks and review before
+others get it.
+
+The gateway accepts this only from a signed-in browser session. When it refuses
+the credential this command uses, it says so and exits 10 without retrying: make
+the draft in the dashboard.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ref, err := recipeRef(args[0])
 			if err != nil {
 				return err
+			}
+			body := map[string]any{}
+			if cmd.Flags().Changed("version") {
+				if version < 1 {
+					return errors.New("--version must be 1 or more")
+				}
+				body["version"] = version
 			}
 			c, err := approvalsClient(f.gatewayURL)
 			if err != nil {
@@ -288,9 +305,10 @@ through the usual publish checks and review before others get it.`,
 					Slug string `json:"slug"`
 					URL  string `json:"url"`
 				} `json:"skill"`
-				VersionID string `json:"versionId"`
+				VersionID    string `json:"versionId"`
+				CasesSkipped string `json:"casesSkipped"`
 			}
-			raw, err := builderRequest(cmd, c, f.jsonOut, http.MethodPost, recipePath(ref, ":promote"), map[string]any{}, &doc)
+			raw, err := builderRequest(cmd, c, f.jsonOut, http.MethodPost, recipePath(ref, ":promote"), body, &doc)
 			if err != nil {
 				return err
 			}
@@ -305,12 +323,157 @@ through the usual publish checks and review before others get it.`,
 					fmt.Fprintf(out, "  %s\n", link)
 				}
 			}
+			if doc.CasesSkipped != "" {
+				fmt.Fprintf(out, "No eval cases were copied: %s\n", textsafe.Clean(doc.CasesSkipped))
+			}
 			fmt.Fprintf(out, "Next: score it with `%s`, then submit it with `%s`.\n", brand.Cmd("eval run --target skill:"+textsafe.Clean(doc.Skill.Slug)), brand.Cmd("skill promote "+textsafe.Clean(doc.Skill.ID)))
 			return nil
 		},
 	}
 	f.bind(cmd, "Print the gateway's answer as JSON")
+	cmd.Flags().IntVar(&version, "version", 0, "A version other than the one served")
 	return cmd
+}
+
+func recipesDiffCmd() *cobra.Command {
+	var f approvalFlags
+	var from, to int
+	var against string
+	cmd := &cobra.Command{
+		Use:   "diff <id>",
+		Short: "Show what changed between two versions of a recipe, or since the platform's recipe it copies",
+		Long: `Compares two versions of a recipe: --from defaults to the version being served
+and --to to the latest. With --against platform, an organisation recipe that
+overrides a platform recipe is compared with it: the platform version the copy
+was made from against the one served now.
+
+The gateway computes the difference and does not sign it. Use 'show' to check a
+version's signature before you rely on its content.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ref, err := recipeRef(args[0])
+			if err != nil {
+				return err
+			}
+			if against != "" && against != "version" && against != "platform" {
+				return errors.New("--against must be version or platform")
+			}
+			q := map[string]string{"against": against}
+			for name, n := range map[string]int{"from": from, "to": to} {
+				if !cmd.Flags().Changed(name) {
+					continue
+				}
+				if n < 1 {
+					return fmt.Errorf("--%s must be 1 or more", name)
+				}
+				if against == "platform" {
+					return errors.New("--against platform compares the copy's base with the platform's served version; it takes no --from or --to")
+				}
+				q[name] = strconv.Itoa(n)
+			}
+			c, err := approvalsClient(f.gatewayURL)
+			if err != nil {
+				return err
+			}
+			var doc struct {
+				Diff recipes.Diff `json:"diff"`
+			}
+			raw, err := builderRequest(cmd, c, f.jsonOut, http.MethodGet, withQuery(recipePath(ref, "/diff"), q), nil, &doc)
+			if err != nil {
+				return err
+			}
+			if f.jsonOut {
+				printRaw(cmd.OutOrStdout(), raw)
+				return nil
+			}
+			renderRecipeDiff(cmd.OutOrStdout(), doc.Diff)
+			return nil
+		},
+	}
+	f.bind(cmd, "Print the gateway's answer as JSON")
+	cmd.Flags().IntVar(&from, "from", 0, "The version to compare from (default: the one served)")
+	cmd.Flags().IntVar(&to, "to", 0, "The version to compare to (default: the latest)")
+	cmd.Flags().StringVar(&against, "against", "", "version (the default) or platform")
+	return cmd
+}
+
+func renderRecipeDiff(w io.Writer, d recipes.Diff) {
+	scope := "v" + strconv.Itoa(d.From) + " -> v" + strconv.Itoa(d.To)
+	if d.Against == "platform" {
+		scope += " of the platform recipe"
+	}
+	if !d.Changed {
+		fmt.Fprintf(w, "No difference between v%d and v%d.\n", d.From, d.To)
+		return
+	}
+	fmt.Fprintf(w, "%s (%s)\n", textsafe.Clean(d.RecipeID), scope)
+	change := func(label string, c *recipes.Change[string]) {
+		if c != nil {
+			fmt.Fprintf(w, "%s: %s -> %s\n", label, textsafe.Strict(c.From), textsafe.Strict(c.To))
+		}
+	}
+	change("Title", d.Title)
+	change("Use for", d.UseCase)
+	if d.Difficulty != nil {
+		fmt.Fprintf(w, "Difficulty: %s -> %s (%s)\n", textsafe.Clean(d.Difficulty.From.Level), textsafe.Clean(d.Difficulty.To.Level), textsafe.Strict(d.Difficulty.To.Reason))
+	}
+	moved := func(label string, m recipes.Moved) {
+		var parts []string
+		for _, t := range m.Added {
+			parts = append(parts, "+"+textsafe.Strict(t))
+		}
+		for _, t := range m.Removed {
+			parts = append(parts, "-"+textsafe.Strict(t))
+		}
+		if len(parts) > 0 {
+			fmt.Fprintf(w, "%s: %s\n", label, strings.Join(parts, " "))
+		}
+	}
+	moved("Primary tools", d.PrimaryTools)
+	moved("Related tools", d.RelatedTools)
+	if len(d.Steps) > 0 {
+		fmt.Fprintln(w, "\nSteps")
+	}
+	for _, s := range d.Steps {
+		switch s.Change {
+		case "added":
+			fmt.Fprintf(w, "  + %s\n", diffStep(s.After))
+		case "removed":
+			fmt.Fprintf(w, "  - %s\n", diffStep(s.Before))
+		default:
+			fmt.Fprintf(w, "  ~ %s\n      -> %s\n", diffStep(s.Before), diffStep(s.After))
+		}
+	}
+	if len(d.Pitfalls.Added)+len(d.Pitfalls.Removed) > 0 {
+		fmt.Fprintln(w, "\nPitfalls")
+	}
+	for _, side := range []struct {
+		sign string
+		list []recipes.Pitfall
+	}{{"+", d.Pitfalls.Added}, {"-", d.Pitfalls.Removed}} {
+		for _, p := range side.list {
+			codes := ""
+			if len(p.ErrorCodes) > 0 {
+				codes = " [" + textsafe.Strict(strings.Join(p.ErrorCodes, ", ")) + "]"
+			}
+			fmt.Fprintf(w, "  %s %s%s: %s\n", side.sign, textsafe.Strict(p.Tool), codes, textsafe.Strict(p.Text))
+		}
+	}
+	fmt.Fprintln(w, "\nThe gateway computed this difference; it is not signature-checked. `zuano recipes show` verifies a version.")
+}
+
+func diffStep(s *recipes.Step) string {
+	if s == nil {
+		return ""
+	}
+	kind := ""
+	switch s.Kind {
+	case "optional":
+		kind = " (optional: " + textsafe.Strict(s.Condition) + ")"
+	case "fallback":
+		kind = fmt.Sprintf(" (fallback for step %d)", s.FallbackFor)
+	}
+	return fmt.Sprintf("%d. %s%s: %s", s.Order, textsafe.Strict(s.Tool), kind, textsafe.Strict(s.Instruction))
 }
 
 func recipesSettingsCmd() *cobra.Command {

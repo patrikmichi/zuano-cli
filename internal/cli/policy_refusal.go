@@ -43,6 +43,8 @@ var refusalCodes = map[string]int{
 	"quality_gate_failed":        exitQualityGate,
 	"network_offline":            exitNetworkOffline,
 	"egress_unavailable":         exitNetworkOffline,
+	"request_too_large":          1,
+	"response_too_large":         1,
 	"spec_fetch_blocked":         1,
 	"federated_mode_unsupported": 1,
 }

@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -46,7 +47,12 @@ func builderRequest(cmd *cobra.Command, c *client.Client, jsonOut bool, method, 
 		}
 		err := gatewayStatusError(status, raw)
 		if status == http.StatusForbidden {
-			return nil, &ExitError{Code: exitDenied, Msg: err.Error()}
+			msg := err.Error()
+			var refusal *gatewayRefusal
+			if errors.As(err, &refusal) && refusal.Code == "browser_session_required" {
+				msg += "\nThis has to be done in the dashboard: the gateway does not accept this command's credential for it, and trying again will not change that."
+			}
+			return nil, &ExitError{Code: exitDenied, Msg: msg}
 		}
 		return nil, err
 	}

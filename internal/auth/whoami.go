@@ -8,10 +8,12 @@ import (
 	"github.com/patrikmichi/zuano-cli/internal/client"
 )
 
-// WhoamiResponse is the JSON returned by /api/cli/whoami.
+// WhoamiResponse is the JSON returned by /api/cli/whoami. OrgID is the
+// organisation the credential acts in; the gateway sends null when it has none.
 type WhoamiResponse struct {
 	Email     string   `json:"email"`
 	GoogleSub string   `json:"googleSub"`
+	OrgID     string   `json:"orgId"`
 	Services  []string `json:"services"`
 	IssuedAt  string   `json:"issuedAt"`
 	Groups    []string `json:"groups,omitempty"`

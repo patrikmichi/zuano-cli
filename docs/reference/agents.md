@@ -17,7 +17,7 @@ lists access review campaigns and exports their evidence.
 | `zuano agents quarantine list [--json]` | none: what is quarantined on this machine |
 | `zuano agents quarantine restore (<id> \| --all)` | none; reports the restore |
 | `zuano reviews list\|show <id>`, `export <id> [--format csv\|json] [--out F]`, `decide <id>` | `GET /api/access-reviews[/{id}[/export]]`; `decide` opens `/reviews?campaign={id}` |
-| `zuano whoami` | `GET /api/cli/whoami`; also prints `Identity: <id> (<status>)` |
+| `zuano whoami` | `GET /api/cli/whoami`; also prints `Identity: <id> (<status>)` and `Org: <orgId>` when the credential has an organisation |
 
 The shapes are in [gateway-contracts.md](gateway-contracts.md).
 

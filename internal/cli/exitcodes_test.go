@@ -70,6 +70,53 @@ func TestRefusalReasonsMapToRegisteredCodes(t *testing.T) {
 	}
 }
 
+// A call through a private network that is too big either way is refused with
+// the gateway's sentence and the generic status; the old transfer code is gone.
+func TestTooLargeRefusalsKeepTheirSentenceAndExitGenerically(t *testing.T) {
+	for _, code := range []string{"request_too_large", "response_too_large"} {
+		err := policyRefusal([]byte(`{"error":"`+code+`","message":"The body is over the limit."}`), nil)
+		if exitCodeOf(err) != 1 || err == nil || !strings.Contains(err.Error(), "The body is over the limit.") {
+			t.Errorf("%s: exit %d, %v", code, exitCodeOf(err), err)
+		}
+		if refusalCodes[code] != 1 {
+			t.Errorf("%s is not listed as a refusal that exits 1", code)
+		}
+	}
+	if _, ok := refusalCodes["transfer_too_large"]; ok {
+		t.Error("transfer_too_large is listed; the gateway no longer sends it")
+	}
+}
+
+// The marketplace and recipe refusals have no status of their own: each ends
+// with exit 1 and the gateway's sentence, and the code stays in --json.
+func TestMarketAndRecipeRefusalsExitGenerically(t *testing.T) {
+	enum := vendoredRefusalCodes(t)
+	for _, tc := range []struct {
+		status int
+		body   string
+		code   string
+	}{
+		{404, `{"error":"purchase_not_found","message":"No such purchase."}`, "purchase_not_found"},
+		{409, `{"error":"refund_refused","message":"The refund window has closed."}`, "refund_refused"},
+		{409, `{"error":"refund_unavailable","message":"This purchase cannot be refunded."}`, "refund_unavailable"},
+		{404, `{"error":"flag_not_found","message":"No such flag."}`, "flag_not_found"},
+		{409, `{"error":"conflict","reason":"four_eyes_required","message":"Another organization admin has to activate it."}`, "four_eyes_required"},
+	} {
+		t.Run(tc.code, func(t *testing.T) {
+			err := gatewayStatusError(tc.status, []byte(tc.body))
+			if exitCodeOf(err) != 1 || !strings.Contains(err.Error(), "(HTTP ") {
+				t.Errorf("exit %d, %v", exitCodeOf(err), err)
+			}
+			if _, mapped := refusalExit[tc.code]; mapped {
+				t.Errorf("%s has an exit status of its own; the registry lists none", tc.code)
+			}
+			if tc.code != "four_eyes_required" && !slices.Contains(enum, tc.code) {
+				t.Errorf("%s is not in the OpenAPI refusal codes", tc.code)
+			}
+		})
+	}
+}
+
 func TestRouteRefusalMapsUseRegisteredCodes(t *testing.T) {
 	registered := map[int]bool{}
 	for _, e := range exitRegistry {

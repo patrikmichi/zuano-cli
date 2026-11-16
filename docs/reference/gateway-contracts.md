@@ -160,7 +160,15 @@ class and take no number of their own: `member_requests_off` (`403`) ends with
 `payload_too_large`; `version_conflict` ends with 25. The organisation domain
 refusals `invalid_domain`, `domain_exists`, `domain_limit`,
 `domain_verified_elsewhere` and `dns_unavailable` end with 1 and
-`domain_unverified` with 70. The approval decision refusals
+`domain_unverified` with 70. A call through a private network that is too big
+is refused with `request_too_large` (`413`, nothing was sent) or
+`response_too_large` (`502`, never a cut-short answer); both end with 1 and
+replace the earlier `transfer_too_large`. The marketplace refusals
+`purchase_not_found`, `flag_not_found` (`404`), `refund_refused` and
+`refund_unavailable` (`409`) end with 1, and so does a `409` `conflict` whose
+`reason` is `four_eyes_required` (the person who edited a mined recipe cannot
+activate it): each prints the gateway's sentence and keeps the code in the JSON.
+The approval decision refusals
 (`browser_session_required`, `expired`, `already_decided`, `challenge_invalid`,
 `digest_mismatch`, `passkey_verification_failed`, `passkey_required`) belong to
 the browser and no command meets them; by class a `403` ends with 10 and the
@@ -724,7 +732,8 @@ routes and commands; the wrappers, `dryRun`, the impact fields and the
 | `GET\|POST /api/compliance/incidents`, `GET .../{id}` | `{"incidents": [...]}`, `{"incident": {...}}`; create `{"title", "severity", "detectedAt", "description"}` answers `{"incident": {"id"}}` |
 | `GET\|POST /api/compliance/dsr`, `POST .../{id}/execute` | `{"requests": [...]}`; create `{"kind", "subject"}` answers `{"request": {"id"}}` |
 | `POST /api/compliance/access-reviews`, `GET .../{id}`, `POST .../{id}/apply` | `{"scope", "dueDays"}` answers `{"review": {"id"}}`; `{"review": {...}}` |
-| `GET /.well-known/zuano-evidence-keys` | `{"keys": [{"kid", "alg": "ed25519", "publicKey"}]}`; the gateway publishes no audit keys |
+| `GET /.well-known/zuano-evidence-keys` | `{"keys": [{"kid", "alg": "ed25519", "publicKey"}]}` |
+| `GET /.well-known/zuano-audit-keys` | `{"keys": [...]}`: the keys that sign the hourly audit checkpoints. `compliance verify` does not fetch them; it reads the audit keys from the bundle's signed key file, or from the `audit` list of a `--keys` file |
 
 A bundle (format 1) is one zip, or numbered volumes of a large one (the manifest
 is in the last). Its files: `manifest.json`, `manifest.sig`, `controls.csv`,
@@ -767,7 +776,7 @@ and `docs/reference/compliance-bundle.md` on the integration branch.
 | `POST /api/agents/{id}/suspend`, `/revoke` | `{"reason"}`; `POST .../resume` `{}`; `401 step_up_required` for resume and revoke |
 | `GET /api/agents/devices`, `GET /api/agents/shadow-mcp` | `{"devices": [{"hostLabel", "os", "cliVersion", "owner", "lastReportAt", "agents": [{"id", "gatewayMcp"}]}]}`, `{"servers": [{"name", "transport", "host"?, "command"?, "devices"}]}` |
 | `GET /api/access-reviews`, `GET /api/access-reviews/{id}`, `GET .../{id}/export?format=csv\|json` | `{"reviews": [{"id", "name", "status", "dueAt", "progress": {"decided", "total"}}]}`; `{"review", "items": [{"identityId", "name", "reviewer", "decision"}]}`; the export body as it is |
-| `GET /api/cli/whoami` | gains `"identityId"` and `"identityStatus"` |
+| `GET /api/cli/whoami` | gains `"identityId"` and `"identityStatus"`; carries `"orgId"` (null when the credential has none), the organisation it acts in. `zuano whoami` prints it as `Org:`, and `recipes show` uses it for an organisation recipe when no `--org` is given |
 | login: `POST /api/cli/token`, `POST /api/cli/device/code` | the request gains `install_id` (32 hex characters, an identifier and not a credential) |
 
 A request from a suspended, revoked or expired identity answers `403` with
@@ -946,14 +955,15 @@ by `name`, `slug` or `id`; the CLI lists networks and picks the id.
 | `POST /api/admin/networks/{id}/bindings` | `{"kind", "service", "target", "credentialsMode"?: "agent\|gateway"}`; `201`. Built-in services are refused with `binding_not_supported` |
 | `DELETE /api/admin/networks/{id}/bindings/{binding}` | `{"deleted": true}`; the CLI finds the binding's id in the list by kind, service and target |
 | `GET /api/admin/networks/{id}/events?before=&limit=` | `{"events": [{"id", "agentId", "type", "details", "ts"}], "next"}`, newest first |
-| `GET /api/admin/networks/{id}/logs?agent=&target=&outcome=&since=` | not in the gateway's OpenAPI document: `zuano networks logs` expects `{"logs": [{"ts", "agent", "target", "method", "status", "outcome", "duration_ms", "audit_ref"}]}` |
-| `POST /api/admin/networks/{id}/test` | not in the gateway's OpenAPI document: `zuano networks test` expects `{"results": [{"agent", "ok", "rtt_ms"?, "error"?}]}`; an empty list means no agent is online (exit 34) |
+| `GET /api/admin/networks/{id}/enrollment-tokens` | `{"tokens": [{"id", "createdAt", "expiresAt", "maxUses", "usesLeft", "requireApproval"}]}`: the tokens that can still be used, never a secret |
+| `GET /api/admin/networks/{id}/logs?agent=&target=&outcome=&since=&before=&limit=` | `{"logs": [{"id", "ts", "agent", "agent_id", "level", "event", "target", "method", "path", "status", "outcome", "code", "duration_ms", "audit_ref", "message"}], "next"}`, newest first; `since` and `before` are UTC timestamps, `limit` 1 to 200 (default 50); `next` is the `before` of the following page, or null |
+| `POST /api/admin/networks/{id}/test` | `{}`; `200` `{"results": [{"agent", "agent_id", "ok", "rtt_ms", "error"?}], "via": "broker"}`. The time is the gateway-to-broker round trip. An empty list means no agent is online (exit 34); `409` `network_disabled`; `503` `broker_unavailable` when the broker did not answer in time |
 
 `PATCH /api/admin/networks/{id}` (rename, settings, enable and disable) and
-`DELETE /api/admin/networks/{id}/enrollment-tokens/{token}` have no command:
-the first needs a passkey confirmation of the exact change, and no route lists
-the token ids the second needs. The contract test fails for any other network
-operation the document gains without a command.
+`DELETE /api/admin/networks/{id}/enrollment-tokens/{token}` have no command: the
+first needs a passkey confirmation of the exact change, and revoking a token is
+not built yet. The contract test fails for any other network operation the
+document gains without a command.
 
 A call whose body or MCP result carries `reason` `network_offline` or
 `egress_unavailable` exits 34.
@@ -1305,9 +1315,8 @@ is the shape the CLI verifies.
 | `GET /recipes/{id}/versions` | `{"versions": [{"version", "title", "contentHash", "createdAt"}]}` |
 | `GET /org/recipe-settings`, `PUT /org/recipe-settings` | `{"serveRecipes": "all\|org_only\|off"}`; PUT takes that one field |
 | `GET /recipes/keys` | public, `Cache-Control: public, max-age=300`: `{"keys": [{"keyId", "alg": "ed25519", "publicKey": base64}]}` |
-
-`POST /recipes/{id}:promote` is not in the gateway's OpenAPI document; `recipes
-promote` calls it and expects `201` `{"skill": {"id", "slug", "url"}, "versionId"}`.
+| `GET /recipes/{id}/diff?from=&to=&against=version\|platform` | `{"diff": {"recipeId", "against", "from", "to", "changed", "title", "useCase", "difficulty": null or {"from", "to"}, "primaryTools": {"added", "removed"}, "relatedTools", "steps": [{"order", "change": "added\|removed\|changed", "before", "after"}], "pitfalls": {"added", "removed"}}}`; `against=platform` takes no `from` or `to` |
+| `POST /recipes/{id}:promote` | `{"version"?}`; `201` `{"skill": {"id", "slug", "url"}, "versionId", "semver", "casesCopied", "casesSkipped"?}`. Browser session only: with another credential the gateway answers `403` `browser_session_required`, which `recipes promote` reports as needing the dashboard (exit 10) and does not retry |
 
 ```json
 SUMMARY = {"id", "slug", "title", "useCase", "services", "source", "status", "version", "stepCount", "pitfallCount", "updatedAt"}

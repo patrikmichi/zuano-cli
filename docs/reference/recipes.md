@@ -10,7 +10,8 @@ from the platform, from your organisation, or are mined from its usage.
 | `zuano recipes list [--service S] [--source platform\|mined\|org] [--status S] [--query Q] [--limit N] [--cursor C]` | id, title, services, steps, pitfalls, source, status, version |
 | `zuano recipes show <id> [--version N] [--org ORG]` | the recipe in full, printed only when its signature checks |
 | `zuano recipes versions <id>` | the versions of a recipe with the hash of each version's content |
-| `zuano recipes promote <id>` | make it into a draft skill; prints the next commands |
+| `zuano recipes diff <id> [--from N] [--to N] [--against version\|platform]` | what changed between two versions, or since the platform recipe an organisation recipe copies |
+| `zuano recipes promote <id> [--version N]` | make it into a draft skill; prints the next commands |
 | `zuano recipes settings [--serve all\|org_only\|off]` | show or change which recipes tool search offers |
 
 `--json` prints what the gateway sent, and `--gateway-url` names the gateway.
@@ -52,10 +53,10 @@ recipe when it fails:
    another recipe, version or organisation;
 5. the recipe, version, scope and organisation are the ones asked for. A
    platform recipe is signed with scope `platform` and no organisation. An
-   organisation recipe verifies only for the organisation named by `--org` (or
-   the client organisation you act for), because the gateway does not tell the
-   client which organisation it belongs to; without it, and for any other
-   organisation, the recipe is refused.
+   organisation recipe verifies only for the organisation named by `--org`, else
+   the client organisation you act for, else the `orgId` the gateway reports for
+   your credential at `GET /api/cli/whoami`; when none is known, and for any
+   other organisation, the recipe is refused.
 
 An answer with a repeated JSON key is refused. Slug, status, services, source and
 timestamps are not signed and are shown as the gateway sent them.
@@ -63,6 +64,26 @@ timestamps are not signed and are shown as the gateway sent them.
 A recipe that fails any check is not printed, not shown as verified and not kept:
 the command prints `signature: NOT VERIFIED` with the reason and exits 4. Do not
 follow it.
+
+## Diff
+
+`diff` compares two versions: `--from` defaults to the version being served and
+`--to` to the latest. `--against platform` compares an organisation recipe that
+overrides a platform recipe with it: the platform version the copy was made from
+against the one served now (it takes no `--from` or `--to`). It prints only what
+differs: title, use case, difficulty, tools added or removed, steps added (`+`),
+removed (`-`) or changed (`~`), and pitfalls added or removed. The gateway
+computes the difference and does not sign it, so use `show` to verify a version
+before relying on its content. The same character filtering as `show` applies.
+
+## Promote
+
+`promote` makes the served version (or `--version`) into a private draft skill and
+copies the recipe's eval cases to it when the plan allows evaluations; when it
+does not, the command says no cases were copied. The gateway accepts promotion
+only from a signed-in browser session. When it refuses the credential the CLI
+uses (`browser_session_required`, exit 10), the command says the draft has to be
+made in the dashboard and does not retry.
 
 ## Settings
 
@@ -75,7 +96,7 @@ administrator's and is audited; it is refused in an agent session (exit 10).
 | Status | Meaning |
 |---|---|
 | 4 | the recipe's signature does not verify |
-| 10 | refused for an agent session, or not allowed |
+| 10 | refused for an agent session, not allowed, or (promote) only a browser session may do it |
 | 12 | an agent session's write is held for approval |
 | 13 | rate limited |
 | 30-33 | the plan does not allow it; see [billing.md](billing.md) |

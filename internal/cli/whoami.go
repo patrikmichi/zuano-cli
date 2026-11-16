@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -23,6 +24,22 @@ func profileLabel(c *client.Client) string {
 		return "agent (ZUANO_AGENT=1; the gateway holds the writes of a session issued as an agent's for approval)"
 	}
 	return "human (your own session; set ZUANO_AGENT=1 for the agent profile)"
+}
+
+// credentialOrgID is the organisation the gateway says the credential acts in,
+// or "" when it cannot be read: the callers that want it can be told with --org
+// instead, so a failed lookup never fails the command.
+func credentialOrgID(parent context.Context, c *client.Client) string {
+	ctx, cancel, err := requestContext(parent, controlRequest)
+	if err != nil {
+		return ""
+	}
+	defer cancel()
+	info, err := auth.Whoami(ctx, c, false)
+	if err != nil {
+		return ""
+	}
+	return info.OrgID
 }
 
 // WhoamiCmd returns the `zuano whoami` cobra command.
@@ -60,6 +77,9 @@ func WhoamiCmd() *cobra.Command {
 			fmt.Fprintf(cmd.OutOrStdout(), "Email:    %s\n", info.Email)
 			if info.IdentityID != "" {
 				fmt.Fprintf(cmd.OutOrStdout(), "Identity: %s (%s)\n", textsafe.Clean(info.IdentityID), orDash(textsafe.Clean(info.IdentityStatus)))
+			}
+			if info.OrgID != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "Org:      %s\n", textsafe.Clean(info.OrgID))
 			}
 			if info.GoogleSub != "" {
 				fmt.Fprintf(cmd.OutOrStdout(), "Sub:      %s\n", info.GoogleSub)

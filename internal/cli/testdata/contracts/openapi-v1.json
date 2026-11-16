@@ -8016,6 +8016,206 @@
         ]
       }
     },
+    "/agents/{id}/reviews": {
+      "get": {
+        "operationId": "agents.reviews",
+        "summary": "The access reviews an agent identity was part of: campaign, reviewer and decision.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reviews": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "campaignId": {
+                            "type": "string"
+                          },
+                          "campaignName": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "dueAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "reviewerUserId": {
+                            "type": "string"
+                          },
+                          "decision": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "decidedBy": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "decidedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "note": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "campaignId",
+                          "campaignName",
+                          "status",
+                          "dueAt",
+                          "reviewerUserId",
+                          "decision",
+                          "decidedBy",
+                          "decidedAt",
+                          "note"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "reviews"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api"
+          }
+        ]
+      }
+    },
     "/agents/{id}/revoke": {
       "post": {
         "operationId": "agents.revoke",
@@ -42916,6 +43116,133 @@
         }
       }
     },
+    "/market/publisher/payouts/onboard": {
+      "post": {
+        "operationId": "market.publisher.payouts.onboard",
+        "summary": "Start or resume payout onboarding; answers with the address Stripe hosts it at.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/market/publisher/reports": {
       "get": {
         "operationId": "market.publisher.reports.list",
@@ -42959,6 +43286,116 @@
                   "required": [
                     "reports"
                   ],
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/publisher/sales": {
+      "get": {
+        "operationId": "market.publisher.sales",
+        "summary": "Read the publisher’s balance, ledger rows and payouts.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
                   "additionalProperties": {}
                 }
               }
@@ -43734,6 +44171,247 @@
                       "$ref": "#/components/schemas/RefusalValidation"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/purchases": {
+      "get": {
+        "operationId": "market.purchases.list",
+        "summary": "List what the organization has bought.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "purchases": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": {}
+                      }
+                    }
+                  },
+                  "required": [
+                    "purchases"
+                  ],
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/purchases/{id}/refund": {
+      "post": {
+        "operationId": "market.purchases.refund",
+        "summary": "Refund a one-time purchase inside the refund window.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
                 }
               }
             }
@@ -47174,6 +47852,173 @@
       }
     },
     "/networks/{id}/enrollment-tokens": {
+      "get": {
+        "operationId": "networks.tokens.list",
+        "summary": "The enrollment tokens that can still be used, newest first. A token’s secret is never returned, only the id that revokes it.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tokens": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "expiresAt": {
+                            "type": "string"
+                          },
+                          "maxUses": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "usesLeft": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "requireApproval": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "createdAt",
+                          "expiresAt",
+                          "maxUses",
+                          "usesLeft",
+                          "requireApproval"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "tokens"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/admin"
+          }
+        ]
+      },
       "post": {
         "operationId": "networks.tokens.create",
         "summary": "Create a one-time enrollment token with the commands that use it. Needs a passkey confirmation; the secret is in this answer only.",
@@ -47622,6 +48467,7 @@
                               "agent.approved",
                               "agent.update_failed",
                               "agent.spill_unavailable",
+                              "agent.logs",
                               "network.no_agents",
                               "exchange.dropped"
                             ]
@@ -47710,6 +48556,502 @@
             }
           },
           "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/admin"
+          }
+        ]
+      }
+    },
+    "/networks/{id}/logs": {
+      "get": {
+        "operationId": "networks.logs.list",
+        "summary": "The log lines the network’s agents uploaded (an agent uploads what its `log.upload` setting allows), newest first. `path` and `message` are null when the data protection policy stopped them or the organization keeps no content. Pass the last `next` as `before` for the following page.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "agent",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "target",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "logs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "ts": {
+                            "type": "string"
+                          },
+                          "agent": {
+                            "type": "string"
+                          },
+                          "agent_id": {
+                            "type": "string"
+                          },
+                          "level": {
+                            "type": "string",
+                            "enum": [
+                              "info",
+                              "warn",
+                              "error"
+                            ]
+                          },
+                          "event": {
+                            "type": "string"
+                          },
+                          "target": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "method": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "path": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "outcome": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "code": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "duration_ms": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "audit_ref": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "message": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "ts",
+                          "agent",
+                          "agent_id",
+                          "level",
+                          "event",
+                          "target",
+                          "method",
+                          "path",
+                          "status",
+                          "outcome",
+                          "code",
+                          "duration_ms",
+                          "audit_ref",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "logs",
+                    "next"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalValidation"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/admin"
+          }
+        ]
+      }
+    },
+    "/networks/{id}/test": {
+      "post": {
+        "operationId": "networks.test",
+        "summary": "Check every agent the broker holds a connection for. The protocol has no ping frame, so `rtt_ms` is the round trip from the gateway to the broker, and `ok` means connected, approved and not paused. An empty `results` means no agent is online.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "agent": {
+                            "type": "string"
+                          },
+                          "agent_id": {
+                            "type": "string"
+                          },
+                          "ok": {
+                            "type": "boolean"
+                          },
+                          "rtt_ms": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "error": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "agent",
+                          "agent_id",
+                          "ok",
+                          "rtt_ms"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "via": {
+                      "type": "string",
+                      "const": "broker"
+                    }
+                  },
+                  "required": [
+                    "results",
+                    "via"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
             "description": "Refusal.",
             "content": {
               "application/json": {
@@ -48140,10 +49482,15 @@
                         "org_only",
                         "off"
                       ]
+                    },
+                    "mineOrgPrivate": {
+                      "type": "boolean",
+                      "description": "Whether the organization’s own recorded usage is mined for recipe proposals. Off by default under zero data retention."
                     }
                   },
                   "required": [
-                    "serveRecipes"
+                    "serveRecipes",
+                    "mineOrgPrivate"
                   ],
                   "additionalProperties": false
                 }
@@ -48228,17 +49575,10 @@
       },
       "put": {
         "operationId": "recipes.settings.put",
-        "summary": "Choose which recipes tool search offers.",
+        "summary": "Choose which recipes tool search offers and whether the organization’s own usage is mined for proposals. Send what changes; at least one field.",
         "security": [
           {
-            "browserSession": [
-              "recipes:write"
-            ]
-          },
-          {
-            "serverKey": [
-              "recipes:write"
-            ]
+            "browserSession": []
           }
         ],
         "parameters": [],
@@ -48256,11 +49596,11 @@
                       "org_only",
                       "off"
                     ]
+                  },
+                  "mineOrgPrivate": {
+                    "type": "boolean"
                   }
                 },
-                "required": [
-                  "serveRecipes"
-                ],
                 "additionalProperties": false
               }
             }
@@ -48281,10 +49621,15 @@
                         "org_only",
                         "off"
                       ]
+                    },
+                    "mineOrgPrivate": {
+                      "type": "boolean",
+                      "description": "Whether the organization’s own recorded usage is mined for recipe proposals. Off by default under zero data retention."
                     }
                   },
                   "required": [
-                    "serveRecipes"
+                    "serveRecipes",
+                    "mineOrgPrivate"
                   ],
                   "additionalProperties": false
                 }
@@ -48667,6 +50012,363 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/market/flags": {
+      "get": {
+        "operationId": "platform.market.flags.list",
+        "summary": "List the open flags: publishers with many refunds, installations whose runs jumped, failed payouts and reversed transfers.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "flags": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": {}
+                      }
+                    }
+                  },
+                  "required": [
+                    "flags"
+                  ],
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/market/flags/{id}/resolve": {
+      "post": {
+        "operationId": "platform.market.flags.resolve",
+        "summary": "Mark a flag as looked into.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/market/ledger": {
+      "get": {
+        "operationId": "platform.market.ledger",
+        "summary": "Read the newest ledger rows across publishers: sales, refunds and disputes.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "sale",
+                "refund",
+                "dispute"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": {}
+                      }
+                    }
+                  },
+                  "required": [
+                    "entries"
+                  ],
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
                 }
               }
             }
@@ -49645,6 +51347,135 @@
             }
           },
           "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/market/sales/{id}/refund": {
+      "post": {
+        "operationId": "platform.market.sales.refund",
+        "summary": "Refund a sale in full, whatever its model or age.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
             "description": "Refusal.",
             "content": {
               "application/json": {
@@ -58144,6 +59975,1317 @@
         }
       }
     },
+    "/recipe-candidates": {
+      "get": {
+        "operationId": "recipes.candidates.list",
+        "summary": "Recipes proposed from the organization’s own recorded tool calls, newest evidence first. A candidate holds tool names and their order only and is never served until an admin accepts it and the draft it becomes is activated.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "accepted",
+                "dismissed"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "goalTool": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "useCase": {
+                            "type": "string"
+                          },
+                          "difficulty": {
+                            "type": "object",
+                            "properties": {
+                              "level": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "level",
+                              "reason"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "primaryTools": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "relatedTools": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "steps": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "order": {
+                                  "type": "number"
+                                },
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "required",
+                                    "optional",
+                                    "fallback"
+                                  ]
+                                },
+                                "condition": {
+                                  "type": "string"
+                                },
+                                "fallbackFor": {
+                                  "type": "number"
+                                },
+                                "tool": {
+                                  "type": "string"
+                                },
+                                "instruction": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "order",
+                                "kind",
+                                "tool",
+                                "instruction"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "pitfalls": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "tool": {
+                                  "type": "string"
+                                },
+                                "errorCodes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "text": {
+                                  "type": "string"
+                                },
+                                "fix": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "tool",
+                                "text",
+                                "fix"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "support": {
+                            "type": "object",
+                            "properties": {
+                              "segments": {
+                                "type": "number"
+                              },
+                              "callers": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "segments",
+                              "callers"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "windowEnd": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "accepted",
+                              "dismissed"
+                            ]
+                          },
+                          "recipeId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "goalTool",
+                          "title",
+                          "useCase",
+                          "difficulty",
+                          "primaryTools",
+                          "relatedTools",
+                          "steps",
+                          "pitfalls",
+                          "support",
+                          "windowEnd",
+                          "status",
+                          "recipeId"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "candidates"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipe-candidates/{id}:accept": {
+      "post": {
+        "operationId": "recipes.candidates.accept",
+        "summary": "Turn a candidate into a draft recipe. Send `recipe` to save your own wording instead; then a different admin has to activate it.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "recipe": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "useCase": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                      },
+                      "difficulty": {
+                        "type": "object",
+                        "properties": {
+                          "level": {
+                            "type": "string",
+                            "enum": [
+                              "easy",
+                              "medium",
+                              "hard"
+                            ]
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          }
+                        },
+                        "required": [
+                          "level",
+                          "reason"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "primaryTools": {
+                        "minItems": 1,
+                        "maxItems": 10,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 3,
+                          "maxLength": 120,
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*\\.[A-Za-z0-9][A-Za-z0-9_.-]*$"
+                        }
+                      },
+                      "relatedTools": {
+                        "default": [],
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 3,
+                          "maxLength": 120,
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*\\.[A-Za-z0-9][A-Za-z0-9_.-]*$"
+                        }
+                      },
+                      "steps": {
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "required",
+                                "optional",
+                                "fallback"
+                              ]
+                            },
+                            "condition": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "fallbackFor": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 20
+                            },
+                            "tool": {
+                              "type": "string",
+                              "minLength": 3,
+                              "maxLength": 120,
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*\\.[A-Za-z0-9][A-Za-z0-9_.-]*$"
+                            },
+                            "instruction": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 400
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "tool",
+                            "instruction"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "pitfalls": {
+                        "default": [],
+                        "maxItems": 30,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "tool": {
+                              "type": "string",
+                              "minLength": 3,
+                              "maxLength": 120,
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*\\.[A-Za-z0-9][A-Za-z0-9_.-]*$"
+                            },
+                            "errorCodes": {
+                              "maxItems": 10,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "pattern": "^(http_[1-5]\\d\\d|[A-Z][A-Z0-9_]{1,40})$"
+                              }
+                            },
+                            "text": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 300
+                            },
+                            "fix": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 300
+                            }
+                          },
+                          "required": [
+                            "tool",
+                            "text",
+                            "fix"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "title",
+                      "useCase",
+                      "difficulty",
+                      "primaryTools",
+                      "steps"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidate": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "goalTool": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "useCase": {
+                          "type": "string"
+                        },
+                        "difficulty": {
+                          "type": "object",
+                          "properties": {
+                            "level": {
+                              "type": "string"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "level",
+                            "reason"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "primaryTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "relatedTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "order": {
+                                "type": "number"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "required",
+                                  "optional",
+                                  "fallback"
+                                ]
+                              },
+                              "condition": {
+                                "type": "string"
+                              },
+                              "fallbackFor": {
+                                "type": "number"
+                              },
+                              "tool": {
+                                "type": "string"
+                              },
+                              "instruction": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "order",
+                              "kind",
+                              "tool",
+                              "instruction"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "pitfalls": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tool": {
+                                "type": "string"
+                              },
+                              "errorCodes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "fix": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tool",
+                              "text",
+                              "fix"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "support": {
+                          "type": "object",
+                          "properties": {
+                            "segments": {
+                              "type": "number"
+                            },
+                            "callers": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "segments",
+                            "callers"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "windowEnd": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "accepted",
+                            "dismissed"
+                          ]
+                        },
+                        "recipeId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "goalTool",
+                        "title",
+                        "useCase",
+                        "difficulty",
+                        "primaryTools",
+                        "relatedTools",
+                        "steps",
+                        "pitfalls",
+                        "support",
+                        "windowEnd",
+                        "status",
+                        "recipeId"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "recipe": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "number"
+                        },
+                        "currentVersion": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "latestVersion": {
+                          "type": "number"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "useCase": {
+                          "type": "string"
+                        },
+                        "services": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "difficulty": {
+                          "type": "object",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "enum": [
+                                "easy",
+                                "medium",
+                                "hard"
+                              ]
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "level",
+                            "reason"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "primaryTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "relatedTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "order": {
+                                "type": "number"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "required",
+                                  "optional",
+                                  "fallback"
+                                ]
+                              },
+                              "condition": {
+                                "type": "string"
+                              },
+                              "fallbackFor": {
+                                "type": "number"
+                              },
+                              "tool": {
+                                "type": "string"
+                              },
+                              "instruction": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "order",
+                              "kind",
+                              "tool",
+                              "instruction"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "pitfalls": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tool": {
+                                "type": "string"
+                              },
+                              "errorCodes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "fix": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tool",
+                              "text",
+                              "fix"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "platform",
+                            "mined",
+                            "org"
+                          ]
+                        },
+                        "overrides": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "active",
+                            "suspended",
+                            "retired"
+                          ]
+                        },
+                        "contentHash": {
+                          "type": "string"
+                        },
+                        "signature": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "keyId": {
+                                  "type": "string"
+                                },
+                                "signature": {
+                                  "type": "string"
+                                },
+                                "scope": {
+                                  "type": "string",
+                                  "enum": [
+                                    "platform",
+                                    "org"
+                                  ]
+                                },
+                                "orgId": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "keyId",
+                                "signature",
+                                "scope",
+                                "orgId"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "editable": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "slug",
+                        "version",
+                        "currentVersion",
+                        "latestVersion",
+                        "title",
+                        "useCase",
+                        "services",
+                        "difficulty",
+                        "primaryTools",
+                        "relatedTools",
+                        "steps",
+                        "pitfalls",
+                        "source",
+                        "overrides",
+                        "status",
+                        "contentHash",
+                        "signature",
+                        "editable",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "candidate",
+                    "recipe"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipe-candidates/{id}:dismiss": {
+      "post": {
+        "operationId": "recipes.candidates.dismiss",
+        "summary": "Dismiss a candidate; mining the same pattern again does not bring it back.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidate": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "goalTool": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "useCase": {
+                          "type": "string"
+                        },
+                        "difficulty": {
+                          "type": "object",
+                          "properties": {
+                            "level": {
+                              "type": "string"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "level",
+                            "reason"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "primaryTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "relatedTools": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "order": {
+                                "type": "number"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "required",
+                                  "optional",
+                                  "fallback"
+                                ]
+                              },
+                              "condition": {
+                                "type": "string"
+                              },
+                              "fallbackFor": {
+                                "type": "number"
+                              },
+                              "tool": {
+                                "type": "string"
+                              },
+                              "instruction": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "order",
+                              "kind",
+                              "tool",
+                              "instruction"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "pitfalls": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tool": {
+                                "type": "string"
+                              },
+                              "errorCodes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "fix": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tool",
+                              "text",
+                              "fix"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "support": {
+                          "type": "object",
+                          "properties": {
+                            "segments": {
+                              "type": "number"
+                            },
+                            "callers": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "segments",
+                            "callers"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "windowEnd": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "accepted",
+                            "dismissed"
+                          ]
+                        },
+                        "recipeId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "goalTool",
+                        "title",
+                        "useCase",
+                        "difficulty",
+                        "primaryTools",
+                        "relatedTools",
+                        "steps",
+                        "pitfalls",
+                        "support",
+                        "windowEnd",
+                        "status",
+                        "recipeId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "candidate"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/recipes": {
       "get": {
         "operationId": "recipes.list",
@@ -58203,6 +61345,19 @@
                 "active",
                 "suspended",
                 "retired"
+              ]
+            }
+          },
+          {
+            "name": "difficulty",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "easy",
+                "medium",
+                "hard"
               ]
             }
           },
@@ -58531,7 +61686,7 @@
                           "type": "array",
                           "items": {
                             "type": "string",
-                            "pattern": "^[A-Z][A-Z0-9_]{1,40}$"
+                            "pattern": "^(http_[1-5]\\d\\d|[A-Z][A-Z0-9_]{1,40})$"
                           }
                         },
                         "text": {
@@ -59439,7 +62594,7 @@
                           "type": "array",
                           "items": {
                             "type": "string",
-                            "pattern": "^[A-Z][A-Z0-9_]{1,40}$"
+                            "pattern": "^(http_[1-5]\\d\\d|[A-Z][A-Z0-9_]{1,40})$"
                           }
                         },
                         "text": {
@@ -60925,6 +64080,204 @@
         }
       }
     },
+    "/recipes/{id}:promote": {
+      "post": {
+        "operationId": "recipes.promote",
+        "summary": "Make the served version of a recipe (or `version`) into a draft skill that belongs to the caller. The recipe version must verify against the published keys. The draft is private and cannot be installed until it passes the usual publish checks and review; the recipe’s eval cases are copied to the skill when the plan allows evaluations.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "skill": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string",
+                          "description": "Path of the skill’s page on the gateway."
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "slug",
+                        "url"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "versionId": {
+                      "type": "string"
+                    },
+                    "semver": {
+                      "type": "string"
+                    },
+                    "casesCopied": {
+                      "type": "number"
+                    },
+                    "casesSkipped": {
+                      "description": "Why no eval cases were copied, when the plan does not allow them. The draft was made.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "skill",
+                    "versionId",
+                    "semver",
+                    "casesCopied"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/recipes/{id}:retire": {
       "post": {
         "operationId": "recipes.retire",
@@ -62114,6 +65467,536 @@
         }
       }
     },
+    "/recipes/{id}/diff": {
+      "get": {
+        "operationId": "recipes.diff",
+        "summary": "What changed between two versions of a recipe: `from` defaults to the served version and `to` to the latest. With `against=platform`, an organization recipe that overrides a platform recipe is compared with that platform recipe: the version it was copied from against the one served now.",
+        "security": [
+          {
+            "browserSession": [
+              "recipes:read"
+            ]
+          },
+          {
+            "serverKey": [
+              "recipes:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "against",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "version",
+                "platform"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "diff": {
+                      "type": "object",
+                      "properties": {
+                        "recipeId": {
+                          "type": "string"
+                        },
+                        "against": {
+                          "type": "string",
+                          "enum": [
+                            "version",
+                            "platform"
+                          ]
+                        },
+                        "from": {
+                          "type": "number",
+                          "description": "The version compared from; with `against=platform`, the platform version the copy was made from."
+                        },
+                        "to": {
+                          "type": "number",
+                          "description": "The version compared to; with `against=platform`, the platform version served now."
+                        },
+                        "changed": {
+                          "type": "boolean"
+                        },
+                        "title": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "from": {
+                                  "type": "string"
+                                },
+                                "to": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "from",
+                                "to"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "useCase": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "from": {
+                                  "type": "string"
+                                },
+                                "to": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "from",
+                                "to"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "difficulty": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "from": {
+                                  "type": "object",
+                                  "properties": {
+                                    "level": {
+                                      "type": "string",
+                                      "enum": [
+                                        "easy",
+                                        "medium",
+                                        "hard"
+                                      ]
+                                    },
+                                    "reason": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "level",
+                                    "reason"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "to": {
+                                  "type": "object",
+                                  "properties": {
+                                    "level": {
+                                      "type": "string",
+                                      "enum": [
+                                        "easy",
+                                        "medium",
+                                        "hard"
+                                      ]
+                                    },
+                                    "reason": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "level",
+                                    "reason"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "from",
+                                "to"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "primaryTools": {
+                          "type": "object",
+                          "properties": {
+                            "added": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "removed": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "required": [
+                            "added",
+                            "removed"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "relatedTools": {
+                          "type": "object",
+                          "properties": {
+                            "added": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "removed": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "required": [
+                            "added",
+                            "removed"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "order": {
+                                "type": "number"
+                              },
+                              "change": {
+                                "type": "string",
+                                "enum": [
+                                  "added",
+                                  "removed",
+                                  "changed"
+                                ]
+                              },
+                              "before": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "order": {
+                                        "type": "number"
+                                      },
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "required",
+                                          "optional",
+                                          "fallback"
+                                        ]
+                                      },
+                                      "condition": {
+                                        "type": "string"
+                                      },
+                                      "fallbackFor": {
+                                        "type": "number"
+                                      },
+                                      "tool": {
+                                        "type": "string"
+                                      },
+                                      "instruction": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "order",
+                                      "kind",
+                                      "tool",
+                                      "instruction"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "after": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "order": {
+                                        "type": "number"
+                                      },
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "required",
+                                          "optional",
+                                          "fallback"
+                                        ]
+                                      },
+                                      "condition": {
+                                        "type": "string"
+                                      },
+                                      "fallbackFor": {
+                                        "type": "number"
+                                      },
+                                      "tool": {
+                                        "type": "string"
+                                      },
+                                      "instruction": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "order",
+                                      "kind",
+                                      "tool",
+                                      "instruction"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "order",
+                              "change",
+                              "before",
+                              "after"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "pitfalls": {
+                          "type": "object",
+                          "properties": {
+                            "added": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "tool": {
+                                    "type": "string"
+                                  },
+                                  "errorCodes": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "text": {
+                                    "type": "string"
+                                  },
+                                  "fix": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "tool",
+                                  "text",
+                                  "fix"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "removed": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "tool": {
+                                    "type": "string"
+                                  },
+                                  "errorCodes": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "text": {
+                                    "type": "string"
+                                  },
+                                  "fix": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "tool",
+                                  "text",
+                                  "fix"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "added",
+                            "removed"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "recipeId",
+                        "against",
+                        "from",
+                        "to",
+                        "changed",
+                        "title",
+                        "useCase",
+                        "difficulty",
+                        "primaryTools",
+                        "relatedTools",
+                        "steps",
+                        "pitfalls"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "diff"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/recipes/{id}/eval": {
       "get": {
         "operationId": "recipes.eval",
@@ -62310,7 +66193,7 @@
     "/recipes/{id}/stats": {
       "get": {
         "operationId": "recipes.stats",
-        "summary": "How often each version of a recipe was offered in a search (`served`) and read in full (`fetched`) by this organization over the last `days` days. Counts are the organization’s own, also for a platform recipe.",
+        "summary": "How often each version of a recipe was offered in a search (`served`) and read in full (`fetched`) by this organization over the last `days` days. Counts are the organization’s own, also for a platform recipe. `followed`, `succeeded` and `failed` come from the organization’s own recorded sessions, counted once a day, and stay 0 where mining of its usage is off.",
         "security": [
           {
             "browserSession": [
@@ -62371,6 +66254,42 @@
                           "fetched": {
                             "type": "number"
                           },
+                          "followed": {
+                            "type": "number",
+                            "description": "Recorded sessions whose required steps ran in the recipe’s order, whether or not the recipe was offered."
+                          },
+                          "succeeded": {
+                            "type": "number",
+                            "description": "Of the followed sessions, those whose last required step worked."
+                          },
+                          "failed": {
+                            "type": "number",
+                            "description": "Of the followed sessions, those whose last required step failed."
+                          },
+                          "successRate": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "low": {
+                                    "type": "number"
+                                  },
+                                  "high": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "low",
+                                  "high"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The 95% interval of the share that worked among followed sessions; null with none."
+                          },
                           "lastDay": {
                             "type": [
                               "string",
@@ -62382,6 +66301,10 @@
                           "version",
                           "served",
                           "fetched",
+                          "followed",
+                          "succeeded",
+                          "failed",
+                          "successRate",
                           "lastDay"
                         ],
                         "additionalProperties": false
@@ -81389,10 +85312,12 @@
               "invalid_token",
               "publisher_not_verified",
               "review_not_eligible",
+              "flag_not_found",
               "handle_not_flagged",
               "installation_not_found",
               "listing_not_found",
               "publisher_not_found",
+              "purchase_not_found",
               "report_not_found",
               "review_not_found",
               "submission_not_found",
@@ -81403,6 +85328,8 @@
               "listing_archived",
               "publisher_exists",
               "publisher_protected",
+              "refund_refused",
+              "refund_unavailable",
               "reply_exists",
               "review_exists",
               "review_hidden",
@@ -81502,6 +85429,7 @@
               "network_disabled",
               "agent_revoked",
               "binding_not_supported",
+              "broker_unavailable",
               "rate_limiter_unavailable"
             ]
           },

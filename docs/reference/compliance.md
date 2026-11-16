@@ -65,10 +65,13 @@ is extracted: each file is hashed as it streams out of its archive. It checks:
    (leaf `SHA-256(0x00 || canonical JSON of the row's non-null columns)`, pairs
    `SHA-256(0x01 || left || right)`, an odd node carried up) must equal the
    hour's checkpoint, with its row count and first and last id; the checkpoint's
-   signature is checked with the audit key its `kid` names. The gateway does not
-   publish audit keys, so they are read from the bundle's `keys/public-keys.json`,
-   which the signed manifest covers by hash; `--keys` may carry `audit` keys to
-   use instead. Rows must be in ascending id order, inside the manifest's audit
+   signature is checked with the audit key its `kid` names. The audit keys are read
+   from the bundle's `keys/public-keys.json`, which the signed manifest covers by
+   hash; `--keys` may carry `audit` keys to use instead. The gateway also
+   publishes its audit keys at `/.well-known/zuano-audit-keys`; `verify` does not
+   fetch them. To check the checkpoints against keys that did not come from the
+   bundle, copy them from that address into the `audit` list of a `--keys` file
+   next to the `evidence` keys. Rows must be in ascending id order, inside the manifest's audit
    range, of the manifest's organization, and the parts numbered from 1 without a
    gap; `audit/verification.json` must equal the verification recomputed here.
 

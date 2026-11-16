@@ -165,7 +165,16 @@ var networkFixtures = []struct{ operation, status, body string }{
 	{"networks.bindings.list", "200", networkBindings},
 	{"networks.bindings.delete", "200", `{"deleted":true}`},
 	{"networks.events.list", "200", networkEvents},
+	{"networks.tokens.list", "200", networkTokenList},
+	{"networks.logs.list", "200", networkLogs},
+	{"networks.test", "200", networkTestResults},
 }
+
+const (
+	networkTokenList   = `{"tokens":[{"id":"ent_1","createdAt":"2026-10-16T09:00:00Z","expiresAt":"2026-10-16T10:00:00Z","maxUses":3,"usesLeft":2,"requireApproval":true}]}`
+	networkLogs        = `{"logs":[{"id":"nal_1","ts":"2026-10-16T09:30:00Z","agent":"erp-a","agent_id":"nag_1","level":"error","event":"exchange","target":"erp","method":"GET","path":null,"status":502,"outcome":"upstream_error","code":null,"duration_ms":12,"audit_ref":null,"message":null}],"next":null}`
+	networkTestResults = `{"results":[{"agent":"erp-a","agent_id":"nag_1","ok":true,"rtt_ms":42},{"agent":"erp-b","agent_id":"nag_2","ok":false,"rtt_ms":0,"error":"timeout"}],"via":"broker"}`
+)
 
 func TestContract_NetworkFixturesMatchTheOpenAPI(t *testing.T) {
 	doc := loadOpenAPI(t)
@@ -204,13 +213,16 @@ var networkInvocations = [][]string{
 	{"revoke", "dc1", "erp-a", "--reason", "retired", "--yes"},
 	{"allowlist", "dc1"},
 	{"events", "dc1", "--limit", "20", "--before", "2026-10-17T00:00:00Z"},
+	{"logs", "dc1", "--agent", "erp-a", "--target", "erp", "--outcome", "upstream_error", "--since", "24h", "--limit", "20", "--before", "2026-10-17T00:00:00Z"},
+	{"token", "list", "dc1"},
+	{"test", "dc1"},
 	{"bind", "erp-private", "--network", "dc1", "--target", "erp", "--credentials", "agent"},
 	{"unbind", "erp-private", "--network", "dc1"},
 }
 
 // networkOperationsWithoutACommand are published operations no command sends:
 // changing a network needs a passkey confirmation of that exact change, and
-// revoking a token needs the token's id, which no route lists.
+// no command revokes a token yet.
 var networkOperationsWithoutACommand = []string{"networks.update", "networks.tokens.revoke"}
 
 func TestContract_NetworkRequestsMatchTheOpenAPI(t *testing.T) {
@@ -238,6 +250,9 @@ func TestContract_NetworkRequestsMatchTheOpenAPI(t *testing.T) {
 		"POST " + base + "/net_1/agents/nag_1/revoke":         jsonReply(200, `{"ok":true}`),
 		"GET " + base + "/net_1/allowlist":                    jsonReply(200, networkAllowlist),
 		"GET " + base + "/net_1/events":                       jsonReply(200, networkEvents),
+		"GET " + base + "/net_1/logs":                         jsonReply(200, networkLogs),
+		"GET " + base + "/net_1/enrollment-tokens":            jsonReply(200, networkTokenList),
+		"POST " + base + "/net_1/test":                        jsonReply(200, networkTestResults),
 		"GET " + base + "/net_1/bindings":                     jsonReply(200, networkBindings),
 		"POST " + base + "/net_1/bindings":                    jsonReply(201, `{}`),
 		"DELETE " + base + "/net_1/bindings/nbd_1":            jsonReply(200, `{"deleted":true}`),

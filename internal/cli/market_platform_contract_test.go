@@ -25,8 +25,8 @@ func TestContract_PlatformMarketOperationsAreNotCalledByTheCLI(t *testing.T) {
 			}
 		}
 	}
-	if platform != 12 {
-		t.Errorf("the OpenAPI document lists %d platform market operations, want 12", platform)
+	if platform != 16 {
+		t.Errorf("the OpenAPI document lists %d platform market operations, want 16", platform)
 	}
 	files, err := filepath.Glob("*.go")
 	if err != nil {

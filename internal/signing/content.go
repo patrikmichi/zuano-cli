@@ -1,7 +1,6 @@
 package signing
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -60,11 +59,9 @@ func VerifyContent(keys []Key, h http.Header, body []byte) error {
 	if err != nil {
 		return &ContentError{Reason: "the signature is not base64"}
 	}
-	dec := json.NewDecoder(bytes.NewReader(body))
-	dec.UseNumber()
-	var doc any
-	if err := dec.Decode(&doc); err != nil {
-		return &ContentError{Reason: "the signed body is not JSON"}
+	doc, err := DecodeStrict(body)
+	if err != nil {
+		return &ContentError{Reason: fmt.Sprintf("the signed body is not a clean JSON document: %v", err)}
 	}
 	msg, err := CanonicalJSON(doc)
 	if err != nil {

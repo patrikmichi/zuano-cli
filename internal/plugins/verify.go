@@ -151,11 +151,10 @@ func Verify(archive []byte, ext string, e Expect) (*Package, error) {
 // signedMessage is the canonical JSON of the signature document without its
 // signature member.
 func signedMessage(raw []byte) ([]byte, error) {
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	dec.UseNumber()
-	var doc map[string]any
-	if err := dec.Decode(&doc); err != nil {
-		return nil, reject("%s is not a JSON object", SignatureFile)
+	parsed, err := signing.DecodeStrict(raw)
+	doc, isObject := parsed.(map[string]any)
+	if err != nil || !isObject {
+		return nil, reject("%s is not a JSON object with every key once", SignatureFile)
 	}
 	delete(doc, "signature")
 	msg, err := signing.CanonicalJSON(doc)

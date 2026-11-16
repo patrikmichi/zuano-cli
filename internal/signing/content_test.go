@@ -31,6 +31,9 @@ func TestVerifyContent(t *testing.T) {
 		"no keys":                          {nil, signed(s, body), body, false},
 		"not base64":                       {[]signing.Key{s.Key}, http.Header{signing.HeaderContentSignature: {"!!"}, signing.HeaderContentKeyID: {"k1"}}, body, false},
 		"not json":                         {[]signing.Key{s.Key}, signed(s, body), []byte(`nope`), false},
+		"a repeated key":                   {[]signing.Key{s.Key}, signed(s, []byte(`{"a":1,"a":2}`)), []byte(`{"a":1,"a":2}`), false},
+		"a repeated key below the top":     {[]signing.Key{s.Key}, signed(s, []byte(`{"x":{"a":1,"a":2}}`)), []byte(`{"x":{"a":1,"a":2}}`), false},
+		"content after the document":       {[]signing.Key{s.Key}, signed(s, body), append(append([]byte{}, body...), []byte(` {"c":3}`)...), false},
 	}
 	for name, c := range cases {
 		err := signing.VerifyContent(c.keys, c.h, c.body)

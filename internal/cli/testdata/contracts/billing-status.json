@@ -1,18 +1,1 @@
-{
-  "plan": { "key": "pro", "display_name": "Pro", "source": "stripe", "status": "trialing" },
-  "period": { "start": "2026-10-16T12:00:00.000Z", "end": "2026-11-16T12:00:00.000Z" },
-  "trial": { "ends_at": "2026-10-30T12:00:00.000Z", "used": true },
-  "cancel_at_period_end": false,
-  "scheduled_plan": null,
-  "verified": true,
-  "verification": { "verified": true },
-  "suspended": false,
-  "past_due": false,
-  "dunning": null,
-  "payment_action_url": null,
-  "overage_enabled": false,
-  "spend_cap_nano": null,
-  "credit": { "granted_nano": 5000000000, "source": "plan", "expires_at": "2026-11-16T12:00:00.000Z" },
-  "over_limit": {},
-  "billing_configured": true
-}
+{"plan":{"key":"pro","display_name":"Pro","source":"stripe","status":"trialing"},"period":{"start":"2026-10-16T12:00:00.000Z","end":"2026-11-16T12:00:00.000Z"},"trial":{"ends_at":"2026-10-30T12:00:00.000Z","used":true},"cancel_at_period_end":false,"scheduled_plan":null,"verified":true,"verification":{"verified":true,"method":"card","verified_at":"2026-10-16T12:00:00.000Z","signals":[{"id":"card","met":true},{"id":"work_email","met":false},{"id":"domain","met":false},{"id":"github","met":false},{"id":"admin","met":false}]},"suspended":false,"past_due":false,"dunning":null,"payment_action_url":null,"overage_enabled":false,"spend_cap_nano":null,"credit":{"granted_nano":5000000000,"source":"plan","expires_at":"2026-11-16T12:00:00.000Z"},"over_limit":{},"billing_configured":true}

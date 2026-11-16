@@ -1,18 +1,1 @@
-{
-  "plan": { "key": "expert", "display_name": "Expert", "source": "simulated", "status": "past_due" },
-  "period": { "start": "2026-10-16T12:00:00.000Z", "end": "2026-11-16T12:00:00.000Z" },
-  "trial": { "ends_at": null, "used": false },
-  "cancel_at_period_end": true,
-  "scheduled_plan": "free",
-  "verified": false,
-  "verification": { "verified": false },
-  "suspended": false,
-  "past_due": true,
-  "dunning": { "started_at": "2026-11-01T00:00:00.000Z", "day": 4, "grace_ends_at": "2026-11-15T00:00:00.000Z" },
-  "payment_action_url": "https://gateway.example/admin/billing?pay=1",
-  "overage_enabled": true,
-  "spend_cap_nano": 25000000000,
-  "credit": { "granted_nano": 0, "source": "none", "expires_at": null },
-  "over_limit": { "groups": { "since": "2026-11-02T00:00:00.000Z", "grace_ends_at": "2026-11-09T00:00:00.000Z" } },
-  "billing_configured": true
-}
+{"plan":{"key":"business","display_name":"Business","source":"simulated","status":"past_due"},"period":{"start":"2026-10-16T12:00:00.000Z","end":"2026-11-16T12:00:00.000Z"},"trial":{"ends_at":null,"used":false},"cancel_at_period_end":true,"scheduled_plan":"free","verified":false,"verification":{"verified":false,"method":null,"verified_at":null,"signals":[{"id":"card","met":false},{"id":"work_email","met":false},{"id":"domain","met":false},{"id":"github","met":false},{"id":"admin","met":false}]},"suspended":false,"past_due":true,"dunning":{"started_at":"2026-11-01T00:00:00.000Z","day":4,"grace_ends_at":"2026-11-15T00:00:00.000Z"},"payment_action_url":"https://gateway.example/admin/billing?pay=1","overage_enabled":true,"spend_cap_nano":25000000000,"credit":{"granted_nano":0,"source":"none","expires_at":null},"over_limit":{"members":{"since":"2026-11-02T00:00:00.000Z","grace_ends_at":"2026-11-09T00:00:00.000Z"}},"billing_configured":true}

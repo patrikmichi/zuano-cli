@@ -1,13 +1,1 @@
-{
-  "period": { "start": "2026-10-16T12:00:00.000Z", "end": "2026-11-16T12:00:00.000Z" },
-  "meters": [
-    { "meter": "tool_calls", "unit": "calls", "used": 41000, "included": 50000, "overage": "bill", "percent": 82, "projected": 62000, "projected_cost_nano": 6000000000, "meter_cap": null },
-    { "meter": "trace_spans", "unit": "spans", "used": 1200, "included": null, "overage": "none", "percent": null, "projected": 1800, "projected_cost_nano": 0, "meter_cap": null }
-  ],
-  "spend": { "billable_nano": 0, "credit_nano": 5000000000, "credit_used_nano": 0, "credit_remaining_nano": 5000000000, "credit_source": "plan", "credit_expires_at": "2026-11-16T12:00:00.000Z", "beyond_credit_nano": 0, "cap_nano": null, "overage_enabled": false },
-  "meta_tool_calls": 12,
-  "app_split": [{ "meter": "tool_calls", "managed": 0, "own": 41000 }],
-  "daily": { "meter": "tool_calls", "days": [{ "day": "2026-10-16", "quantity": 1300 }] },
-  "breakdown": { "by": "source", "scope": "organization", "rows": [{ "key": "mcp", "label": "mcp", "quantity": 41000 }] },
-  "over_limit": []
-}
+{"period":{"start":"2026-10-16T12:00:00.000Z","end":"2026-11-16T12:00:00.000Z"},"meters":[{"meter":"tool_calls","unit":"call","used":41000,"included":200000,"overage":"bill","percent":21,"projected":62000,"projected_cost_nano":0,"meter_cap":null},{"meter":"observability_events","unit":"event","used":1200,"included":null,"overage":"none","percent":null,"projected":1800,"projected_cost_nano":0,"meter_cap":null}],"spend":{"billable_nano":0,"credit_nano":5000000000,"credit_used_nano":0,"credit_remaining_nano":5000000000,"credit_source":"plan","credit_expires_at":"2026-11-16T12:00:00.000Z","beyond_credit_nano":0,"cap_nano":null,"overage_enabled":false},"meta_tool_calls":12,"app_split":[{"meter":"tool_calls","managed":0,"own":41000}],"daily":{"meter":"tool_calls","days":[{"day":"2026-10-16","quantity":1300}]},"breakdown":{"by":"source","scope":"organization","rows":[{"key":"mcp","label":"mcp","quantity":41000}]},"over_limit":[]}

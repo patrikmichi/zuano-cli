@@ -38,7 +38,7 @@ func TestBillingStatus_SimulatedPlanPaymentFailingWithSpendCap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Expert — simulated", "payment failing since 2026-11-01T00:00:00.000Z (day 4)", "Cancels:   at the end of the period", "Moves to:  free", "Verified:  no", "Overage:   on, spend cap 25.00 EUR", "Over limit: groups since 2026-11-02T00:00:00.000Z, until 2026-11-09T00:00:00.000Z", "Pay:       https://gateway.example/admin/billing?pay=1"} {
+	for _, want := range []string{"Business — simulated", "payment failing since 2026-11-01T00:00:00.000Z (day 4)", "Cancels:   at the end of the period", "Moves to:  free", "Verified:  no", "Overage:   on, spend cap 25.00 EUR", "Over limit: members since 2026-11-02T00:00:00.000Z, until 2026-11-09T00:00:00.000Z", "Pay:       https://gateway.example/admin/billing?pay=1"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
@@ -67,7 +67,7 @@ func TestBillingUsage_PrintsATableWithPercentAndProjectedCost(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"METER", "PROJECTED COST", "tool_calls", "41000", "50000", "82%", "62000", "6.00 EUR", "trace_spans", "unlimited", "Spend:  0.00 EUR (credit left 5.00 EUR)", "Tool calls by source (organization):", "  mcp  41000"} {
+	for _, want := range []string{"METER", "PROJECTED COST", "tool_calls", "41000", "200000", "21%", "62000", "observability_events", "unlimited", "Spend:  0.00 EUR (credit left 5.00 EUR)", "Tool calls by source (organization):", "  mcp  41000"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
@@ -151,7 +151,7 @@ func TestBillingOpen_PrintsTheLinkWithoutATerminalAndOpensTheBrowserWithOne(t *t
 }
 
 func TestBillingFixturesAreValidJSON(t *testing.T) {
-	for _, name := range []string{"billing-status.json", "billing-status-simulated.json", "billing-usage.json", "billing-usage-by-service.json", "org-usage.json", "run-accepted.json", "job.json", "jobs.json"} {
+	for _, name := range []string{"billing-status.json", "billing-status-simulated.json", "billing-usage.json", "billing-usage-by-service.json", "billing-credits.json", "run-accepted.json", "job.json", "jobs.json"} {
 		var v any
 		if err := json.Unmarshal([]byte(contractFixture(t, name)), &v); err != nil {
 			t.Errorf("%s: %v", name, err)
@@ -164,32 +164,57 @@ func TestBillingFixturesAreValidJSON(t *testing.T) {
 	}
 }
 
-func TestUsage_PrintsEveryMetricAndFlagsTheOnesOverTheirLimits(t *testing.T) {
+func TestUsage_PrintsEveryMeterFromTheBillingUsageRoute(t *testing.T) {
 	approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
-		"GET /api/org/usage": reply(200, contractFixture(t, "org-usage.json")),
+		"GET /api/v1/billing/usage": reply(200, contractFixture(t, "billing-usage.json")),
 	})
 	out, err := runCommand(t, UsageCmd())
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Plan: free", "tool_calls", "1650", "2000", "over the soft limit", "agent_runs", "storage_bytes", "seats", "at the hard limit"} {
+	for _, want := range []string{"METRIC", "tool_calls", "call", "41000", "200000", "observability_events", "unlimited", "2026-11-16T12:00:00.000Z"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
 	}
+	if strings.Contains(out, "trace_spans") || strings.Contains(out, "at the limit") {
+		t.Errorf("unexpected output:\n%s", out)
+	}
 }
 
-func TestUsage_PassesTheDatesAndPrintsJSONUnchanged(t *testing.T) {
-	body := contractFixture(t, "org-usage.json")
+func TestPrintOrgUsage_FlagsMetersAtOrOverTheirAllowance(t *testing.T) {
+	var u billingUsage
+	body := `{"period":{"end":"2026-11-16T12:00:00.000Z"},"meters":[
+		{"meter":"seats","unit":"seat","used":3,"included":3,"overage":"none"},
+		{"meter":"tool_calls","unit":"call","used":300,"included":200,"overage":"bill"},
+		{"meter":"agent_runs","unit":"run","used":1,"included":50,"overage":"bill"}]}`
+	if err := json.Unmarshal([]byte(body), &u); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	printOrgUsage(&buf, u)
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	if len(lines) != 4 {
+		t.Fatalf("output = %q", buf.String())
+	}
+	for i, want := range []string{"seats seat 3 3 2026-11-16T12:00:00.000Z at the limit", "tool_calls call 300 200 2026-11-16T12:00:00.000Z over the allowance", "agent_runs run 1 50 2026-11-16T12:00:00.000Z"} {
+		if got := strings.Join(strings.Fields(lines[i+1]), " "); got != want {
+			t.Errorf("row %d = %q, want %q", i, got, want)
+		}
+	}
+}
+
+func TestUsage_PrintsJSONUnchangedAndTakesNoDateRange(t *testing.T) {
+	body := contractFixture(t, "billing-usage.json")
 	approvalsGateway(t, map[string]func(http.ResponseWriter, map[string]any){
-		"GET /api/org/usage?from=2026-10-01&to=2026-10-16": reply(200, body),
+		"GET /api/v1/billing/usage": reply(200, body),
 	})
-	out, err := runCommand(t, UsageCmd(), "--from", "2026-10-01", "--to", "2026-10-16", "--json")
+	out, err := runCommand(t, UsageCmd(), "--json")
 	if err != nil || strings.TrimSpace(out) != strings.TrimSpace(body) {
 		t.Fatalf("--json = %q, %v", out, err)
 	}
-	if _, err := runCommand(t, UsageCmd(), "--from", "yesterday"); err == nil || !strings.Contains(err.Error(), "invalid --from") {
-		t.Errorf("err = %v", err)
+	if _, err := runCommand(t, UsageCmd(), "--from", "2026-10-01"); err == nil {
+		t.Error("--from is not a flag of the billing usage route")
 	}
 }
 

@@ -13,7 +13,7 @@ no billing credential and cannot spend money.
 | `zuano billing usage [--meter KEY] [--by member\|service\|tool\|source] [--json]` | `GET /api/v1/billing/usage?meter=&by=` |
 | `zuano billing credits [--json]` | `GET /api/v1/billing/credits` |
 | `zuano billing open [--no-browser]` | none: opens `<gateway>/admin/billing` |
-| `zuano usage [--from DAY] [--to DAY] [--json]` | `GET /api/org/usage?from=&to=` |
+| `zuano usage [--json]` | `GET /api/v1/billing/usage` |
 
 All of them accept the personal and the agent session (they only read), except `billing credits`, which needs a personal session, and
 `--json` prints the response body unchanged. The request and response shapes
@@ -31,9 +31,12 @@ is over and the link that confirms a payment the bank is waiting on.
 percent of the allowance, the projection to the end of the period and its cost
 (only for a meter billed beyond its allowance), then the spend and the tool
 calls grouped by `--by` (the source of the call by default; an administrator
-sees the organisation, a member only their own). `usage` is the quota view:
-each metric with its soft limit (a warning) and hard limit (a block) and when
-the window resets.
+sees the organisation, a member only their own). `usage` is the short view of the same
+route: each meter with its unit, what was used, what the plan includes
+(`unlimited` without an allowance) and when the billing period ends, flagged
+`at the limit` where the plan blocks at the allowance and `over the allowance`
+where it bills beyond it. The gateway has no per-day range or soft and hard
+limits, so the command takes no `--from` or `--to`.
 
 `billing credits` prints the prepaid model credit balance in euros, what calls
 in flight hold back, each top-up or grant that still has credit (remaining,

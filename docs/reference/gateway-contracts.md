@@ -22,13 +22,17 @@ The documents the contract tests read from the gateway's own fixtures:
 billing and suspension refusal, which must end with the exit code the registry
 gives it), the `plugin-*.json` documents and `skill-requirements.json`. Ids and
 timestamps are stable placeholders,
-so a fixture changes only when a route's shape does.
+so a fixture changes only when a route's shape does. The `billing-*.json` documents are the gateway's own
+(`gateway/contract-fixtures/`, which also names the request each answers); the chat and approval-route
+documents in `internal/cli/testdata/chat/` are written from the response schemas in the OpenAPI document,
+because the gateway ships none for them. The compliance bundle, its tampered copy and the public evidence key
+in `internal/evidence/testdata/` come from the gateway's `compliance:fixture` script and hold no private key.
 
 The gateway's OpenAPI document (`gateway/openapi/v1.json`) is vendored as
 `internal/cli/testdata/contracts/openapi-v1.json`; `ZUANO_GATEWAY_OPENAPI`
 names the gateway's own copy. The vendored copy is the integration branch's
-document as it stood at c1e5a24, unedited (`make gen-openapi` copies it): the run, firewall, knowledge base,
-approval and SDK session routes are all in it, so nothing is merged in by
+document as it stood at 15fcb4fcf, unedited (`make gen-openapi` copies it): the run, firewall, knowledge base,
+approval, billing, chat, approval-route and SDK session routes are all in it, so nothing is merged in by
 hand. Regenerate it by copying `gateway/openapi/v1.json` from the integration
 branch. An operation names its own `servers` entry when it is not under
 `/api/v1`, and the test follows it. The contract tests send every
@@ -124,7 +128,7 @@ the constants in the code, both ways.
 | 32 | `billing_unavailable` | |
 | 33 | `suspended` | `org_suspended`, `seat_suspended`, `ip_not_allowed`, `identity_suspended`, `identity_revoked`, `identity_expired`, `identity_refused` |
 | 34 | `network_offline` | REST `503` with `Retry-After` and `{"ok": false, "error": text, "network": {"error": "network_offline" \| "target_not_served" \| "egress_unavailable", "network"?}}`; also the `reason`/`error` codes of an MCP result |
-| 40 | `policy_invalid` | also DLP policy documents |
+| 40 | `policy_invalid` | also DLP policy documents; a diagnostic with the code `policy_unknown_category` (a data category the catalog does not have) is one of its problems |
 | 41 | `policy_conflict` | |
 | 42 | `policy_managed_in_git` | |
 | 43 | `tool_definition_changed` | |
@@ -132,7 +136,7 @@ the constants in the code, both ways.
 | 45 | `evidence_bundle_invalid` | `compliance verify` |
 | 46 | `evidence_keys_missing` | `compliance verify` |
 | 47 | `scan_pending` | `409` `scan_pending` on `sites/{id}/activate` or `sites/{id}/sharing`: the release's data protection scan has not finished, so it cannot go live or public yet; retry shortly |
-| 50 | `a2a_chain_refused` | `a2a_loop`, `a2a_depth_exceeded`, `a2a_chain_limit` |
+| 50 | `a2a_chain_refused` | `a2a_loop`, `a2a_depth_exceeded`, `a2a_chain_limit`, `a2a_scope_exceeded` |
 | 51 | `chain_killed` | |
 | 52 | `chain_budget_exhausted` | |
 | 53 | `agent_card_changed` | |
@@ -585,17 +589,10 @@ The run routes are read against the workflows branch at ae0cbec
 
 ## Quota usage
 
-`GET /api/org/usage?from=YYYY-MM-DD&to=YYYY-MM-DD` (Bearer). Fixture:
-`org-usage.json`.
-
-```json
-{"orgId", "plan", "from", "to",
- "metrics": [{"metric", "window": "day|month|gauge", "used", "soft", "hard", "resetsAt": null|text}],
- "daily": [{"day", "metric", "quantity"}]}
-```
-
-Source: scalability plan sections 5.9 and 7 ("per-metric daily usage, current
-window counters, limits"). The layout is this client's decision.
+`zuano usage` reads `GET /api/v1/billing/usage` (Bearer; no query), the route
+and fixture described under billing above (`billing-usage.json`). It prints
+`meters[]` (`meter`, `unit`, `used`, `included`, `overage`) and the period end.
+The gateway has no `/api/org/usage`, no date range and no soft or hard limits.
 
 ## Signed documents
 

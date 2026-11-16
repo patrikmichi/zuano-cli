@@ -1,142 +1,383 @@
-package evidence
+package evidence_test
 
 import (
 	"archive/zip"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/patrikmichi/zuano-cli/internal/evidence"
+	"github.com/patrikmichi/zuano-cli/internal/evidence/evidencetest"
 	"github.com/patrikmichi/zuano-cli/internal/signing"
 	"github.com/patrikmichi/zuano-cli/internal/signing/signingtest"
 )
 
-// bundle describes a bundle to build; each field can be spoiled by a test.
-type bundle struct {
-	t        *testing.T
-	evidence *signingtest.Signer
-	audit    *signingtest.Signer
-	files    map[string][]byte
-	listed   map[string]bool
-	events   []map[string]any
-	cps      []checkpoint
-	manifest Manifest
-	head     string
-	phantom  []FileEntry
+func verify(t *testing.T, b *evidencetest.Bundle, opts evidence.Options) *evidence.Result {
+	t.Helper()
+	return verifyPaths(t, b.Write(), []signing.Key{b.Evidence.Key}, opts)
 }
 
-func canon(t *testing.T, v any) []byte {
+func verifyPaths(t *testing.T, paths []string, trusted []signing.Key, opts evidence.Options) *evidence.Result {
 	t.Helper()
-	b, err := signing.CanonicalJSON(v)
+	res, err := evidence.Verify(paths, evidence.Keys{Evidence: trusted}, opts)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	return res
+}
+
+func failures(res *evidence.Result) string {
+	var parts []string
+	for _, f := range res.Failures {
+		parts = append(parts, f.String())
+	}
+	return strings.Join(parts, "\n")
+}
+
+func wantFailure(t *testing.T, res *evidence.Result, wants ...string) {
+	t.Helper()
+	if res.OK() {
+		t.Fatal("the bundle verified")
+	}
+	got := failures(res)
+	for _, want := range wants {
+		if !strings.Contains(got, want) {
+			t.Errorf("failures lack %q:\n%s", want, got)
+		}
+	}
+}
+
+func TestVerify_AcceptsABundleInTheGatewaysFormat(t *testing.T) {
+	for name, o := range map[string]evidencetest.Options{
+		"one volume":         {},
+		"audit parts":        {RowsPerPart: 2},
+		"several volumes":    {VolumeBytes: 1},
+		"parts and volumes":  {RowsPerPart: 1, VolumeBytes: 100},
+		"an unsigned hour":   {SkipCheckpoint: map[int]bool{1: true}},
+		"every hour is open": {SkipCheckpoint: map[int]bool{0: true, 1: true, 2: true}},
+	} {
+		b := evidencetest.New(t, o)
+		res := verify(t, b, evidence.Options{})
+		if !res.OK() {
+			t.Errorf("%s: %s", name, failures(res))
+			continue
+		}
+		if res.Events != 6 || res.Hours != 3 || res.Volumes != b.Volumes || res.Files != len(b.Manifest["files"].([]any)) {
+			t.Errorf("%s: events %d, hours %d, volumes %d, files %d", name, res.Events, res.Hours, res.Volumes, res.Files)
+		}
+		if want := 3 - len(o.SkipCheckpoint); res.VerifiedHours != want || len(res.UnsignedHours) != len(o.SkipCheckpoint) {
+			t.Errorf("%s: verified %d, unsigned %v", name, res.VerifiedHours, res.UnsignedHours)
+		}
+	}
+}
+
+func TestVerify_TakesVolumesInAnyOrder(t *testing.T) {
+	b := evidencetest.New(t, evidencetest.Options{VolumeBytes: 1})
+	paths := b.Write()
+	if len(paths) < 3 {
+		t.Fatalf("only %d volumes", len(paths))
+	}
+	slices.Reverse(paths)
+	if res := verifyPaths(t, paths, []signing.Key{b.Evidence.Key}, evidence.Options{}); !res.OK() {
+		t.Error(failures(res))
+	}
+}
+
+func TestVerify_RefusesAManifestNobodyTrustedSigned(t *testing.T) {
+	b := evidencetest.New(t, evidencetest.Options{})
+	forger := signingtest.New("evidence-1")
+	forged := evidencetest.New(t, evidencetest.Options{})
+	t.Run("a bundle carrying its own key", func(t *testing.T) {
+		// A forged bundle lists its own key in keys/public-keys.json; only the trusted key counts.
+		wantFailure(t, verifyPaths(t, forged.Write(), []signing.Key{b.Evidence.Key}, evidence.Options{}), "the signature does not verify against the trusted evidence key")
+	})
+	t.Run("a key id nobody trusts", func(t *testing.T) {
+		other := evidencetest.New(t, evidencetest.Options{})
+		other.ManifestSigner = signingtest.New("rogue")
+		other.Seal()
+		wantFailure(t, verifyPaths(t, other.Write(), []signing.Key{b.Evidence.Key}, evidence.Options{}), `"rogue"`, "not among the trusted evidence keys")
+	})
+	t.Run("a different key under the trusted id", func(t *testing.T) {
+		wantFailure(t, verifyPaths(t, b.Write(), []signing.Key{forger.Key}, evidence.Options{}), "does not verify")
+	})
+	t.Run("an audit key signing the manifest", func(t *testing.T) {
+		other := evidencetest.New(t, evidencetest.Options{})
+		other.ManifestSigner = other.Audit
+		other.Seal()
+		wantFailure(t, verify(t, other, evidence.Options{}), "not among the trusted evidence keys")
+	})
+	t.Run("another purpose in the signed text", func(t *testing.T) {
+		other := evidencetest.New(t, evidencetest.Options{})
+		other.ManifestPurpose = "audit-checkpoint"
+		other.Seal()
+		wantFailure(t, verify(t, other, evidence.Options{}), "does not verify")
+	})
+	t.Run("another purpose named in manifest.sig", func(t *testing.T) {
+		other := evidencetest.New(t, evidencetest.Options{})
+		other.Files["manifest.sig"] = bytes.ReplaceAll(other.Files["manifest.sig"], []byte("compliance-manifest"), []byte("audit-checkpoint"))
+		wantFailure(t, verify(t, other, evidence.Options{}), "was not made for a compliance manifest")
+	})
+	t.Run("a manifest edited after it was signed", func(t *testing.T) {
+		other := evidencetest.New(t, evidencetest.Options{})
+		other.Files["manifest.json"] = bytes.ReplaceAll(other.Files["manifest.json"], []byte("admin@acme.test"), []byte("mallory@acme.test"))
+		res := verify(t, other, evidence.Options{})
+		wantFailure(t, res, "does not verify")
+		if res.Files != 0 {
+			t.Error("files were read against a manifest that is not signed")
+		}
+	})
+	t.Run("a repeated key in the manifest", func(t *testing.T) {
+		other := evidencetest.New(t, evidencetest.Options{})
+		text := bytes.Replace(other.Files["manifest.json"], []byte(`"format": 1,`), []byte(`"format": 1, "format": 2,`), 1)
+		other.WriteManifest(text)
+		wantFailure(t, verify(t, other, evidence.Options{}), "is not valid JSON")
+	})
+	t.Run("another format", func(t *testing.T) {
+		other := evidencetest.New(t, evidencetest.Options{})
+		other.WriteManifest(bytes.Replace(other.Files["manifest.json"], []byte(`"format": 1`), []byte(`"format": 2`), 1))
+		wantFailure(t, verify(t, other, evidence.Options{}), "is format 2")
+	})
+	t.Run("no trusted key at all", func(t *testing.T) {
+		if _, err := evidence.Verify(b.Write(), evidence.Keys{}, evidence.Options{}); err != evidence.ErrNoEvidenceKeys {
+			t.Errorf("err = %v", err)
+		}
+	})
+}
+
+func TestVerify_ChecksEveryFileTheManifestListsAndNothingMore(t *testing.T) {
+	t.Run("a file edited to the same length", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		b.Files["controls.csv"] = []byte("control_id,title,statuz\r\n")
+		wantFailure(t, verify(t, b, evidence.Options{}), "controls.csv: does not match the hash in the manifest")
+	})
+	t.Run("a file replaced by a larger one", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		b.Files["controls.csv"] = bytes.Repeat([]byte("0"), 1<<20)
+		wantFailure(t, verify(t, b, evidence.Options{}), "controls.csv: declares 1048576 bytes in its archive; the manifest says")
+	})
+	t.Run("a file missing", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		delete(b.Files, "controls.csv")
+		delete(b.Volume, "controls.csv")
+		wantFailure(t, verify(t, b, evidence.Options{}), "controls.csv: is listed in the manifest but missing")
+	})
+	t.Run("a file nobody listed", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		b.Files["extra.txt"] = []byte("x")
+		b.Volume["extra.txt"] = 1
+		wantFailure(t, verify(t, b, evidence.Options{}), "extra.txt: is in the archives but not listed in the signed manifest")
+	})
+	t.Run("a file in another volume than the manifest says", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{VolumeBytes: 1})
+		b.Volume["controls.csv"] = b.Volumes
+		wantFailure(t, verify(t, b, evidence.Options{}), "holds files of volume")
+	})
+	t.Run("the manifest outside the last volume", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{VolumeBytes: 1})
+		b.Volume["manifest.sig"] = 1
+		wantFailure(t, verify(t, b, evidence.Options{}), "manifest.sig: is not in the last volume")
+	})
+	t.Run("a manifest that leaves out the audit checkpoints", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		var kept []any
+		for _, e := range b.Manifest["files"].([]any) {
+			if e.(map[string]any)["path"] != "audit/checkpoints.jsonl" {
+				kept = append(kept, e)
+			}
+		}
+		b.Manifest["files"] = kept
+		b.WriteManifest(mustIndent(t, b.Manifest))
+		wantFailure(t, verify(t, b, evidence.Options{}), "does not list audit/checkpoints.jsonl")
+	})
+	t.Run("more bytes than the cap", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		res := verify(t, b, evidence.Options{MaxBytes: 10})
+		wantFailure(t, res, "lists more than 10 bytes of files")
+		if res.Files != 0 {
+			t.Error("files were read past the cap")
+		}
+	})
+}
+
+func TestVerify_NeedsEveryVolume(t *testing.T) {
+	b := evidencetest.New(t, evidencetest.Options{VolumeBytes: 1})
+	paths := b.Write()
+	trusted := []signing.Key{b.Evidence.Key}
+	t.Run("the first volume left out", func(t *testing.T) {
+		res := verifyPaths(t, paths[1:], trusted, evidence.Options{})
+		wantFailure(t, res, "volume 1 of ", "archives were given")
+	})
+	t.Run("a middle volume left out", func(t *testing.T) {
+		res := verifyPaths(t, slices.Concat(paths[:1], paths[2:]), trusted, evidence.Options{})
+		wantFailure(t, res, "volume 2 of ")
+	})
+	t.Run("the last volume left out", func(t *testing.T) {
+		if _, err := evidence.Verify(paths[:len(paths)-1], evidence.Keys{Evidence: trusted}, evidence.Options{}); err == nil || !strings.Contains(err.Error(), "manifest.json or manifest.sig is missing") {
+			t.Errorf("err = %v", err)
+		}
+	})
+	t.Run("a volume given twice", func(t *testing.T) {
+		wantFailure(t, verifyPaths(t, append(slices.Clone(paths), paths[0]), trusted, evidence.Options{}), "appears more than once")
+	})
+}
+
+// sealWithOldCheckpoints replaces the audit rows and signs a manifest over them
+// while the checkpoints and the stated verification stay as they were.
+func sealWithOldCheckpoints(b *evidencetest.Bundle, change func()) {
+	checkpoints, stated := b.Files["audit/checkpoints.jsonl"], b.Files["audit/verification.json"]
+	change()
+	b.RebuildAudit()
+	b.Files["audit/checkpoints.jsonl"], b.Files["audit/verification.json"] = checkpoints, stated
+	b.Seal()
+}
+
+func TestVerify_RecomputesTheAuditCheckpoints(t *testing.T) {
+	hour := func(n int) string { return evidencetest.Hour(n).Format("2006-01-02T15:04:05.000Z") }
+	t.Run("a row removed", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		sealWithOldCheckpoints(b, func() { b.Rows = b.Rows[:5] })
+		wantFailure(t, verify(t, b, evidence.Options{}), "audit hour "+hour(2)+": rows are missing against the signed checkpoint")
+	})
+	t.Run("a row changed", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		sealWithOldCheckpoints(b, func() { b.Rows[0]["tool"] = "other" })
+		wantFailure(t, verify(t, b, evidence.Options{}), "audit hour "+hour(0)+": the rows differ from the signed checkpoint")
+	})
+	t.Run("a row added", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		sealWithOldCheckpoints(b, func() {
+			extra := map[string]any{}
+			for k, v := range b.Rows[2] {
+				extra[k] = v
+			}
+			extra["id"], extra["tool"] = json.Number("7"), "added"
+			b.Rows = append(b.Rows, extra)
+		})
+		wantFailure(t, verify(t, b, evidence.Options{}), "audit hour "+hour(1)+": the rows differ")
+	})
+	t.Run("an hour whose rows are all gone", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		sealWithOldCheckpoints(b, func() { b.Rows = append(slices.Clone(b.Rows[:2]), b.Rows[3:]...) })
+		wantFailure(t, verify(t, b, evidence.Options{}), "audit hour "+hour(1)+": there is a checkpoint and no rows")
+	})
+	t.Run("a checkpoint root changed", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		root := b.Checkpoints[0]["root"].(string)
+		b.Files["audit/checkpoints.jsonl"] = bytes.Replace(b.Files["audit/checkpoints.jsonl"], []byte(root), []byte(strings.Repeat("0", 64)), 1)
+		b.Seal()
+		wantFailure(t, verify(t, b, evidence.Options{}), "audit hour "+hour(0)+": the rows differ from the signed checkpoint")
+	})
+	t.Run("a checkpoint signed by another key", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		b.Audit = signingtest.New("audit-1")
+		b.RebuildAudit()
+		stolen := b.Files["audit/checkpoints.jsonl"]
+		b.Audit = signingtest.New("audit-1")
+		b.RebuildAudit()
+		b.Files["audit/checkpoints.jsonl"] = stolen
+		b.Seal()
+		wantFailure(t, verify(t, b, evidence.Options{}), "the checkpoint signature does not verify")
+	})
+	t.Run("a checkpoint signed by a key the bundle does not list", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		b.Files["audit/checkpoints.jsonl"] = bytes.ReplaceAll(b.Files["audit/checkpoints.jsonl"], []byte(`"kid":"audit-1"`), []byte(`"kid":"stranger"`))
+		b.Seal()
+		wantFailure(t, verify(t, b, evidence.Options{}), "signed with a key the bundle does not list")
+	})
+	t.Run("a stated verification that says more than the rows", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		b.Files["audit/verification.json"] = []byte(`{"hours":3,"verified":2,"unsigned":[],"failures":[],"ok":true}`)
+		b.Seal()
+		wantFailure(t, verify(t, b, evidence.Options{}), "audit/verification.json: differs from the verification recomputed")
+	})
+	t.Run("an hour without a checkpoint", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{SkipCheckpoint: map[int]bool{1: true}})
+		res := verify(t, b, evidence.Options{RequireCheckpoints: true})
+		wantFailure(t, res, "1 audit hours have rows and no signed checkpoint")
+		if len(res.UnsignedHours) != 1 || res.UnsignedHours[0] != hour(1) || res.VerifiedHours != 2 {
+			t.Errorf("unsigned %v verified %d", res.UnsignedHours, res.VerifiedHours)
+		}
+	})
+	t.Run("audit keys the caller supplies replace the bundle's", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		paths := b.Write()
+		res, err := evidence.Verify(paths, evidence.Keys{Evidence: []signing.Key{b.Evidence.Key}, Audit: []signing.Key{b.Audit.Key}}, evidence.Options{})
+		if err != nil || !res.OK() {
+			t.Fatalf("%v %v", err, res)
+		}
+		res, err = evidence.Verify(paths, evidence.Keys{Evidence: []signing.Key{b.Evidence.Key}, Audit: []signing.Key{signingtest.New("audit-1").Key}}, evidence.Options{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantFailure(t, res, "the checkpoint signature does not verify")
+	})
+}
+
+func mustIndent(t *testing.T, v any) []byte {
+	t.Helper()
+	raw, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		t.Fatal(err)
 	}
-	return b
+	return append(raw, '\n')
 }
 
-// newBundle builds events 5 to 9 chained after a start checkpoint at 4, with
-// checkpoints at 4, 7 and 9.
-func newBundle(t *testing.T) *bundle {
-	b := &bundle{t: t, evidence: signingtest.New("ev1"), audit: signingtest.New("au1"), files: map[string][]byte{}, listed: map[string]bool{}}
-	prev := hex.EncodeToString(make([]byte, 32))
-	heads := map[int64]string{4: prev}
-	for seq := int64(5); seq <= 9; seq++ {
-		ev := map[string]any{"seq": seq, "org_id": "org_1", "action": fmt.Sprintf("tool.call.%d", seq), "ts": "2026-10-01T10:00:00Z"}
-		prevBytes, _ := hex.DecodeString(prev)
-		sum := sha256.Sum256(append(prevBytes, canon(t, ev)...))
-		h := hex.EncodeToString(sum[:])
-		ev["prev_hash"], ev["hash"] = prev, h
-		b.events = append(b.events, ev)
-		heads[seq], prev = h, h
+func TestVerify_CatchesRowsThatDoNotBelongInTheRange(t *testing.T) {
+	cases := map[string]struct {
+		change func(*evidencetest.Bundle)
+		want   string
+	}{
+		"a row after the audit range": {func(b *evidencetest.Bundle) { b.Rows[5]["ts"] = "2026-10-05T00:00:00.000Z" }, "is outside the audit range"},
+		"a row of another organization": {func(b *evidencetest.Bundle) { b.Rows[0]["orgId"] = "org_other" }, "belongs to another organization"},
+		"ids out of order":                {func(b *evidencetest.Bundle) { b.Rows[0], b.Rows[1] = b.Rows[1], b.Rows[0] }, "is not in ascending id order"},
+		"a row without an id":             {func(b *evidencetest.Bundle) { delete(b.Rows[0], "id") }, "has no valid id"},
 	}
-	b.head = prev
-	for _, c := range []struct {
-		seq  int64
-		date string
-	}{{4, "2026-09-30"}, {7, "2026-10-01"}, {9, "2026-10-02"}} {
-		cp := checkpoint{OrgID: "org_1", Date: c.date, LastSeq: c.seq, HeadHash: heads[c.seq], KID: "au1"}
-		body := canon(t, map[string]any{"org_id": cp.OrgID, "date": cp.Date, "last_seq": cp.LastSeq, "head_hash": cp.HeadHash})
-		cp.Signature = base64.StdEncoding.EncodeToString(b.audit.SignMessage(body))
-		b.cps = append(b.cps, cp)
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			b := evidencetest.New(t, evidencetest.Options{})
+			c.change(b)
+			b.RebuildAudit()
+			b.Seal()
+			wantFailure(t, verify(t, b, evidence.Options{}), c.want)
+		})
 	}
-	b.manifest = Manifest{Pack: "soc2", PackVersion: "1", OrgID: "org_1", OrgSlug: "acme", EvidenceKeyID: "ev1"}
-	b.manifest.Range.From, b.manifest.Range.To = "2026-10-01", "2026-10-03"
-	return b
+	t.Run("audit parts with a gap", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{RowsPerPart: 3})
+		b.Files["audit/events.part-003.jsonl"] = b.Files["audit/events.part-002.jsonl"]
+		delete(b.Files, "audit/events.part-002.jsonl")
+		b.Seal()
+		wantFailure(t, verify(t, b, evidence.Options{}), "not numbered from 1 without a gap")
+	})
+	t.Run("a repeated key in a row", func(t *testing.T) {
+		b := evidencetest.New(t, evidencetest.Options{})
+		b.Files["audit/events.part-001.jsonl"] = bytes.Replace(b.Files["audit/events.part-001.jsonl"], []byte(`"event":"tool_call"`), []byte(`"event":"a","event":"b"`), 1)
+		b.Seal()
+		wantFailure(t, verify(t, b, evidence.Options{}), "line 1: is not a JSON object")
+	})
 }
 
-func (b *bundle) jsonl(v any) []byte {
-	var sb strings.Builder
-	switch t := v.(type) {
-	case []map[string]any:
-		for _, x := range t {
-			raw, _ := json.Marshal(x)
-			sb.Write(raw)
-			sb.WriteString("\n")
-		}
-	case []checkpoint:
-		for _, x := range t {
-			raw, _ := json.Marshal(x)
-			sb.Write(raw)
-			sb.WriteString("\n")
-		}
-	}
-	return []byte(sb.String())
-}
-
-// write assembles the archive and returns its path.
-func (b *bundle) write() string {
-	t := b.t
-	if _, ok := b.files["chain/audit_chain.jsonl"]; !ok {
-		b.files["chain/audit_chain.jsonl"] = b.jsonl(b.events)
-	}
-	if _, ok := b.files["chain/checkpoints.jsonl"]; !ok {
-		b.files["chain/checkpoints.jsonl"] = b.jsonl(b.cps)
-	}
-	if _, ok := b.files["chain/verification.json"]; !ok {
-		b.files["chain/verification.json"] = fmt.Appendf(nil, `{"ok":true,"from_seq":5,"to_seq":9,"recomputed_head":%q}`, b.head)
-	}
-	if _, ok := b.files["controls.csv"]; !ok {
-		b.files["controls.csv"] = []byte("control_id,status\nCC6.1,covered\n")
-	}
-	b.manifest.Files = nil
-	names := make([]string, 0, len(b.files))
-	for n := range b.files {
-		names = append(names, n)
-	}
-	for _, n := range names {
-		if b.listed[n] {
-			continue
-		}
-		sum := sha256.Sum256(b.files[n])
-		b.manifest.Files = append(b.manifest.Files, FileEntry{Path: n, SHA256: hex.EncodeToString(sum[:]), Size: int64(len(b.files[n]))})
-	}
-	b.manifest.Files = append(b.manifest.Files, b.phantom...)
-	manifest, _ := json.Marshal(b.manifest)
-	sig := base64.StdEncoding.EncodeToString(b.evidence.SignMessage(manifest))
+// zipWith writes the bundle's single volume with extra entries.
+func zipWith(t *testing.T, b *evidencetest.Bundle, extra func(*zip.Writer)) string {
+	t.Helper()
 	path := filepath.Join(t.TempDir(), "bundle.zip")
 	f, err := os.Create(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	zw := zip.NewWriter(f)
-	put := func(name string, data []byte) {
-		w, err := zw.Create(name)
+	for name, content := range b.Files {
+		w, err := zw.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Deflate})
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, _ = w.Write(data)
+		_, _ = w.Write(content)
 	}
-	put(ManifestFile, manifest)
-	put(SignatureFile, []byte(sig+"\n"))
-	for n, data := range b.files {
-		put(n, data)
-	}
+	extra(zw)
 	if err := zw.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -144,359 +385,82 @@ func (b *bundle) write() string {
 	return path
 }
 
-func (b *bundle) keys() Keys {
-	return Keys{Evidence: []signing.Key{b.evidence.Key}, Audit: []signing.Key{b.audit.Key}}
-}
-
-func verify(t *testing.T, b *bundle) *Result {
-	t.Helper()
-	res, err := Verify(b.write(), b.keys())
-	if err != nil {
-		t.Fatal(err)
-	}
-	return res
-}
-
-func failures(r *Result) string {
-	var parts []string
-	for _, f := range r.Failures {
-		parts = append(parts, f.String())
-	}
-	return strings.Join(parts, "\n")
-}
-
-func TestAValidBundleVerifies(t *testing.T) {
-	r := verify(t, newBundle(t))
-	if !r.OK() || r.Events != 5 || r.Checkpoints != 3 || r.Files != 4 || len(r.Warnings) != 0 || r.Manifest.Pack != "soc2" {
-		t.Fatalf("result = %+v\n%s", r, failures(r))
-	}
-}
-
-func TestATamperedFileIsNamed(t *testing.T) {
-	b := newBundle(t)
-	b.write()
-	b.files["controls.csv"] = []byte("control_id,status\nCC6.1,gap\n")
-	good := b.files["controls.csv"]
-	// Build with the original, then replace the bytes.
-	b.files["controls.csv"] = []byte("control_id,status\nCC6.1,covered\n")
-	path := b.write()
-	rewritten := rewrite(t, path, "controls.csv", good)
-	res, err := Verify(rewritten, b.keys())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if res.OK() || !strings.Contains(failures(res), "controls.csv") {
-		t.Errorf("failures = %q", failures(res))
-	}
-}
-
-// rewrite copies an archive with one file's bytes replaced.
-func rewrite(t *testing.T, src, name string, data []byte) string {
-	t.Helper()
-	zr, err := zip.OpenReader(src)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer zr.Close()
-	dst := filepath.Join(t.TempDir(), "tampered.zip")
-	f, _ := os.Create(dst)
-	zw := zip.NewWriter(f)
-	for _, zf := range zr.File {
-		w, _ := zw.Create(zf.Name)
-		if zf.Name == name {
-			_, _ = w.Write(data)
-			continue
-		}
-		rc, _ := zf.Open()
-		buf := make([]byte, zf.UncompressedSize64)
-		n, _ := rc.Read(buf)
-		for n < len(buf) {
-			m, err := rc.Read(buf[n:])
-			n += m
-			if err != nil {
-				break
-			}
-		}
-		_ = rc.Close()
-		_, _ = w.Write(buf)
-	}
-	_ = zw.Close()
-	_ = f.Close()
-	return dst
-}
-
-func TestATamperedAuditRowIsNamedBySequence(t *testing.T) {
-	b := newBundle(t)
-	b.events[2]["action"] = "tool.call.EDITED"
-	b.files["chain/audit_chain.jsonl"] = b.jsonl(b.events)
-	r := verify(t, b)
-	got := failures(r)
-	if r.OK() || !strings.Contains(got, "event 7: the event's hash does not match its content") || !strings.Contains(got, "event 8: prev_hash is not the hash of event 7") {
-		t.Errorf("failures = %q", got)
-	}
-	if !strings.Contains(got, "chain recomputed to a different head than the checkpoint of 2026-10-01") {
-		t.Errorf("the checkpoint at 7 did not notice: %q", got)
-	}
-}
-
-func TestAMissingEventBreaksTheSequence(t *testing.T) {
-	b := newBundle(t)
-	b.events = append(b.events[:2:2], b.events[3:]...)
-	b.files["chain/audit_chain.jsonl"] = b.jsonl(b.events)
-	if got := failures(verify(t, b)); !strings.Contains(got, "event 8: the sequence jumps from 6") {
-		t.Errorf("failures = %q", got)
-	}
-}
-
-func TestChainMustStartWhereTheStartCheckpointEnds(t *testing.T) {
-	b := newBundle(t)
-	b.cps[0].HeadHash = strings.Repeat("ab", 32)
-	body := canon(t, map[string]any{"org_id": "org_1", "date": b.cps[0].Date, "last_seq": b.cps[0].LastSeq, "head_hash": b.cps[0].HeadHash})
-	b.cps[0].Signature = base64.StdEncoding.EncodeToString(b.audit.SignMessage(body))
-	if got := failures(verify(t, b)); !strings.Contains(got, "does not continue from the start checkpoint") {
-		t.Errorf("failures = %q", got)
-	}
-	b = newBundle(t)
-	b.cps = b.cps[1:]
-	if got := failures(verify(t, b)); !strings.Contains(got, "no checkpoint anchors the start of the chain") {
-		t.Errorf("no anchor: %q", got)
-	}
-}
-
-func TestSignaturesMustVerifyWithTheGivenKeys(t *testing.T) {
-	b := newBundle(t)
-	path := b.write()
-	other := signingtest.New("ev1")
-	res, err := Verify(path, Keys{Evidence: []signing.Key{other.Key}, Audit: []signing.Key{b.audit.Key}})
-	if err != nil || !strings.Contains(failures(res), "manifest.json: the signature does not verify") {
-		t.Errorf("wrong evidence key: %v %q", err, failures(res))
-	}
-	res, err = Verify(path, Keys{Evidence: []signing.Key{b.evidence.Key}})
-	if err != nil || !strings.Contains(failures(res), "checkpoint of 2026-10-01 does not verify") {
-		t.Errorf("no audit keys: %v %q", err, failures(res))
-	}
-	b.cps[1].Signature = "!!"
-	delete(b.files, "chain/checkpoints.jsonl")
-	if got := failures(verify(t, b)); !strings.Contains(got, "the checkpoint signature cannot be read") {
-		t.Errorf("garbled checkpoint signature: %q", got)
-	}
-}
-
-func TestFilesOutsideTheManifestAndMissingFilesAreFailures(t *testing.T) {
-	b := newBundle(t)
-	b.files["extra.txt"] = []byte("x")
-	b.listed["extra.txt"] = true
-	b.phantom = []FileEntry{{Path: "data/missing.jsonl", SHA256: "00", Size: 1}}
-	got := failures(verify(t, b))
-	for _, want := range []string{"extra.txt: in the archive but not listed in the signed manifest", "data/missing.jsonl: listed in the manifest but missing"} {
-		if !strings.Contains(got, want) {
-			t.Errorf("no failure %q in:\n%s", want, got)
+func TestVerify_RefusesEntriesThatCouldEscapeOrHideOthers(t *testing.T) {
+	file := func(name string) func(*zip.Writer) {
+		return func(zw *zip.Writer) {
+			w, _ := zw.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Store})
+			_, _ = w.Write([]byte("x"))
 		}
 	}
-}
-
-func TestFileSizeIsChecked(t *testing.T) {
-	b := newBundle(t)
-	b.files["controls.csv"] = []byte("abc")
-	path := b.write()
-	// A manifest that claims fewer bytes than the file holds.
-	res := &Result{}
-	zr, err := zip.OpenReader(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer zr.Close()
-	for _, f := range zr.File {
-		if f.Name == "controls.csv" {
-			checkFile(res, f, FileEntry{Path: "controls.csv", SHA256: "00", Size: 1})
-		}
-	}
-	if len(res.Failures) != 1 || !strings.Contains(res.Failures[0].Msg, "is 2 bytes; the manifest says 1") {
-		t.Errorf("failures = %+v", res.Failures)
-	}
-}
-
-func TestAnUnsignedChainTailIsAWarningAndTheGatewaysOwnFailureIsNot(t *testing.T) {
-	b := newBundle(t)
-	b.cps = b.cps[:2]
-	r := verify(t, b)
-	if !r.OK() || len(r.Warnings) != 1 || !strings.Contains(r.Warnings[0], "events 8 to 9 come after the last signed checkpoint") {
-		t.Errorf("tail: %+v", r)
-	}
-	b = newBundle(t)
-	b.files["chain/verification.json"] = []byte(`{"ok":false}`)
-	if got := failures(verify(t, b)); !strings.Contains(got, "the gateway's own verification of the chain failed") {
-		t.Errorf("gateway failure: %q", got)
-	}
-	b = newBundle(t)
-	b.files["chain/verification.json"] = []byte(`{"ok":true,"to_seq":9,"recomputed_head":"` + strings.Repeat("cd", 32) + `"}`)
-	if got := failures(verify(t, b)); !strings.Contains(got, "recorded head differs from the recomputed one") {
-		t.Errorf("head: %q", got)
-	}
-	b = newBundle(t)
-	b.files["chain/verification.json"] = []byte(`nope`)
-	if got := failures(verify(t, b)); !strings.Contains(got, "chain/verification.json: cannot be read") {
-		t.Errorf("garbled verification: %q", got)
-	}
-}
-
-func TestGarbledChainFilesAreFailures(t *testing.T) {
-	for name, files := range map[string]map[string][]byte{
-		"bad event":      {"chain/audit_chain.jsonl": []byte("{nope\n")},
-		"no seq":         {"chain/audit_chain.jsonl": []byte(`{"hash":"00","prev_hash":"00"}` + "\n")},
-		"bad prev hash":  {"chain/audit_chain.jsonl": []byte(`{"seq":5,"hash":"00","prev_hash":"zz"}` + "\n")},
-		"bad checkpoint": {"chain/checkpoints.jsonl": []byte("{nope\n")},
+	for name, tc := range map[string]struct {
+		extra func(*zip.Writer)
+		want  string
+	}{
+		"a parent directory":      {file("../outside.txt"), "has a name that is empty, absolute, outside the bundle"},
+		"a nested parent":         {file("evidence/../../outside.txt"), "has a name that is empty, absolute, outside the bundle"},
+		"an absolute path":        {file("/etc/cron.d/x"), "has a name that is empty, absolute, outside the bundle"},
+		"a windows path":          {file(`evidence\..\x`), "has a name that is empty, absolute, outside the bundle"},
+		"a drive letter":          {file("C:evil"), "has a name that is empty, absolute, outside the bundle"},
+		"a dot segment":           {file("evidence/./x"), "has a name that is empty, absolute, outside the bundle"},
+		"a doubled slash":         {file("evidence//x"), "has a name that is empty, absolute, outside the bundle"},
+		"a control character":     {file("evidence/x\x1b[2J"), "has a name that is empty, absolute, outside the bundle"},
+		"a directory":             {func(zw *zip.Writer) { _, _ = zw.Create("evidence/") }, "has a name that is empty, absolute, outside the bundle"},
+		"a symbolic link": {func(zw *zip.Writer) {
+			h := &zip.FileHeader{Name: "evidence/link", Method: zip.Store}
+			h.SetMode(os.ModeSymlink | 0o777)
+			w, _ := zw.CreateHeader(h)
+			_, _ = w.Write([]byte("/etc/passwd"))
+		}, "is a symbolic link"},
+		"a device": {func(zw *zip.Writer) {
+			h := &zip.FileHeader{Name: "evidence/dev", Method: zip.Store}
+			h.SetMode(os.ModeDevice | 0o666)
+			_, _ = zw.CreateHeader(h)
+		}, "is not a regular file"},
+		"a second controls.csv": {file("controls.csv"), "appears more than once"},
 	} {
-		b := newBundle(t)
-		maps.Copy(b.files, files)
-		if r := verify(t, b); r.OK() {
-			t.Errorf("%s verified", name)
-		}
-	}
-	b := newBundle(t)
-	b.files["chain/audit_chain.jsonl"] = []byte("")
-	if r := verify(t, b); r.Events != 0 {
-		t.Errorf("empty chain: %+v", r)
+		t.Run(name, func(t *testing.T) {
+			b := evidencetest.New(t, evidencetest.Options{})
+			res := verifyPaths(t, []string{zipWith(t, b, tc.extra)}, []signing.Key{b.Evidence.Key}, evidence.Options{})
+			wantFailure(t, res, tc.want)
+		})
 	}
 }
 
-func TestCheckpointsWithoutAChainAreAFailure(t *testing.T) {
-	b := newBundle(t)
-	b.files["chain/audit_chain.jsonl"] = []byte{}
-	path := b.write()
-	// Rebuild the archive without the (empty) chain file.
-	rewritten := dropFile(t, path, "chain/audit_chain.jsonl")
-	res, err := Verify(rewritten, b.keys())
-	if err != nil || !strings.Contains(failures(res), "the bundle has checkpoints but no audit chain") {
-		t.Errorf("%v %q", err, failures(res))
+func TestVerify_NeverPrintsBundleContent(t *testing.T) {
+	const secret = "LEAK-THIS-ROW-VALUE"
+	b := evidencetest.New(t, evidencetest.Options{})
+	sealWithOldCheckpoints(b, func() { b.Rows[0]["tool"] = secret })
+	b.Files["controls.csv"] = []byte("LEAK-THIS-FILE-VALUE" + strings.Repeat("0", len(b.Files["controls.csv"])-len("LEAK-THIS-FILE-VALUE")))
+	res := verify(t, b, evidence.Options{})
+	wantFailure(t, res, "does not match the hash")
+	if got := fmt.Sprint(res.Failures); strings.Contains(got, "LEAK-THIS") {
+		t.Errorf("failures print bundle content: %s", got)
+	}
+	long := strings.Repeat("a", 400)
+	b2 := evidencetest.New(t, evidencetest.Options{})
+	b2.Files[long+".txt"] = []byte("x")
+	b2.Volume[long+".txt"] = 1
+	res = verify(t, b2, evidence.Options{})
+	if got := failures(res); strings.Contains(got, strings.Repeat("a", 150)) {
+		t.Errorf("a long entry name was printed whole: %d bytes", len(got))
 	}
 }
 
-func dropFile(t *testing.T, src, name string) string {
-	t.Helper()
-	zr, err := zip.OpenReader(src)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer zr.Close()
-	dst := filepath.Join(t.TempDir(), "dropped.zip")
-	f, _ := os.Create(dst)
-	zw := zip.NewWriter(f)
-	for _, zf := range zr.File {
-		if zf.Name == name {
-			continue
-		}
-		w, _ := zw.Create(zf.Name)
-		rc, _ := zf.Open()
-		buf := make([]byte, zf.UncompressedSize64)
-		n := 0
-		for n < len(buf) {
-			m, err := rc.Read(buf[n:])
-			n += m
-			if err != nil {
-				break
-			}
-		}
-		_ = rc.Close()
-		_, _ = w.Write(buf)
-	}
-	_ = zw.Close()
-	_ = f.Close()
-	return dst
-}
-
-func TestSplitChainPartsAreReadInOrder(t *testing.T) {
-	b := newBundle(t)
-	b.files["chain/audit_chain.part-001.jsonl"] = b.jsonl(b.events[:3])
-	b.files["chain/audit_chain.part-002.jsonl"] = b.jsonl(b.events[3:])
-	// write() recreates the default chain file unless one is supplied; an
-	// empty one leaves only the parts to count.
-	b.files["chain/audit_chain.jsonl"] = []byte{}
-	r := verify(t, b)
-	if !r.OK() || r.Events != 5 {
-		t.Errorf("parts: %+v\n%s", r, failures(r))
-	}
-}
-
-func TestAnArchiveThatIsNotABundleIsAnError(t *testing.T) {
+func TestVerify_RefusesInputThatIsNotABundle(t *testing.T) {
 	dir := t.TempDir()
-	if _, err := Verify(filepath.Join(dir, "none.zip"), Keys{}); err == nil {
-		t.Error("a missing file verified")
-	}
-	bad := filepath.Join(dir, "bad.zip")
-	_ = os.WriteFile(bad, []byte("not a zip"), 0o600)
-	if _, err := Verify(bad, Keys{}); err == nil {
-		t.Error("a non-zip verified")
-	}
-	empty := filepath.Join(dir, "empty.zip")
-	f, _ := os.Create(empty)
-	zw := zip.NewWriter(f)
-	w, _ := zw.Create("something.txt")
-	_, _ = w.Write([]byte("x"))
-	_ = zw.Close()
-	_ = f.Close()
-	if _, err := Verify(empty, Keys{}); err == nil || !strings.Contains(err.Error(), "not a compliance bundle") {
-		t.Errorf("no manifest: %v", err)
-	}
-	garbled := newBundle(t)
-	p := rewrite(t, garbled.write(), ManifestFile, []byte("{"))
-	if _, err := Verify(p, garbled.keys()); err == nil || !strings.Contains(err.Error(), "manifest.json is not valid") {
-		t.Errorf("garbled manifest: %v", err)
-	}
-	p = rewrite(t, garbled.write(), SignatureFile, []byte("!!"))
-	if res, err := Verify(p, garbled.keys()); err != nil || !strings.Contains(failures(res), "the signature is not base64") {
-		t.Errorf("garbled signature: %v %q", err, failures(res))
-	}
-}
-
-func TestUnsafeAndRepeatedNamesAreFailures(t *testing.T) {
-	b := newBundle(t)
-	path := b.write()
-	f, _ := os.Create(filepath.Join(t.TempDir(), "evil.zip"))
-	zr, _ := zip.OpenReader(path)
-	zw := zip.NewWriter(f)
-	for _, zf := range zr.File {
-		w, _ := zw.Create(zf.Name)
-		rc, _ := zf.Open()
-		buf := make([]byte, zf.UncompressedSize64)
-		n := 0
-		for n < len(buf) {
-			m, err := rc.Read(buf[n:])
-			n += m
-			if err != nil {
-				break
-			}
-		}
-		_ = rc.Close()
-		_, _ = w.Write(buf)
-	}
-	for _, name := range []string{"../escape.txt", "/abs.txt", "a/../b.txt", "controls.csv"} {
-		w, _ := zw.Create(name)
-		_, _ = w.Write([]byte("x"))
-	}
-	_ = zw.Close()
-	_ = f.Close()
-	zr.Close()
-	res, err := Verify(f.Name(), b.keys())
-	if err != nil {
+	notZip := filepath.Join(dir, "x.zip")
+	if err := os.WriteFile(notZip, []byte("nope"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	got := failures(res)
-	for _, want := range []string{"../escape.txt: an unsafe file name", "/abs.txt: an unsafe file name", "a/../b.txt: an unsafe file name", "controls.csv: listed twice in the archive"} {
-		if !strings.Contains(got, want) {
-			t.Errorf("no failure %q in:\n%s", want, got)
+	trusted := evidence.Keys{Evidence: []signing.Key{signingtest.New("k").Key}}
+	for name, paths := range map[string][]string{"not a zip": {notZip}, "a directory": {dir}, "missing": {filepath.Join(dir, "none.zip")}, "nothing": nil} {
+		if _, err := evidence.Verify(paths, trusted, evidence.Options{}); err == nil {
+			t.Errorf("%s was accepted", name)
 		}
 	}
-}
-
-func TestFailureStrings(t *testing.T) {
-	for in, want := range map[Failure]string{
-		{File: "f", Seq: 3, Msg: "m"}: "f, event 3: m",
-		{File: "f", Msg: "m"}:         "f: m",
-		{Msg: "m"}:                    "m",
-	} {
-		if in.String() != want {
-			t.Errorf("%+v = %q", in, in.String())
-		}
+	other := filepath.Join(dir, "plain.zip")
+	evidencetest.WriteZip(t, other, []string{"readme.txt"}, func(string) []byte { return []byte("hi") })
+	if _, err := evidence.Verify([]string{other}, trusted, evidence.Options{}); err == nil || !strings.Contains(err.Error(), "not a compliance bundle") {
+		t.Errorf("a zip without a manifest: %v", err)
 	}
 }

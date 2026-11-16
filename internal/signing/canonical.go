@@ -5,8 +5,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"slices"
 	"sort"
 	"strings"
+	"unicode/utf16"
 )
 
 // Go's encoder escapes these two characters; JSON.stringify writes them raw.
@@ -52,7 +54,7 @@ func canonicalJSON(b *bytes.Buffer, v any) error {
 		for k := range t {
 			keys = append(keys, k)
 		}
-		sort.Strings(keys)
+		sort.Slice(keys, func(i, j int) bool { return compareUTF16(keys[i], keys[j]) < 0 })
 		b.WriteByte('{')
 		for i, k := range keys {
 			if i > 0 {
@@ -82,6 +84,11 @@ func canonicalJSON(b *bytes.Buffer, v any) error {
 		return scalar(b, t)
 	}
 	return nil
+}
+
+// compareUTF16 orders strings the way JavaScript's `<` does, by UTF-16 code unit.
+func compareUTF16(a, b string) int {
+	return slices.Compare(utf16.Encode([]rune(a)), utf16.Encode([]rune(b)))
 }
 
 func scalar(b *bytes.Buffer, v any) error {

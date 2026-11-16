@@ -43,6 +43,11 @@ type openAPIOperation struct {
 			Schema openAPISchema `json:"schema"`
 		} `json:"content"`
 	} `json:"requestBody"`
+	Responses map[string]struct {
+		Content map[string]struct {
+			Schema map[string]any `json:"schema"`
+		} `json:"content"`
+	} `json:"responses"`
 }
 
 type openAPIDocument struct {

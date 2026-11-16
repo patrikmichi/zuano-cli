@@ -925,17 +925,26 @@ by `name`, `slug` or `id`; the CLI lists networks and picks the id.
 
 | Request | Carries / answers |
 |---|---|
-| `GET /api/admin/networks` | `{"networks": [{"id", "name", "slug", "status": "online\|degraded\|offline\|disabled", "description"?, "data_class"?, "agents_online", "bindings", "last_seen_at"}]}` |
-| `POST /api/admin/networks` | `{"name", "description"?, "data_class"?}`; `201` `{"network": {...}}`; `402 plan_required` without the add-on |
-| `GET /api/admin/networks/{id}`, `DELETE /api/admin/networks/{id}` | `{"network": {...}}`; delete is a soft delete |
-| `POST /api/admin/networks/{id}/enrollment-tokens` | `{"mode": "single\|multi", "uses", "ttl_seconds", "require_approval"?}`; `201` `{"token": "nxt_...", "expires_at", "snippets": [{"title", "text"}]}`. The token is returned once and is not an MCP tool |
-| `GET /api/admin/networks/{id}/agents` | `{"agents": [{"id", "name", "status": "pending\|active\|revoked", "connection", "version", "platform", "last_seen_at", "key_age_days"}]}` |
-| `POST /api/admin/networks/{id}/agents/{agent}/approve`, `/rotate`, `/revoke` | `{}`; `200` |
-| `GET /api/admin/networks/{id}/allowlist` | `{"drift", "targets": [{"name", "kind", "methods"?, "path_globs"?, "tool_globs"?, "agents", "bound_to"}], "unserved_bindings": [name]}` |
-| `GET /api/admin/networks/{id}/logs?agent=&target=&outcome=&since=` | `{"logs": [{"ts", "agent", "target", "method", "status", "outcome", "duration_ms", "audit_ref"}]}` |
-| `POST /api/admin/networks/{id}/bindings` | `{"service" \| "mcp_server", "target", "credentials_mode": "agent\|gateway"}`; `201`. Built-in services are refused with `binding_not_supported` |
-| `DELETE /api/admin/networks/{id}/bindings?service=` or `?mcp_server=` | `200` |
-| `POST /api/admin/networks/{id}/test` | `{"results": [{"agent", "ok", "rtt_ms"?, "error"?}]}`; an empty list means no agent is online (exit 34) |
+| `GET /api/admin/networks` | `{"networks": [{"network": {"id", "slug", "name", "status", "dataClass", "settings", ...}, "agents": {"total", "online", "pending"}, "bindings", "health": "online\|degraded\|offline\|disabled", "lastSeenAt"}], "entitled"}` |
+| `POST /api/admin/networks` | `{"name", "description"?, "dataClass"?}`; `201` `{"network": {...}}`; `402 plan_required` without the add-on |
+| `GET /api/admin/networks/{id}` | the same entry as the list |
+| `DELETE /api/admin/networks/{id}` | `{"deleted": true}`; needs a passkey confirmation |
+| `POST /api/admin/networks/{id}/enrollment-tokens` | `{"uses"?, "ttlSeconds"? (60 to 86400), "requireApproval"?}`; `201` `{"id", "token": "nxt_...", "maxUses", "requireApproval", "expiresAt", "install": {"linux", "debian", "docker"?, "kubernetes"?}}`. The token is returned once and is not an MCP tool |
+| `GET /api/admin/networks/{id}/agents` | `{"agents": [{"id", "name", "status": "pending\|active\|revoked", "connected", "version", "os", "arch", "lastSeenAt", "enrolledAt", "keyNotAfter", ...}], "live"}`; `live` false means the connection state is the last stored one |
+| `POST /api/admin/networks/{id}/agents/{agent}/approve`, `/rotate`, `/revoke` | `{"reason"?}`; `200` `{"ok": true}`. The CLI turns an agent's name into its id first |
+| `GET /api/admin/networks/{id}/allowlist` | `{"drift", "targets": [{"name", "kind", "agents", "methods", "pathGlobs", "mcpTools", "bindings", "drift"}], "unserved": [name]}` |
+| `GET /api/admin/networks/{id}/bindings` | `{"bindings": [{"id", "kind": "connector\|mcp_server", "service", "target", "credentialsMode", ...}]}` |
+| `POST /api/admin/networks/{id}/bindings` | `{"kind", "service", "target", "credentialsMode"?: "agent\|gateway"}`; `201`. Built-in services are refused with `binding_not_supported` |
+| `DELETE /api/admin/networks/{id}/bindings/{binding}` | `{"deleted": true}`; the CLI finds the binding's id in the list by kind, service and target |
+| `GET /api/admin/networks/{id}/events?before=&limit=` | `{"events": [{"id", "agentId", "type", "details", "ts"}], "next"}`, newest first |
+| `GET /api/admin/networks/{id}/logs?agent=&target=&outcome=&since=` | not in the gateway's OpenAPI document: `zuano networks logs` expects `{"logs": [{"ts", "agent", "target", "method", "status", "outcome", "duration_ms", "audit_ref"}]}` |
+| `POST /api/admin/networks/{id}/test` | not in the gateway's OpenAPI document: `zuano networks test` expects `{"results": [{"agent", "ok", "rtt_ms"?, "error"?}]}`; an empty list means no agent is online (exit 34) |
+
+`PATCH /api/admin/networks/{id}` (rename, settings, enable and disable) and
+`DELETE /api/admin/networks/{id}/enrollment-tokens/{token}` have no command:
+the first needs a passkey confirmation of the exact change, and no route lists
+the token ids the second needs. The contract test fails for any other network
+operation the document gains without a command.
 
 A call whose body or MCP result carries `reason` `network_offline` or
 `egress_unavailable` exits 34.

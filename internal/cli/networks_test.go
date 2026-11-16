@@ -6,7 +6,22 @@ import (
 	"testing"
 )
 
-const networkList = `{"networks":[{"id":"net_1","name":"Datacentre 1","slug":"dc1","status":"online","agents_online":1,"bindings":2,"last_seen_at":"2026-10-16T10:00:00Z"}]}`
+// The documents below have the shape of the gateway's network admin routes
+// (lib/api/contract/networks.ts); the contract test checks them against the
+// OpenAPI document, so the commands are exercised against what it publishes.
+const networkDoc = `{"id":"net_1","orgId":"org_1","slug":"dc1","name":"Datacentre 1","description":null,"status":"active","dataClass":"internal","settings":{"autoUpdate":"patch","requireAgentApproval":true,"keyRotationDays":30,"offlineAlertMinutes":10,"offlineRetryMinutes":5},"offlineSince":null,"createdBy":"usr_1","createdAt":"2026-10-16T09:00:00Z","updatedAt":"2026-10-16T09:00:00Z","deletedAt":null}`
+
+const networkSummaryDoc = `{"network":` + networkDoc + `,"agents":{"total":2,"online":1,"pending":1},"bindings":2,"health":"online","lastSeenAt":"2026-10-16T10:00:00Z"}`
+
+const networkList = `{"networks":[` + networkSummaryDoc + `],"entitled":true}`
+
+const networkAgents = `{"agents":[{"id":"nag_1","name":"erp-a","status":"active","connected":true,"version":"1.4.2","os":"linux","arch":"amd64","lastSeenAt":"2026-10-16T10:00:00Z","lastIpPrefix":"203.0.113.0/24","allowlistHash":"h1","rotateRequestedAt":null,"enrolledAt":"2026-10-01T09:00:00Z","keyNotAfter":"2026-11-01T09:00:00Z"},{"id":"nag_2","name":"erp-b","status":"pending","connected":false,"version":null,"os":null,"arch":null,"lastSeenAt":null,"lastIpPrefix":null,"allowlistHash":null,"rotateRequestedAt":null,"enrolledAt":"2026-10-02T09:00:00Z","keyNotAfter":null}],"live":true}`
+
+const networkAllowlist = `{"targets":[{"name":"erp","kind":"http","agents":["erp-a"],"methods":["GET"],"pathGlobs":["/invoices/**"],"mcpTools":[],"bindings":["erp-private"],"drift":true},{"name":"hr","kind":"mcp_stdio","agents":["erp-a"],"methods":[],"pathGlobs":[],"mcpTools":["employees_*"],"bindings":[],"drift":false}],"unserved":["crm"],"drift":true}`
+
+const networkBindings = `{"bindings":[{"id":"nbd_1","orgId":"org_1","networkId":"net_1","kind":"connector","service":"erp-private","target":"erp","credentialsMode":"agent","createdBy":"usr_1","createdAt":"2026-10-16T09:00:00Z"},{"id":"nbd_2","orgId":"org_1","networkId":"net_1","kind":"mcp_server","service":"hr","target":"hr","credentialsMode":"gateway","createdBy":"usr_1","createdAt":"2026-10-16T09:00:00Z"}]}`
+
+const networkEvents = `{"events":[{"id":"nev_1","orgId":"org_1","networkId":"net_1","agentId":"nag_1","type":"agent.connected","details":{"os":"linux"},"ts":"2026-10-16T09:30:00Z"}],"next":"2026-10-16T09:30:00Z"}`
 
 func networksGateway(t *testing.T, extra map[string]func(*packServer, http.ResponseWriter, *http.Request)) *packServer {
 	t.Helper()
@@ -22,18 +37,24 @@ func networksGateway(t *testing.T, extra map[string]func(*packServer, http.Respo
 
 func TestNetworksReadCommands(t *testing.T) {
 	gw := networksGateway(t, map[string]func(*packServer, http.ResponseWriter, *http.Request){
-		"GET /api/admin/networks/net_1":           jsonReply(200, `{"network":{"id":"net_1","status":"online","data_class":"internal"}}`),
-		"GET /api/admin/networks/net_1/agents":    jsonReply(200, `{"agents":[{"id":"nag_1","name":"erp-a","status":"active","connection":"online","version":"1.4.2","platform":"linux/amd64","last_seen_at":"now","key_age_days":3}]}`),
-		"GET /api/admin/networks/net_1/allowlist": jsonReply(200, `{"drift":true,"targets":[{"name":"erp","kind":"http","methods":["GET"],"path_globs":["/invoices/**"],"agents":["erp-a"],"bound_to":["erp-private"]},{"name":"hr","kind":"mcp_stdio","tool_globs":["employees_*"],"agents":["erp-a"]}],"unserved_bindings":["crm"]}`),
+		"GET /api/admin/networks/net_1":           jsonReply(200, networkSummaryDoc),
+		"GET /api/admin/networks/net_1/agents":    jsonReply(200, networkAgents),
+		"GET /api/admin/networks/net_1/allowlist": jsonReply(200, networkAllowlist),
+		"GET /api/admin/networks/net_1/events":    jsonReply(200, networkEvents),
 		"GET /api/admin/networks/net_1/logs":      jsonReply(200, `{"logs":[{"ts":"t","agent":"erp-a","target":"erp","method":"GET","status":200,"outcome":"ok","duration_ms":12,"audit_ref":"aud_1"}]}`),
 	})
 	gw.lenient = true
 	out, err := runCommand(t, NetworksCmd(), "list")
-	if err != nil || !strings.Contains(out, "Datacentre 1") || !strings.Contains(out, "online") {
-		t.Fatalf("list: %q %v", out, err)
+	for _, want := range []string{"Datacentre 1", "active", "online", "2026-10-16T10:00:00Z"} {
+		if err != nil || !strings.Contains(out, want) {
+			t.Fatalf("list lacks %q: %q %v", want, out, err)
+		}
 	}
-	if out, err = runCommand(t, NetworksCmd(), "show", "dc1"); err != nil || !strings.Contains(out, "data_class: internal") {
-		t.Errorf("show: %q %v", out, err)
+	out, err = runCommand(t, NetworksCmd(), "show", "dc1")
+	for _, want := range []string{"dataClass: internal", "health: online", "bindings: 2", "agents: 1 online, 1 pending, 2 in total"} {
+		if err != nil || !strings.Contains(out, want) {
+			t.Errorf("show lacks %q: %q %v", want, out, err)
+		}
 	}
 	if out, err = runCommand(t, NetworksCmd(), "show", "net_1", "--json"); err != nil || !strings.Contains(out, `"network"`) {
 		t.Errorf("show --json: %q %v", out, err)
@@ -41,15 +62,26 @@ func TestNetworksReadCommands(t *testing.T) {
 	if _, err = runCommand(t, NetworksCmd(), "show", "nope"); err == nil || !strings.Contains(err.Error(), "no network named") {
 		t.Errorf("unknown network: %v", err)
 	}
-	if out, err = runCommand(t, NetworksCmd(), "agents", "Datacentre 1"); err != nil || !strings.Contains(out, "nag_1") || !strings.Contains(out, "linux/amd64") {
-		t.Errorf("agents: %q %v", out, err)
+	out, err = runCommand(t, NetworksCmd(), "agents", "Datacentre 1")
+	for _, want := range []string{"nag_1", "linux", "amd64", "erp-b", "pending", "2026-11-01T09:00:00Z"} {
+		if err != nil || !strings.Contains(out, want) {
+			t.Errorf("agents lacks %q: %q %v", want, out, err)
+		}
 	}
 	out, err = runCommand(t, NetworksCmd(), "allowlist", "dc1")
-	if err != nil || !strings.Contains(out, "erp (http)") || !strings.Contains(out, "/invoices/**") || !strings.Contains(out, "employees_*") || !strings.Contains(out, "different allowlists") || !strings.Contains(out, "crm is bound") {
-		t.Errorf("allowlist: %q %v", out, err)
+	for _, want := range []string{"erp (http)", "/invoices/**", "employees_*", "erp-private", "differ", "crm is bound"} {
+		if err != nil || !strings.Contains(out, want) {
+			t.Errorf("allowlist lacks %q: %q %v", want, out, err)
+		}
 	}
 	if out, err = runCommand(t, NetworksCmd(), "allowlist", "dc1", "--json"); err != nil || !strings.Contains(out, `"drift":true`) {
 		t.Errorf("allowlist --json: %q %v", out, err)
+	}
+	if out, err = runCommand(t, NetworksCmd(), "events", "dc1", "--limit", "5", "--before", "2026-10-17T00:00:00Z"); err != nil || !strings.Contains(out, "agent.connected") || !strings.Contains(out, "--before 2026-10-16T09:30:00Z") {
+		t.Errorf("events: %q %v", out, err)
+	}
+	if _, err = runCommand(t, NetworksCmd(), "events", "dc1", "--limit", "0"); err == nil {
+		t.Error("an events limit of 0 was accepted")
 	}
 	out, err = runCommand(t, NetworksCmd(), "logs", "dc1", "--agent", "erp-a", "--target", "erp", "--outcome", "ok", "--since", "24h")
 	if err != nil || !strings.Contains(out, "aud_1") {
@@ -63,13 +95,24 @@ func TestNetworksReadCommands(t *testing.T) {
 	}
 }
 
+func TestNetworksAgentsWarnsWhenTheStateIsNotLive(t *testing.T) {
+	networksGateway(t, map[string]func(*packServer, http.ResponseWriter, *http.Request){
+		"GET /api/admin/networks/net_1/agents": jsonReply(200, strings.Replace(networkAgents, `"live":true`, `"live":false`, 1)),
+	})
+	out, err := runCommand(t, NetworksCmd(), "agents", "dc1")
+	if err != nil || !strings.Contains(out, "last stored state") {
+		t.Errorf("agents: %q %v", out, err)
+	}
+}
+
 func TestNetworksEmptyViews(t *testing.T) {
 	networksGateway(t, map[string]func(*packServer, http.ResponseWriter, *http.Request){
-		"GET /api/admin/networks/net_1/agents":    jsonReply(200, `{"agents":[]}`),
-		"GET /api/admin/networks/net_1/allowlist": jsonReply(200, `{"targets":[]}`),
+		"GET /api/admin/networks/net_1/agents":    jsonReply(200, `{"agents":[],"live":true}`),
+		"GET /api/admin/networks/net_1/allowlist": jsonReply(200, `{"targets":[],"unserved":[],"drift":false}`),
+		"GET /api/admin/networks/net_1/events":    jsonReply(200, `{"events":[],"next":null}`),
 		"GET /api/admin/networks/net_1/logs":      jsonReply(200, `{"logs":[]}`),
 	})
-	for args, want := range map[string]string{"agents dc1": "No agents", "allowlist dc1": "No agent advertises", "logs dc1": "No log lines"} {
+	for args, want := range map[string]string{"agents dc1": "No agents", "allowlist dc1": "No agent advertises", "events dc1": "No events", "logs dc1": "No log lines"} {
 		out, err := runCommand(t, NetworksCmd(), strings.Fields(args)...)
 		if err != nil || !strings.Contains(out, want) {
 			t.Errorf("%s: %q %v", args, out, err)
@@ -79,22 +122,25 @@ func TestNetworksEmptyViews(t *testing.T) {
 
 func TestNetworksWriteCommands(t *testing.T) {
 	gw := networksGateway(t, map[string]func(*packServer, http.ResponseWriter, *http.Request){
-		"POST /api/admin/networks":                            jsonReply(201, `{"network":{"id":"net_2","name":"HQ"}}`),
-		"DELETE /api/admin/networks/net_1":                    jsonReply(200, `{}`),
-		"POST /api/admin/networks/net_1/agents/nag_1/approve": jsonReply(200, `{}`),
-		"POST /api/admin/networks/net_1/agents/nag_1/rotate":  jsonReply(200, `{}`),
-		"POST /api/admin/networks/net_1/agents/nag_1/revoke":  jsonReply(200, `{}`),
+		"POST /api/admin/networks":                            jsonReply(201, `{"network":`+networkDoc+`}`),
+		"DELETE /api/admin/networks/net_1":                    jsonReply(200, `{"deleted":true}`),
+		"GET /api/admin/networks/net_1/agents":                jsonReply(200, networkAgents),
+		"POST /api/admin/networks/net_1/agents/nag_1/approve": jsonReply(200, `{"ok":true}`),
+		"POST /api/admin/networks/net_1/agents/nag_1/rotate":  jsonReply(200, `{"ok":true}`),
+		"POST /api/admin/networks/net_1/agents/nag_1/revoke":  jsonReply(200, `{"ok":true}`),
+		"GET /api/admin/networks/net_1/bindings":              jsonReply(200, networkBindings),
 		"POST /api/admin/networks/net_1/bindings":             jsonReply(201, `{}`),
-		"DELETE /api/admin/networks/net_1/bindings":           jsonReply(200, `{}`),
+		"DELETE /api/admin/networks/net_1/bindings/nbd_1":     jsonReply(200, `{"deleted":true}`),
+		"DELETE /api/admin/networks/net_1/bindings/nbd_2":     jsonReply(200, `{"deleted":true}`),
 	})
 	out, err := runCommand(t, NetworksCmd(), "create", "HQ", "--description", "head office", "--data-class", "confidential")
-	if err != nil || !strings.Contains(out, "Created HQ") {
+	if err != nil || !strings.Contains(out, "Created Datacentre 1") {
 		t.Fatalf("create: %q %v", out, err)
 	}
-	if b := gw.body("POST /api/admin/networks", 0); b["name"] != "HQ" || b["description"] != "head office" || b["data_class"] != "confidential" {
+	if b := gw.body("POST /api/admin/networks", 0); b["name"] != "HQ" || b["description"] != "head office" || b["dataClass"] != "confidential" || len(b) != 3 {
 		t.Errorf("create body = %v", b)
 	}
-	if out, err = runCommand(t, NetworksCmd(), "create", "HQ", "--json"); err != nil || !strings.Contains(out, "net_2") {
+	if out, err = runCommand(t, NetworksCmd(), "create", "HQ", "--json"); err != nil || !strings.Contains(out, "net_1") {
 		t.Errorf("create --json: %q %v", out, err)
 	}
 	if _, err = runCommand(t, NetworksCmd(), "delete", "dc1"); err == nil {
@@ -104,13 +150,30 @@ func TestNetworksWriteCommands(t *testing.T) {
 		t.Errorf("delete: %q %v", out, err)
 	}
 	for action, want := range map[string]string{"approve": "Approved", "rotate": "Rotation requested", "revoke": "Revoked"} {
-		args := []string{action, "dc1", "nag_1"}
-		if action == "revoke" {
-			args = append(args, "--yes")
+		for _, ref := range []string{"nag_1", "erp-a"} {
+			args := []string{action, "dc1", ref}
+			if action == "revoke" {
+				args = append(args, "--yes")
+			}
+			if out, err = runCommand(t, NetworksCmd(), args...); err != nil || !strings.Contains(out, want) {
+				t.Errorf("%s %s: %q %v", action, ref, out, err)
+			}
 		}
-		if out, err = runCommand(t, NetworksCmd(), args...); err != nil || !strings.Contains(out, want) {
-			t.Errorf("%s: %q %v", action, out, err)
-		}
+	}
+	if _, err = runCommand(t, NetworksCmd(), "approve", "dc1", "nope"); err == nil || !strings.Contains(err.Error(), "no agent") {
+		t.Errorf("an unknown agent: %v", err)
+	}
+	if gw.count("POST /api/admin/networks/net_1/agents/nag_1/approve") != 2 {
+		t.Error("the unknown agent reached the gateway")
+	}
+	if _, err = runCommand(t, NetworksCmd(), "revoke", "dc1", "nag_1", "--reason", "laptop lost", "--yes"); err != nil {
+		t.Fatal(err)
+	}
+	if b := gw.body("POST /api/admin/networks/net_1/agents/nag_1/revoke", 2); b["reason"] != "laptop lost" || len(b) != 1 {
+		t.Errorf("revoke body = %v", b)
+	}
+	if b := gw.body("POST /api/admin/networks/net_1/agents/nag_1/approve", 0); len(b) != 0 {
+		t.Errorf("approve body = %v", b)
 	}
 	if _, err = runCommand(t, NetworksCmd(), "revoke", "dc1", "nag_1"); err == nil {
 		t.Error("revoke without --yes and without a terminal was accepted")
@@ -119,17 +182,26 @@ func TestNetworksWriteCommands(t *testing.T) {
 	if out, err = runCommand(t, NetworksCmd(), "bind", "erp-private", "--network", "dc1", "--target", "erp", "--credentials", "agent"); err != nil || !strings.Contains(out, "Bound erp-private") {
 		t.Errorf("bind: %q %v", out, err)
 	}
-	if b := gw.body("POST /api/admin/networks/net_1/bindings", 0); b["service"] != "erp-private" || b["target"] != "erp" || b["credentials_mode"] != "agent" {
+	if b := gw.body("POST /api/admin/networks/net_1/bindings", 0); b["kind"] != "connector" || b["service"] != "erp-private" || b["target"] != "erp" || b["credentialsMode"] != "agent" || len(b) != 4 {
 		t.Errorf("bind body = %v", b)
 	}
 	if _, err = runCommand(t, NetworksCmd(), "bind", "mcp:hr", "--network", "dc1", "--target", "hr"); err != nil {
 		t.Fatal(err)
 	}
-	if b := gw.body("POST /api/admin/networks/net_1/bindings", 1); b["mcp_server"] != "hr" || b["credentials_mode"] != "gateway" {
+	if b := gw.body("POST /api/admin/networks/net_1/bindings", 1); b["kind"] != "mcp_server" || b["service"] != "hr" || b["credentialsMode"] != "gateway" {
 		t.Errorf("mcp bind body = %v", b)
 	}
 	if out, err = runCommand(t, NetworksCmd(), "unbind", "mcp:hr", "--network", "dc1"); err != nil || !strings.Contains(out, "Unbound mcp:hr") {
 		t.Errorf("unbind: %q %v", out, err)
+	}
+	if out, err = runCommand(t, NetworksCmd(), "unbind", "erp-private", "--network", "dc1"); err != nil || !strings.Contains(out, "Unbound erp-private") {
+		t.Errorf("unbind connector: %q %v", out, err)
+	}
+	if gw.count("DELETE /api/admin/networks/net_1/bindings/nbd_1") != 1 || gw.count("DELETE /api/admin/networks/net_1/bindings/nbd_2") != 1 {
+		t.Error("each binding was not deleted by its id exactly once")
+	}
+	if _, err = runCommand(t, NetworksCmd(), "unbind", "mcp:erp-private", "--network", "dc1"); err == nil || !strings.Contains(err.Error(), "not routed") {
+		t.Errorf("unbinding something that is not bound: %v", err)
 	}
 	for _, args := range [][]string{
 		{"bind", "erp", "--target", "erp"},
@@ -144,31 +216,58 @@ func TestNetworksWriteCommands(t *testing.T) {
 	}
 }
 
+func TestNetworksUnbindNeedsTheTargetWhenSeveralBindingsMatch(t *testing.T) {
+	two := strings.Replace(networkBindings, `"service":"hr","target":"hr"`, `"service":"erp-private","target":"erp-2"`, 1)
+	two = strings.Replace(two, `"kind":"mcp_server"`, `"kind":"connector"`, 1)
+	gw := networksGateway(t, map[string]func(*packServer, http.ResponseWriter, *http.Request){
+		"GET /api/admin/networks/net_1/bindings":          jsonReply(200, two),
+		"DELETE /api/admin/networks/net_1/bindings/nbd_2": jsonReply(200, `{"deleted":true}`),
+	})
+	if _, err := runCommand(t, NetworksCmd(), "unbind", "erp-private", "--network", "dc1"); err == nil || !strings.Contains(err.Error(), "--target") {
+		t.Fatalf("an ambiguous unbind: %v", err)
+	}
+	if _, err := runCommand(t, NetworksCmd(), "unbind", "erp-private", "--network", "dc1", "--target", "erp-2"); err != nil {
+		t.Fatal(err)
+	}
+	if gw.count("DELETE /api/admin/networks/net_1/bindings/nbd_2") != 1 {
+		t.Error("the binding for that target was not deleted")
+	}
+}
+
 func TestNetworksTokenCreate(t *testing.T) {
 	token := "nxt_" + "ABCDEFGH23456"
+	doc := `{"id":"ent_1","token":"` + token + `","maxUses":1,"requireApproval":false,"expiresAt":"2026-10-16T11:00:00Z","install":{"linux":"sudo zuano-connector enroll --token ` + token + `","debian":"sudo apt install zuano-connector","kubernetes":"helm install zuano-connector"}}`
 	gw := networksGateway(t, map[string]func(*packServer, http.ResponseWriter, *http.Request){
-		"POST /api/admin/networks/net_1/enrollment-tokens": jsonReply(201, `{"token":"`+token+`","expires_at":"2026-10-16T11:00:00Z","snippets":[{"title":"Linux","text":"sudo zuano-connector enroll --token `+token+`\n"}]}`),
+		"POST /api/admin/networks/net_1/enrollment-tokens": jsonReply(201, doc),
 	})
 	out, err := runCommand(t, NetworksCmd(), "token", "create", "dc1")
-	if err != nil || !strings.Contains(out, token) || !strings.Contains(out, "shown once") || !strings.Contains(out, "Linux") {
-		t.Fatalf("token create: %q %v", out, err)
+	for _, want := range []string{token, "shown once", "2026-10-16T11:00:00Z", "Linux", "Debian", "Kubernetes", "apt install"} {
+		if err != nil || !strings.Contains(out, want) {
+			t.Fatalf("token create lacks %q: %q %v", want, out, err)
+		}
 	}
-	if b := gw.body("POST /api/admin/networks/net_1/enrollment-tokens", 0); b["mode"] != "single" || b["uses"] != float64(1) || b["ttl_seconds"] != float64(3600) || b["require_approval"] != nil {
+	if strings.Contains(out, "Docker") {
+		t.Errorf("a missing install command was printed: %q", out)
+	}
+	if b := gw.body("POST /api/admin/networks/net_1/enrollment-tokens", 0); b["uses"] != float64(1) || b["ttlSeconds"] != float64(3600) || b["requireApproval"] != nil || len(b) != 2 {
 		t.Errorf("single body = %v", b)
 	}
 	if _, err = runCommand(t, NetworksCmd(), "token", "create", "dc1", "--uses", "3", "--ttl", "2h", "--require-approval"); err != nil {
 		t.Fatal(err)
 	}
-	if b := gw.body("POST /api/admin/networks/net_1/enrollment-tokens", 1); b["mode"] != "multi" || b["uses"] != float64(3) || b["ttl_seconds"] != float64(7200) || b["require_approval"] != true {
+	if b := gw.body("POST /api/admin/networks/net_1/enrollment-tokens", 1); b["uses"] != float64(3) || b["ttlSeconds"] != float64(7200) || b["requireApproval"] != true {
 		t.Errorf("multi body = %v", b)
 	}
 	if out, err = runCommand(t, NetworksCmd(), "token", "create", "dc1", "--json"); err != nil || !strings.Contains(out, token) {
 		t.Errorf("--json: %q %v", out, err)
 	}
-	for _, args := range [][]string{{"--uses", "0"}, {"--uses", "11"}, {"--ttl", "48h"}, {"--ttl", "0s"}} {
+	for _, args := range [][]string{{"--uses", "0"}, {"--uses", "11"}, {"--ttl", "48h"}, {"--ttl", "59s"}, {"--ttl", "0s"}} {
 		if _, err := runCommand(t, NetworksCmd(), append([]string{"token", "create", "dc1"}, args...)...); err == nil {
 			t.Errorf("%v was accepted", args)
 		}
+	}
+	if _, err = runCommand(t, NetworksCmd(), "token", "create", "dc1", "--ttl", "60s"); err != nil {
+		t.Errorf("the shortest ttl was refused: %v", err)
 	}
 	gw.replace(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {

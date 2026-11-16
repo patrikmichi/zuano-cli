@@ -20,12 +20,9 @@ import (
 const networksAPI = "/api/admin/networks"
 
 type networkSummary struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Slug        string `json:"slug"`
-	Status      string `json:"status"`
-	Description string `json:"description"`
-	DataClass   string `json:"data_class"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Slug string `json:"slug"`
 }
 
 // NetworksCmd returns `zuano networks`, the admin side of private networks:
@@ -47,20 +44,22 @@ call that reaches an offline network exits 34.`,
 	}
 	cmd.AddCommand(networksListCmd(), networksShowCmd(), networksCreateCmd(), networksDeleteCmd(), networksTokenCmd(),
 		networksAgentsCmd(), networksAgentActionCmd("approve"), networksAgentActionCmd("rotate"), networksAgentActionCmd("revoke"),
-		networksAllowlistCmd(), networksLogsCmd(), networksBindCmd(false), networksBindCmd(true), networksTestCmd())
+		networksAllowlistCmd(), networksEventsCmd(), networksLogsCmd(), networksBindCmd(false), networksBindCmd(true), networksTestCmd())
 	return cmd
 }
 
 // resolveNetwork turns a name, slug or id into the network's id.
 func resolveNetwork(ctx context.Context, c *client.Client, ref string) (networkSummary, error) {
 	var doc struct {
-		Networks []networkSummary `json:"networks"`
+		Networks []struct {
+			Network networkSummary `json:"network"`
+		} `json:"networks"`
 	}
 	if _, err := gatewayJSON(ctx, c, http.MethodGet, networksAPI, nil, &doc); err != nil {
 		return networkSummary{}, err
 	}
-	for _, n := range doc.Networks {
-		if n.ID == ref || n.Slug == ref || n.Name == ref {
+	for _, entry := range doc.Networks {
+		if n := entry.Network; n.ID == ref || n.Slug == ref || n.Name == ref {
 			return n, nil
 		}
 	}
@@ -71,9 +70,38 @@ func networkPath(n networkSummary, rest ...string) string {
 	return networksAPI + "/" + url.PathEscape(n.ID) + strings.Join(rest, "")
 }
 
+// resolveNetworkAgent turns an agent's id or name into its id.
+func resolveNetworkAgent(ctx context.Context, c *client.Client, n networkSummary, ref string) (string, error) {
+	var doc struct {
+		Agents []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"agents"`
+	}
+	if _, err := gatewayJSON(ctx, c, http.MethodGet, networkPath(n, "/agents"), nil, &doc); err != nil {
+		return "", err
+	}
+	var byName []string
+	for _, a := range doc.Agents {
+		if a.ID == ref {
+			return a.ID, nil
+		}
+		if a.Name == ref {
+			byName = append(byName, a.ID)
+		}
+	}
+	switch len(byName) {
+	case 1:
+		return byName[0], nil
+	case 0:
+		return "", fmt.Errorf("no agent %q on %s; see `%s`", textsafe.Clean(ref), textsafe.Clean(n.Name), brand.Cmd("networks agents "+n.Name))
+	}
+	return "", fmt.Errorf("%d agents on %s are named %q; use an id from `%s`", len(byName), textsafe.Clean(n.Name), textsafe.Clean(ref), brand.Cmd("networks agents "+n.Name))
+}
+
 func networksListCmd() *cobra.Command {
 	return listCommand("list", "List the private networks", networksAPI, "networks", "No private networks yet. Create one with `"+brand.Cmd("networks create <name>")+"`.",
-		[]column{{"NAME", "name"}, {"STATUS", "status"}, {"AGENTS", "agents_online"}, {"BINDINGS", "bindings"}, {"LAST SEEN", "last_seen_at"}}, nil)
+		[]column{{"NAME", "network.name"}, {"STATUS", "network.status"}, {"HEALTH", "health"}, {"AGENTS ONLINE", "agents.online"}, {"PENDING", "agents.pending"}, {"BINDINGS", "bindings"}, {"LAST SEEN", "lastSeenAt"}}, nil)
 }
 
 func networksShowCmd() *cobra.Command {
@@ -100,8 +128,16 @@ func networksShowCmd() *cobra.Command {
 				printRaw(cmd.OutOrStdout(), raw)
 				return nil
 			}
-			var obj map[string]any
+			obj := map[string]any{}
 			_ = json.Unmarshal(doc["network"], &obj)
+			var agents struct{ Total, Online, Pending int }
+			_ = json.Unmarshal(doc["agents"], &agents)
+			obj["agents"] = fmt.Sprintf("%d online, %d pending, %d in total", agents.Online, agents.Pending, agents.Total)
+			for _, k := range []string{"health", "bindings", "lastSeenAt"} {
+				var v any
+				_ = json.Unmarshal(doc[k], &v)
+				obj[k] = v
+			}
 			printObject(cmd.OutOrStdout(), obj)
 			return nil
 		},
@@ -130,7 +166,7 @@ func networksCreateCmd() *cobra.Command {
 				body["description"] = description
 			}
 			if dataClass != "" {
-				body["data_class"] = dataClass
+				body["dataClass"] = dataClass
 			}
 			var res struct {
 				Network networkSummary `json:"network"`
@@ -213,8 +249,8 @@ ZUANO_AGENT is set. A single-use token lasts an hour by default; a token with
 			if uses < 1 || uses > 10 {
 				return errors.New("--uses must be between 1 and 10")
 			}
-			if ttl <= 0 || ttl > 24*time.Hour {
-				return errors.New("--ttl must be between 1s and 24h")
+			if ttl < time.Minute || ttl > 24*time.Hour {
+				return errors.New("--ttl must be between 1m and 24h")
 			}
 			c, err := approvalsClient(f.gatewayURL)
 			if err != nil {
@@ -224,21 +260,14 @@ ZUANO_AGENT is set. A single-use token lasts an hour by default; a token with
 			if err != nil {
 				return err
 			}
-			mode := "single"
-			if uses > 1 {
-				mode = "multi"
-			}
-			body := map[string]any{"mode": mode, "uses": uses, "ttl_seconds": int(ttl.Seconds())}
+			body := map[string]any{"uses": uses, "ttlSeconds": int(ttl.Seconds())}
 			if cmd.Flags().Changed("require-approval") {
-				body["require_approval"] = requireApproval
+				body["requireApproval"] = requireApproval
 			}
 			var res struct {
 				Token     string `json:"token"`
-				ExpiresAt string `json:"expires_at"`
-				Snippets  []struct {
-					Title string `json:"title"`
-					Text  string `json:"text"`
-				} `json:"snippets"`
+				ExpiresAt string `json:"expiresAt"`
+				Install   map[string]string `json:"install"`
 			}
 			raw, err := gatewayWrite(cmd, c, f.jsonOut, http.MethodPost, networkPath(n, "/enrollment-tokens"), body, &res)
 			if err != nil {
@@ -253,8 +282,10 @@ ZUANO_AGENT is set. A single-use token lasts an hour by default; a token with
 				return errors.New("the gateway did not return an enrollment token")
 			}
 			fmt.Fprintf(out, "Enrollment token (shown once, expires %s):\n  %s\n", textsafe.Clean(orDash(res.ExpiresAt)), textsafe.Clean(res.Token))
-			for _, s := range res.Snippets {
-				fmt.Fprintf(out, "\n%s\n%s\n", textsafe.Clean(s.Title), strings.TrimRight(textsafe.Clean(s.Text), "\n"))
+			for _, k := range []struct{ key, title string }{{"linux", "Linux"}, {"debian", "Debian"}, {"docker", "Docker"}, {"kubernetes", "Kubernetes"}} {
+				if text := res.Install[k.key]; text != "" {
+					fmt.Fprintf(out, "\n%s\n%s\n", k.title, strings.TrimRight(textsafe.Clean(text), "\n"))
+				}
 			}
 			return nil
 		},
@@ -298,7 +329,11 @@ func networksAgentsCmd() *cobra.Command {
 				fmt.Fprintf(out, "No agents. Enroll one with `%s`.\n", brand.Cmd("networks token create "+args[0]))
 				return nil
 			}
-			printTable(out, rows, []column{{"ID", "id"}, {"NAME", "name"}, {"STATUS", "status"}, {"CONNECTION", "connection"}, {"VERSION", "version"}, {"OS/ARCH", "platform"}, {"LAST SEEN", "last_seen_at"}, {"KEY AGE (D)", "key_age_days"}})
+			printTable(out, rows, []column{{"ID", "id"}, {"NAME", "name"}, {"STATUS", "status"}, {"CONNECTED", "connected"}, {"VERSION", "version"}, {"OS", "os"}, {"ARCH", "arch"}, {"LAST SEEN", "lastSeenAt"}, {"KEY EXPIRES", "keyNotAfter"}})
+			var live bool
+			if json.Unmarshal(doc["live"], &live) == nil && !live {
+				fmt.Fprintln(out, "\nwarning: the broker did not answer; connection state is the last stored state.")
+			}
 			return nil
 		},
 	}
@@ -309,6 +344,7 @@ func networksAgentsCmd() *cobra.Command {
 func networksAgentActionCmd(action string) *cobra.Command {
 	var f approvalFlags
 	var yes bool
+	var reason string
 	short := map[string]string{
 		"approve": "Let a pending agent receive requests",
 		"rotate":  "Make an agent rotate its keys now",
@@ -330,12 +366,20 @@ func networksAgentActionCmd(action string) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			agentID, err := resolveNetworkAgent(cmd.Context(), c, n, args[1])
+			if err != nil {
+				return err
+			}
 			if action == "revoke" {
 				if err := confirmOrYes(cmd, yes, fmt.Sprintf("Revoke agent %s of %s?", textsafe.Clean(args[1]), textsafe.Clean(n.Name))); err != nil {
 					return err
 				}
 			}
-			raw, err := gatewayWrite(cmd, c, f.jsonOut, http.MethodPost, networkPath(n, "/agents/", url.PathEscape(args[1]), "/", action), map[string]any{}, nil)
+			body := map[string]any{}
+			if reason != "" {
+				body["reason"] = reason
+			}
+			raw, err := gatewayWrite(cmd, c, f.jsonOut, http.MethodPost, networkPath(n, "/agents/", url.PathEscape(agentID), "/", action), body, nil)
 			if err != nil {
 				return err
 			}
@@ -348,6 +392,7 @@ func networksAgentActionCmd(action string) *cobra.Command {
 		},
 	}
 	f.bind(cmd, "Print the response body unchanged")
+	cmd.Flags().StringVar(&reason, "reason", "", "Why, for the network's event log (up to 200 characters)")
 	if action == "revoke" {
 		cmd.Flags().BoolVar(&yes, "yes", false, "Revoke without asking")
 	}
@@ -376,12 +421,13 @@ func networksAllowlistCmd() *cobra.Command {
 					Name    string   `json:"name"`
 					Kind    string   `json:"kind"`
 					Methods []string `json:"methods"`
-					Paths   []string `json:"path_globs"`
-					Tools   []string `json:"tool_globs"`
+					Paths   []string `json:"pathGlobs"`
+					Tools   []string `json:"mcpTools"`
 					Agents  []string `json:"agents"`
-					Bound   []string `json:"bound_to"`
+					Bound   []string `json:"bindings"`
+					Drift   bool     `json:"drift"`
 				} `json:"targets"`
-				Unserved []string `json:"unserved_bindings"`
+				Unserved []string `json:"unserved"`
 			}
 			raw, err := gatewayJSON(cmd.Context(), c, http.MethodGet, networkPath(n, "/allowlist"), nil, &doc)
 			if err != nil {
@@ -397,6 +443,9 @@ func networksAllowlistCmd() *cobra.Command {
 			}
 			for _, t := range doc.Targets {
 				fmt.Fprintf(out, "%s (%s)\n  agents:  %s\n", textsafe.Clean(t.Name), textsafe.Clean(t.Kind), textsafe.Clean(orDash(strings.Join(t.Agents, ", "))))
+				if t.Drift {
+					fmt.Fprintln(out, "  drift:   the agents that advertise it disagree")
+				}
 				if len(t.Methods) > 0 {
 					fmt.Fprintf(out, "  methods: %s\n", textsafe.Clean(strings.Join(t.Methods, ", ")))
 				}
@@ -420,6 +469,67 @@ func networksAllowlistCmd() *cobra.Command {
 		},
 	}
 	f.bind(cmd, "Print the response body unchanged")
+	return cmd
+}
+
+func networksEventsCmd() *cobra.Command {
+	var f approvalFlags
+	var limit int
+	var before string
+	cmd := &cobra.Command{
+		Use:   "events <name>",
+		Short: "Show a network's events, newest first",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			q := url.Values{}
+			if cmd.Flags().Changed("limit") {
+				if limit < 1 || limit > 200 {
+					return errors.New("--limit must be between 1 and 200")
+				}
+				q.Set("limit", fmt.Sprint(limit))
+			}
+			if before != "" {
+				q.Set("before", before)
+			}
+			c, err := approvalsClient(f.gatewayURL)
+			if err != nil {
+				return err
+			}
+			n, err := resolveNetwork(cmd.Context(), c, args[0])
+			if err != nil {
+				return err
+			}
+			path := networkPath(n, "/events")
+			if len(q) > 0 {
+				path += "?" + q.Encode()
+			}
+			var doc struct {
+				Events []map[string]any `json:"events"`
+				Next   string           `json:"next"`
+			}
+			raw, err := gatewayJSON(cmd.Context(), c, http.MethodGet, path, nil, &doc)
+			if err != nil {
+				return err
+			}
+			out := cmd.OutOrStdout()
+			if f.jsonOut {
+				printRaw(out, raw)
+				return nil
+			}
+			if len(doc.Events) == 0 {
+				fmt.Fprintln(out, "No events.")
+				return nil
+			}
+			printTable(out, doc.Events, []column{{"TIME", "ts"}, {"TYPE", "type"}, {"AGENT", "agentId"}, {"DETAILS", "details"}})
+			if doc.Next != "" {
+				fmt.Fprintf(out, "\nOlder events: --before %s\n", textsafe.Clean(doc.Next))
+			}
+			return nil
+		},
+	}
+	f.bind(cmd, "Print the response body unchanged")
+	cmd.Flags().IntVar(&limit, "limit", 0, "How many events (1 to 200)")
+	cmd.Flags().StringVar(&before, "before", "", "Only events older than this timestamp (the cursor the previous page printed)")
 	return cmd
 }
 
@@ -485,7 +595,7 @@ func networksLogsCmd() *cobra.Command {
 }
 
 // bindingTarget splits "mcp:<server>" from a connector name.
-func bindingTarget(arg string) (key, value string, err error) {
+func bindingTarget(arg string) (kind, service string, err error) {
 	if server, ok := strings.CutPrefix(arg, "mcp:"); ok {
 		if server == "" {
 			return "", "", errors.New("name the MCP server after the mcp: prefix")
@@ -495,7 +605,36 @@ func bindingTarget(arg string) (key, value string, err error) {
 	if arg == "" {
 		return "", "", errors.New("name a connector, or mcp:<server>")
 	}
-	return "service", arg, nil
+	return "connector", arg, nil
+}
+
+// findBinding returns the id of the network's binding for a connector or MCP
+// server; with several for the same service the target tells them apart.
+func findBinding(ctx context.Context, c *client.Client, n networkSummary, kind, service, target string) (string, error) {
+	var doc struct {
+		Bindings []struct {
+			ID      string `json:"id"`
+			Kind    string `json:"kind"`
+			Service string `json:"service"`
+			Target  string `json:"target"`
+		} `json:"bindings"`
+	}
+	if _, err := gatewayJSON(ctx, c, http.MethodGet, networkPath(n, "/bindings"), nil, &doc); err != nil {
+		return "", err
+	}
+	var ids []string
+	for _, b := range doc.Bindings {
+		if b.Kind == kind && b.Service == service && (target == "" || b.Target == target) {
+			ids = append(ids, b.ID)
+		}
+	}
+	switch len(ids) {
+	case 1:
+		return ids[0], nil
+	case 0:
+		return "", fmt.Errorf("%s is not routed through %s", textsafe.Clean(service), textsafe.Clean(n.Name))
+	}
+	return "", fmt.Errorf("%s is routed through %s to %d targets; name one with --target", textsafe.Clean(service), textsafe.Clean(n.Name), len(ids))
 }
 
 func networksBindCmd(unbind bool) *cobra.Command {
@@ -517,7 +656,7 @@ services such as Google or Slack cannot be bound.`,
 			if err := refuseAgentChange(brand.Cmd("networks " + strings.Fields(use)[0])); err != nil {
 				return err
 			}
-			key, value, err := bindingTarget(args[0])
+			kind, service, err := bindingTarget(args[0])
 			if err != nil {
 				return err
 			}
@@ -542,9 +681,13 @@ services such as Google or Slack cannot be bound.`,
 			}
 			var raw []byte
 			if unbind {
-				raw, err = gatewayWrite(cmd, c, f.jsonOut, http.MethodDelete, networkPath(n, "/bindings?", url.Values{key: {value}}.Encode()), nil, nil)
+				var id string
+				if id, err = findBinding(cmd.Context(), c, n, kind, service, target); err != nil {
+					return err
+				}
+				raw, err = gatewayWrite(cmd, c, f.jsonOut, http.MethodDelete, networkPath(n, "/bindings/", url.PathEscape(id)), nil, nil)
 			} else {
-				raw, err = gatewayWrite(cmd, c, f.jsonOut, http.MethodPost, networkPath(n, "/bindings"), map[string]any{key: value, "target": target, "credentials_mode": credentials}, nil)
+				raw, err = gatewayWrite(cmd, c, f.jsonOut, http.MethodPost, networkPath(n, "/bindings"), map[string]any{"kind": kind, "service": service, "target": target, "credentialsMode": credentials}, nil)
 			}
 			if err != nil {
 				return err
@@ -563,7 +706,9 @@ services such as Google or Slack cannot be bound.`,
 	}
 	f.bind(cmd, "Print the response body unchanged")
 	cmd.Flags().StringVar(&network, "network", "", "Network name")
-	if !unbind {
+	if unbind {
+		cmd.Flags().StringVar(&target, "target", "", "Only the binding to this target, when the service has several")
+	} else {
 		cmd.Flags().StringVar(&target, "target", "", "Target name from the agent's config")
 		cmd.Flags().StringVar(&credentials, "credentials", "gateway", "gateway injects the stored credentials; agent uses the ones held on the agent")
 	}

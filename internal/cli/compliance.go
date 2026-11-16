@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -223,12 +222,16 @@ downloads the bundle when it is ready. The range includes --from and stops befor
 			if outFile == "" {
 				return nil
 			}
-			path, err := downloadExport(cmd, c, started.ExportID, outFile)
+			paths, err := downloadExport(cmd, c, started.ExportID, outFile)
 			if err != nil {
 				return err
 			}
 			if !f.jsonOut {
-				fmt.Fprintf(out, "Wrote %s. Check it with `%s`.\n", textsafe.Clean(path), brand.Cmd("compliance verify "+path))
+				if len(paths) == 1 {
+					fmt.Fprintf(out, "Wrote %s. Check it with `%s`.\n", textsafe.Clean(paths[0]), brand.Cmd("compliance verify "+paths[0]))
+				} else {
+					fmt.Fprintf(out, "Wrote %d volumes. Check them together with `%s`.\n", len(paths), brand.Cmd("compliance verify "+strings.Join(paths, " ")))
+				}
 			}
 			return nil
 		},
@@ -278,65 +281,101 @@ func waitExportJob(cmd *cobra.Command, c *client.Client, jobID string, total tim
 	}
 }
 
-// downloadExport fetches a ready bundle from its short-lived signed address.
-// The address gets no credentials and must be https, or on the gateway itself.
-func downloadExport(cmd *cobra.Command, c *client.Client, id, outFile string) (string, error) {
+// downloadExport fetches every volume of a ready bundle from its short-lived
+// signed addresses and returns where each was written. The addresses get no
+// credentials and must be https, or on the gateway itself. The gateway gives no
+// hash for a volume: the bundle is checked by `compliance verify`, whose signed
+// manifest lists every file.
+func downloadExport(cmd *cobra.Command, c *client.Client, id, outFile string) ([]string, error) {
 	var dl struct {
-		URL      string `json:"url"`
-		FileName string `json:"fileName"`
-		SHA256   string `json:"sha256"`
+		Links []struct {
+			Volume   int    `json:"volume"`
+			URL      string `json:"url"`
+			Filename string `json:"filename"`
+		} `json:"links"`
 	}
 	if _, err := gatewayJSON(cmd.Context(), c, http.MethodGet, "/api/compliance/exports/"+url.PathEscape(id)+"/download", nil, &dl); err != nil {
-		return "", err
+		return nil, err
 	}
-	u, err := url.Parse(dl.URL)
+	if len(dl.Links) == 0 {
+		return nil, errors.New("the gateway gave no download address for the export")
+	}
+	sort.Slice(dl.Links, func(i, j int) bool { return dl.Links[i].Volume < dl.Links[j].Volume })
 	base, berr := url.Parse(c.GatewayURL)
-	if err != nil || berr != nil || (u.Scheme != "https" && (u.Scheme != base.Scheme || u.Host != base.Host)) {
-		return "", errors.New("the gateway gave a download address that is neither https nor on the gateway; refusing to fetch it")
+	names := map[string]bool{}
+	dests := make([]string, len(dl.Links))
+	asDir := outFile == "" || strings.HasSuffix(outFile, string(filepath.Separator))
+	if info, err := os.Stat(outFile); err == nil && info.IsDir() {
+		asDir = true
 	}
-	if outFile == "" || strings.HasSuffix(outFile, string(filepath.Separator)) {
-		name := filepath.Base(dl.FileName)
-		if name == "." || name == string(filepath.Separator) {
-			name = id + ".zip"
+	if !asDir && len(dl.Links) > 1 {
+		return nil, fmt.Errorf("the bundle has %d volumes; give --out a directory (ending in %q)", len(dl.Links), string(filepath.Separator))
+	}
+	for i, l := range dl.Links {
+		u, err := url.Parse(l.URL)
+		if l.Volume != i+1 {
+			return nil, errors.New("the gateway's download addresses do not number the volumes from 1 without a gap")
 		}
-		outFile = filepath.Join(outFile, name)
+		if err != nil || berr != nil || (u.Scheme != "https" && (u.Scheme != base.Scheme || u.Host != base.Host)) {
+			return nil, errors.New("the gateway gave a download address that is neither https nor on the gateway; refusing to fetch it")
+		}
+		dests[i] = outFile
+		if asDir {
+			name := filepath.Base(l.Filename)
+			if name == "." || name == ".." || name == string(filepath.Separator) {
+				name = fmt.Sprintf("%s-%03d.zip", id, l.Volume)
+			}
+			if names[name] {
+				return nil, errors.New("the gateway gave two volumes the same file name")
+			}
+			names[name] = true
+			dests[i] = filepath.Join(outFile, name)
+		}
 	}
-	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, dl.URL, nil)
+	var written []string
+	for i, l := range dl.Links {
+		if err := downloadVolume(cmd, l.URL, dests[i]); err != nil {
+			for _, p := range written {
+				_ = os.Remove(p)
+			}
+			return nil, err
+		}
+		written = append(written, dests[i])
+	}
+	return written, nil
+}
+
+// downloadVolume streams one address into a file, in place only when complete.
+func downloadVolume(cmd *cobra.Command, address, dest string) error {
+	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, address, nil)
 	if err != nil {
-		return "", err
+		return err
 	}
 	resp, err := downloadHTTP().Do(req)
 	if err != nil {
-		return "", fmt.Errorf("download the bundle: %w", err)
+		return fmt.Errorf("download the bundle: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("download the bundle: HTTP %d", resp.StatusCode)
+		return fmt.Errorf("download the bundle: HTTP %d", resp.StatusCode)
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(outFile), ".bundle-*")
+	tmp, err := os.CreateTemp(filepath.Dir(dest), ".bundle-*")
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer os.Remove(tmp.Name())
-	h := sha256.New()
-	if _, err := io.Copy(io.MultiWriter(tmp, h), resp.Body); err != nil {
+	if _, err := io.Copy(tmp, resp.Body); err != nil {
 		_ = tmp.Close()
-		return "", fmt.Errorf("download the bundle: %w", err)
+		return fmt.Errorf("download the bundle: %w", err)
 	}
 	if err := tmp.Chmod(0o600); err != nil {
 		_ = tmp.Close()
-		return "", err
+		return err
 	}
 	if err := tmp.Close(); err != nil {
-		return "", err
+		return err
 	}
-	if dl.SHA256 != "" && !strings.EqualFold(dl.SHA256, hex.EncodeToString(h.Sum(nil))) {
-		return "", errors.New("the downloaded bundle does not match the hash the gateway gave; it was discarded")
-	}
-	if err := os.Rename(tmp.Name(), outFile); err != nil {
-		return "", err
-	}
-	return outFile, nil
+	return os.Rename(tmp.Name(), dest)
 }
 
 func complianceExportsCmd() *cobra.Command {

@@ -1,10 +1,6 @@
 package cli
 
 import (
-	"archive/zip"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -14,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrikmichi/zuano-cli/internal/evidence"
+	"github.com/patrikmichi/zuano-cli/internal/evidence/evidencetest"
 	"github.com/patrikmichi/zuano-cli/internal/signing"
 	"github.com/patrikmichi/zuano-cli/internal/signing/signingtest"
 )
@@ -68,12 +64,12 @@ func TestComplianceControlsAllCovered(t *testing.T) {
 	}
 }
 
-func exportRoutes(job string, bundle []byte, dlSHA string) routeMap {
+func exportRoutes(job string, bundle []byte) routeMap {
 	return routeMap{
 		"POST /api/compliance/exports": jsonReply(202, `{"export_id":"exp_1","job_id":"job_1"}`),
 		"GET /api/v1/jobs/job_1":       jsonReply(200, job),
 		"GET /api/compliance/exports/exp_1/download": func(_ *packServer, w http.ResponseWriter, r *http.Request) {
-			_, _ = io.WriteString(w, `{"url":"http://`+r.Host+`/blob/b.zip","fileName":"../../evil/soc2.zip","sha256":"`+dlSHA+`"}`)
+			_, _ = io.WriteString(w, `{"links":[{"volume":1,"url":"http://`+r.Host+`/blob/b.zip","filename":"../../evil/soc2.zip"}]}`)
 		},
 		"GET /blob/b.zip": func(_ *packServer, w http.ResponseWriter, _ *http.Request) { _, _ = w.Write(bundle) },
 	}
@@ -81,8 +77,7 @@ func exportRoutes(job string, bundle []byte, dlSHA string) routeMap {
 
 func TestComplianceExportWaitsAndDownloads(t *testing.T) {
 	bundle := []byte("zip bytes")
-	sum := sha256.Sum256(bundle)
-	ps := complianceGateway(t, exportRoutes(`{"job":{"id":"job_1","status":"succeeded"}}`, bundle, hex.EncodeToString(sum[:])))
+	ps := complianceGateway(t, exportRoutes(`{"job":{"id":"job_1","status":"succeeded"}}`, bundle))
 	dir := t.TempDir()
 	out := filepath.Join(dir, "bundle.zip")
 	text, err := runCommand(t, ComplianceCmd(), "export", "--pack", "soc2", "--from", "2026-07-01", "--to", "2026-10-01", "--wait", "--out", out)
@@ -111,7 +106,7 @@ func TestComplianceExportWaitsAndDownloads(t *testing.T) {
 }
 
 func TestComplianceExportWithoutWaitAndExitCodes(t *testing.T) {
-	ps := complianceGateway(t, exportRoutes(`{"job":{"id":"job_1","status":"running"}}`, nil, ""))
+	ps := complianceGateway(t, exportRoutes(`{"job":{"id":"job_1","status":"running"}}`, nil))
 	args := []string{"export", "--pack", "soc2", "--from", "2026-07-01", "--to", "2026-10-01"}
 	out, err := runCommand(t, ComplianceCmd(), args...)
 	if err != nil || !strings.Contains(out, "Export exp_1 started (job_1)") || ps.count("GET /api/v1/jobs/job_1") != 0 {
@@ -123,7 +118,7 @@ func TestComplianceExportWithoutWaitAndExitCodes(t *testing.T) {
 	if _, err := runCommand(t, ComplianceCmd(), append(args, "--wait", "--wait-timeout", "5ms")...); exitCodeOf(err) != 17 {
 		t.Errorf("timeout: exit %d, %v", exitCodeOf(err), err)
 	}
-	complianceGateway(t, exportRoutes(`{"job":{"id":"job_1","status":"failed","error":"render failed"}}`, nil, ""))
+	complianceGateway(t, exportRoutes(`{"job":{"id":"job_1","status":"failed","error":"render failed"}}`, nil))
 	if _, err := runCommand(t, ComplianceCmd(), append(args, "--wait")...); exitCodeOf(err) != 20 || !strings.Contains(err.Error(), "render failed") {
 		t.Errorf("failed: %v", err)
 	}
@@ -148,30 +143,31 @@ func TestComplianceExportRefusesBadDownloads(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "b.zip")
 	args := []string{"export", "--pack", "soc2", "--from", "2026-07-01", "--to", "2026-10-01", "--wait", "--out", out}
 
-	routes := exportRoutes(ok, []byte("x"), strings.Repeat("0", 64))
-	complianceGateway(t, routes)
-	if _, err := runCommand(t, ComplianceCmd(), args...); err == nil || !strings.Contains(err.Error(), "does not match the hash") {
-		t.Errorf("hash: %v", err)
-	}
-	if _, err := os.Stat(out); err == nil {
-		t.Error("a bundle with the wrong hash was kept")
-	}
-
-	routes = exportRoutes(ok, []byte("x"), "")
-	routes["GET /api/compliance/exports/exp_1/download"] = jsonReply(200, `{"url":"http://evil.example/b.zip"}`)
+	routes := exportRoutes(ok, []byte("x"))
+	routes["GET /api/compliance/exports/exp_1/download"] = jsonReply(200, `{"links":[{"volume":1,"url":"http://evil.example/b.zip","filename":"b.zip"}]}`)
 	complianceGateway(t, routes)
 	if _, err := runCommand(t, ComplianceCmd(), args...); err == nil || !strings.Contains(err.Error(), "neither https nor on the gateway") {
 		t.Errorf("foreign address: %v", err)
 	}
+	if _, err := os.Stat(out); err == nil {
+		t.Error("a bundle from a foreign address was kept")
+	}
 
-	routes = exportRoutes(ok, []byte("x"), "")
+	routes = exportRoutes(ok, []byte("x"))
+	routes["GET /api/compliance/exports/exp_1/download"] = jsonReply(200, `{"links":[]}`)
+	complianceGateway(t, routes)
+	if _, err := runCommand(t, ComplianceCmd(), args...); err == nil || !strings.Contains(err.Error(), "no download address") {
+		t.Errorf("no links: %v", err)
+	}
+
+	routes = exportRoutes(ok, []byte("x"))
 	routes["GET /blob/b.zip"] = jsonReply(404, `{}`)
 	complianceGateway(t, routes)
 	if _, err := runCommand(t, ComplianceCmd(), args...); err == nil || !strings.Contains(err.Error(), "HTTP 404") {
 		t.Errorf("404: %v", err)
 	}
 
-	routes = exportRoutes(ok, []byte("x"), "")
+	routes = exportRoutes(ok, []byte("x"))
 	routes["GET /blob/b.zip"] = func(_ *packServer, w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/elsewhere", http.StatusFound)
 	}
@@ -180,11 +176,73 @@ func TestComplianceExportRefusesBadDownloads(t *testing.T) {
 		t.Error("a redirect was followed")
 	}
 
-	routes = exportRoutes(ok, nil, "")
+	routes = exportRoutes(ok, nil)
 	routes["POST /api/compliance/exports"] = jsonReply(202, `{}`)
 	complianceGateway(t, routes)
 	if _, err := runCommand(t, ComplianceCmd(), args...); err == nil || !strings.Contains(err.Error(), "did not say which export") {
 		t.Errorf("no id: %v", err)
+	}
+}
+
+func TestComplianceExportDownloadsEveryVolume(t *testing.T) {
+	ok := `{"job":{"status":"succeeded"}}`
+	links := func(l string) func(*packServer, http.ResponseWriter, *http.Request) {
+		return func(_ *packServer, w http.ResponseWriter, r *http.Request) {
+			_, _ = io.WriteString(w, strings.ReplaceAll(l, "HOST", r.Host))
+		}
+	}
+	routes := exportRoutes(ok, nil)
+	routes["GET /api/compliance/exports/exp_1/download"] = links(`{"links":[
+	  {"volume":2,"url":"http://HOST/blob/2","filename":"acme-exp-002.zip"},
+	  {"volume":1,"url":"http://HOST/blob/1","filename":"acme-exp-001.zip"}]}`)
+	routes["GET /blob/1"] = func(_ *packServer, w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "volume one") }
+	routes["GET /blob/2"] = func(_ *packServer, w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "volume two") }
+	routes["GET /blob/missing"] = jsonReply(404, `{}`)
+	complianceGateway(t, routes)
+	base := []string{"export", "--pack", "soc2", "--from", "2026-07-01", "--to", "2026-10-01", "--wait"}
+
+	dir := t.TempDir()
+	out, err := runCommand(t, ComplianceCmd(), append(base, "--out", dir+string(filepath.Separator))...)
+	first, second := filepath.Join(dir, "acme-exp-001.zip"), filepath.Join(dir, "acme-exp-002.zip")
+	if err != nil || !strings.Contains(out, "compliance verify "+first+" "+second) {
+		t.Fatalf("%q %v", out, err)
+	}
+	for path, want := range map[string]string{first: "volume one", second: "volume two"} {
+		if got, _ := os.ReadFile(path); string(got) != want {
+			t.Errorf("%s = %q", path, got)
+		}
+	}
+	if _, err := runCommand(t, ComplianceCmd(), append(base, "--out", filepath.Join(t.TempDir(), "bundle.zip"))...); err == nil || !strings.Contains(err.Error(), "2 volumes") {
+		t.Errorf("one file name for two volumes: %v", err)
+	}
+
+	for name, body := range map[string]string{
+		"a gap":              `{"links":[{"volume":1,"url":"http://HOST/blob/1","filename":"a-001.zip"},{"volume":3,"url":"http://HOST/blob/2","filename":"a-003.zip"}]}`,
+		"a repeated volume":  `{"links":[{"volume":1,"url":"http://HOST/blob/1","filename":"a.zip"},{"volume":1,"url":"http://HOST/blob/2","filename":"b.zip"}]}`,
+		"a repeated name":    `{"links":[{"volume":1,"url":"http://HOST/blob/1","filename":"a.zip"},{"volume":2,"url":"http://HOST/blob/2","filename":"x/a.zip"}]}`,
+		"a foreign volume":   `{"links":[{"volume":1,"url":"http://HOST/blob/1","filename":"a.zip"},{"volume":2,"url":"http://evil.example/2","filename":"b.zip"}]}`,
+		"a volume that fails": `{"links":[{"volume":1,"url":"http://HOST/blob/1","filename":"a.zip"},{"volume":2,"url":"http://HOST/blob/missing","filename":"b.zip"}]}`,
+	} {
+		routes["GET /api/compliance/exports/exp_1/download"] = links(body)
+		complianceGateway(t, routes)
+		target := t.TempDir()
+		if _, err := runCommand(t, ComplianceCmd(), append(base, "--out", target+string(filepath.Separator))...); err == nil {
+			t.Errorf("%s was accepted", name)
+		}
+		if left, _ := os.ReadDir(target); len(left) != 0 {
+			t.Errorf("%s left %d file(s) behind", name, len(left))
+		}
+	}
+
+	// A file name that names a directory is replaced, never joined to the target.
+	routes["GET /api/compliance/exports/exp_1/download"] = links(`{"links":[{"volume":1,"url":"http://HOST/blob/1","filename":".."}]}`)
+	complianceGateway(t, routes)
+	target := t.TempDir()
+	if _, err := runCommand(t, ComplianceCmd(), append(base, "--out", target+string(filepath.Separator))...); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(target, "exp_1-001.zip")); err != nil {
+		t.Errorf("the replacement name was not used: %v", err)
 	}
 }
 
@@ -353,31 +411,6 @@ func TestFieldTextAndPrintObject(t *testing.T) {
 	}
 }
 
-// buildBundle writes a minimal bundle: a manifest, its signature and one file.
-func testBundle(t *testing.T, signer *signingtest.Signer, content string) string {
-	t.Helper()
-	sum := sha256.Sum256([]byte(content))
-	manifest, _ := json.Marshal(evidence.Manifest{Pack: "soc2", OrgSlug: "acme", EvidenceKeyID: signer.Key.KID,
-		Files: []evidence.FileEntry{{Path: "controls.csv", SHA256: hex.EncodeToString(sum[:]), Size: int64(len(content))}}})
-	path := filepath.Join(t.TempDir(), "bundle.zip")
-	f, err := os.Create(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	zw := zip.NewWriter(f)
-	for name, data := range map[string][]byte{
-		evidence.ManifestFile:  manifest,
-		evidence.SignatureFile: []byte(base64.StdEncoding.EncodeToString(signer.SignMessage(manifest))),
-		"controls.csv":         []byte(content),
-	} {
-		w, _ := zw.Create(name)
-		_, _ = w.Write(data)
-	}
-	_ = zw.Close()
-	_ = f.Close()
-	return path
-}
-
 func writeKeys(t *testing.T, doc any) string {
 	t.Helper()
 	raw, _ := json.Marshal(doc)
@@ -387,27 +420,36 @@ func writeKeys(t *testing.T, doc any) string {
 }
 
 func TestComplianceVerifyOffline(t *testing.T) {
-	signer := signingtest.New("ev1")
-	bundle := testBundle(t, signer, "control_id,status\n")
-	keys := writeKeys(t, map[string]any{"evidence": []signing.Key{signer.Key}})
-	out, err := runCommand(t, ComplianceCmd(), "verify", bundle, "--keys", keys)
-	if err != nil || !strings.Contains(out, "Valid: soc2 pack for acme") {
+	b := evidencetest.New(t, evidencetest.Options{VolumeBytes: 1})
+	paths := b.Write()
+	keys := writeKeys(t, map[string]any{"evidence": []signing.Key{b.Evidence.Key}})
+	args := append([]string{"verify"}, paths...)
+	out, err := runCommand(t, ComplianceCmd(), append(args, "--keys", keys)...)
+	if err != nil || !strings.Contains(out, "Valid: iso27001 pack for acme") || !strings.Contains(out, "6 audit rows in 3 hours") || !strings.Contains(out, "in "+keys) {
 		t.Fatalf("%q %v", out, err)
 	}
-	if _, err := runCommand(t, ComplianceCmd(), "verify", bundle, "--keys", writeKeys(t, map[string]any{"keys": []signing.Key{signer.Key}})); err != nil {
+	if _, err := runCommand(t, ComplianceCmd(), append(args, "--keys", writeKeys(t, map[string]any{"keys": []signing.Key{b.Evidence.Key}}))...); err != nil {
 		t.Errorf("generic keys: %v", err)
 	}
+	withAudit := writeKeys(t, map[string]any{"evidence": []signing.Key{b.Evidence.Key}, "audit": []signing.Key{signingtest.New("audit-1").Key}})
+	out, err = runCommand(t, ComplianceCmd(), append(args, "--keys", withAudit)...)
+	if exitCodeOf(err) != 45 || !strings.Contains(out, "the checkpoint signature does not verify") {
+		t.Errorf("audit keys of the caller: exit %d %q %v", exitCodeOf(err), out, err)
+	}
 
-	other := signingtest.New("ev1")
-	out, err = runCommand(t, ComplianceCmd(), "verify", bundle, "--keys", writeKeys(t, map[string]any{"evidence": []signing.Key{other.Key}}))
+	other := signingtest.New("evidence-1")
+	out, err = runCommand(t, ComplianceCmd(), append(args, "--keys", writeKeys(t, map[string]any{"evidence": []signing.Key{other.Key}}))...)
 	if exitCodeOf(err) != 45 || !strings.Contains(out, "manifest.json: the signature does not verify") {
 		t.Errorf("wrong key: exit %d %q %v", exitCodeOf(err), out, err)
 	}
-	tampered := testBundle(t, signer, "control_id,status\n")
-	data := rewriteZip(t, tampered, "controls.csv", []byte("control_id,status\nCC1,gap\n"))
-	out, err = runCommand(t, ComplianceCmd(), "verify", data, "--keys", keys)
-	if exitCodeOf(err) != 45 || !strings.Contains(out, "controls.csv") {
+	tampered := evidencetest.New(t, evidencetest.Options{})
+	tampered.Files["controls.csv"] = []byte("control_id,title,statuz\r\n")
+	out, err = runCommand(t, ComplianceCmd(), "verify", tampered.Write()[0], "--keys", writeKeys(t, map[string]any{"evidence": []signing.Key{tampered.Evidence.Key}}))
+	if exitCodeOf(err) != 45 || !strings.Contains(out, "controls.csv: does not match the hash") {
 		t.Errorf("tampered: exit %d %q %v", exitCodeOf(err), out, err)
+	}
+	if _, err := runCommand(t, ComplianceCmd(), "verify", paths[0], "--keys", keys); exitCodeOf(err) != 45 {
+		t.Errorf("one volume of several: exit %d", exitCodeOf(err))
 	}
 	notZip := filepath.Join(t.TempDir(), "x.zip")
 	_ = os.WriteFile(notZip, []byte("nope"), 0o600)
@@ -418,66 +460,53 @@ func TestComplianceVerifyOffline(t *testing.T) {
 		p := filepath.Join(t.TempDir(), "g.json")
 		_ = os.WriteFile(p, []byte("{"), 0o600)
 		return p
-	}(), "empty": writeKeys(t, map[string]any{})} {
-		if _, err := runCommand(t, ComplianceCmd(), "verify", bundle, "--keys", k); exitCodeOf(err) != 46 {
+	}(), "empty": writeKeys(t, map[string]any{}), "audit only": writeKeys(t, map[string]any{"audit": []signing.Key{b.Audit.Key}})} {
+		if _, err := runCommand(t, ComplianceCmd(), append(args, "--keys", k)...); exitCodeOf(err) != 46 {
 			t.Errorf("%s keys: exit %d, %v", name, exitCodeOf(err), err)
 		}
 	}
 }
 
-func rewriteZip(t *testing.T, src, name string, data []byte) string {
-	t.Helper()
-	zr, err := zip.OpenReader(src)
-	if err != nil {
-		t.Fatal(err)
+func TestComplianceVerifyWarnsAboutHoursWithoutACheckpoint(t *testing.T) {
+	b := evidencetest.New(t, evidencetest.Options{SkipCheckpoint: map[int]bool{2: true}})
+	keys := writeKeys(t, map[string]any{"evidence": []signing.Key{b.Evidence.Key}})
+	args := append([]string{"verify"}, b.Write()...)
+	out, err := runCommand(t, ComplianceCmd(), append(args, "--keys", keys)...)
+	if err != nil || !strings.Contains(out, "warning: 1 audit hour(s) have rows and no signed checkpoint") || !strings.Contains(out, "2026-10-01T02:00:00.000Z") || !strings.Contains(out, "2 hours checked") {
+		t.Errorf("%q %v", out, err)
 	}
-	defer zr.Close()
-	dst := filepath.Join(t.TempDir(), "t.zip")
-	f, _ := os.Create(dst)
-	zw := zip.NewWriter(f)
-	for _, zf := range zr.File {
-		w, _ := zw.Create(zf.Name)
-		if zf.Name == name {
-			_, _ = w.Write(data)
-			continue
-		}
-		rc, _ := zf.Open()
-		b, _ := io.ReadAll(rc)
-		_ = rc.Close()
-		_, _ = w.Write(b)
+	out, err = runCommand(t, ComplianceCmd(), append(args, "--keys", keys, "--require-checkpoints")...)
+	if exitCodeOf(err) != 45 || !strings.Contains(out, "no signed checkpoint") {
+		t.Errorf("required: exit %d %q %v", exitCodeOf(err), out, err)
 	}
-	_ = zw.Close()
-	_ = f.Close()
-	return dst
 }
 
-func TestComplianceVerifyFetchesThePublishedKeys(t *testing.T) {
-	signer := signingtest.New("ev1")
-	audit := signingtest.New("au1")
-	bundle := testBundle(t, signer, "x\n")
-	complianceGateway(t, routeMap{
-		"GET /.well-known/zuano-evidence-keys": jsonReply(200, mustJSON(map[string]any{"keys": []signing.Key{signer.Key}})),
-		"GET /.well-known/zuano-audit-keys":    jsonReply(200, mustJSON(map[string]any{"keys": []signing.Key{audit.Key}})),
+func TestComplianceVerifyFetchesThePublishedEvidenceKeysOnly(t *testing.T) {
+	b := evidencetest.New(t, evidencetest.Options{})
+	paths := b.Write()
+	// The gateway publishes no audit keys: only the evidence keys are asked for.
+	gw := complianceGateway(t, routeMap{
+		"GET /.well-known/zuano-evidence-keys": jsonReply(200, mustJSON(map[string]any{"keys": []signing.Key{b.Evidence.Key}})),
 	})
-	if out, err := runCommand(t, ComplianceCmd(), "verify", bundle); err != nil || !strings.Contains(out, "Valid:") {
+	out, err := runCommand(t, ComplianceCmd(), "verify", paths[0])
+	if err != nil || !strings.Contains(out, "Valid:") || !strings.Contains(out, "published by "+gw.URL) {
 		t.Errorf("%q %v", out, err)
 	}
 
-	complianceGateway(t, routeMap{"GET /.well-known/zuano-evidence-keys": jsonReply(404, `{}`)})
-	if _, err := runCommand(t, ComplianceCmd(), "verify", bundle); exitCodeOf(err) != 46 {
-		t.Errorf("no keys published: exit %d, %v", exitCodeOf(err), err)
+	// A bundle signed by a key the gateway does not publish is refused, whatever key file it carries.
+	forged := evidencetest.New(t, evidencetest.Options{})
+	if out, err := runCommand(t, ComplianceCmd(), "verify", forged.Write()[0]); exitCodeOf(err) != 45 || !strings.Contains(out, "does not verify") {
+		t.Errorf("forged bundle: exit %d %q %v", exitCodeOf(err), out, err)
 	}
-	complianceGateway(t, routeMap{
-		"GET /.well-known/zuano-evidence-keys": jsonReply(200, mustJSON(map[string]any{"keys": []signing.Key{signer.Key}})),
-		"GET /.well-known/zuano-audit-keys":    jsonReply(404, `{}`),
-	})
-	if _, err := runCommand(t, ComplianceCmd(), "verify", bundle); exitCodeOf(err) != 46 {
-		t.Errorf("no audit keys: exit %d, %v", exitCodeOf(err), err)
+
+	complianceGateway(t, routeMap{"GET /.well-known/zuano-evidence-keys": jsonReply(404, `{}`)})
+	if _, err := runCommand(t, ComplianceCmd(), "verify", paths[0]); exitCodeOf(err) != 46 {
+		t.Errorf("no keys published: exit %d, %v", exitCodeOf(err), err)
 	}
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("ZUANO_URL", "")
 	t.Setenv("ZUANO_API_KEY", "")
-	if _, err := runCommand(t, ComplianceCmd(), "verify", bundle); exitCodeOf(err) != 46 || !strings.Contains(err.Error(), "--keys") {
+	if _, err := runCommand(t, ComplianceCmd(), "verify", paths[0]); exitCodeOf(err) != 46 || !strings.Contains(err.Error(), "--keys") {
 		t.Errorf("no gateway: exit %d, %v", exitCodeOf(err), err)
 	}
 }

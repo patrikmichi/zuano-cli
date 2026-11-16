@@ -718,34 +718,43 @@ routes and commands; the wrappers, `dryRun`, the impact fields and the
 | `GET /api/compliance/packs/{pack}/controls?from=&to=` | `{"controls": [{"id", "title", "status": "covered\|partial\|gap\|manual", "sources", "records", "gapNote"?}]}` |
 | `POST /api/compliance/exports` | `{"pack", "from", "to"}` answers `202` `{"export_id", "job_id"}` |
 | `GET /api/compliance/exports`, `.../{id}`, `DELETE .../{id}` | `{"exports": [...]}`, `{"export": {...}}` |
-| `GET /api/compliance/exports/{id}/download` | `{"url", "fileName", "sha256"?}`: a short-lived address, https or on the gateway |
+| `GET /api/compliance/exports/{id}/download` | `{"links": [{"volume", "url", "filename"}]}`: one short-lived address per volume, https or on the gateway; no hash |
 | `GET\|POST /api/compliance/schedules`, `DELETE .../{id}` | `{"schedules": [...]}`; `{"pack", "frequency": "weekly\|monthly\|quarterly", "rangeDays", "recipients"}` answers `{"schedule": {"id"}}` |
 | `POST /api/compliance/exports/{id}/shares` | `{"to", "expiresInDays"}` answers `{"share": {"url", "expiresAt"}}` |
 | `GET\|POST /api/compliance/incidents`, `GET .../{id}` | `{"incidents": [...]}`, `{"incident": {...}}`; create `{"title", "severity", "detectedAt", "description"}` answers `{"incident": {"id"}}` |
 | `GET\|POST /api/compliance/dsr`, `POST .../{id}/execute` | `{"requests": [...]}`; create `{"kind", "subject"}` answers `{"request": {"id"}}` |
 | `POST /api/compliance/access-reviews`, `GET .../{id}`, `POST .../{id}/apply` | `{"scope", "dueDays"}` answers `{"review": {"id"}}`; `{"review": {...}}` |
-| `GET /.well-known/zuano-evidence-keys`, `GET /.well-known/zuano-audit-keys` | `{"keys": [{"kid", "alg": "ed25519", "publicKey"}]}` |
+| `GET /.well-known/zuano-evidence-keys` | `{"keys": [{"kid", "alg": "ed25519", "publicKey"}]}`; the gateway publishes no audit keys |
 
-A bundle is a zip holding `manifest.json`, `manifest.sig` (base64 ed25519 over
-the bytes of `manifest.json`), the files the manifest lists and
-`chain/checkpoints.jsonl`. The manifest has `{"pack", "packVersion",
-"mappingVersion", "orgId", "orgSlug", "range": {"from", "to"}, "generatedAt",
-"requestedBy", "evidenceKeyId", "files": [{"path", "sha256", "size"}]}`.
-`chain/audit_chain*.jsonl` (the plan puts it next to the other evidence
-files; the label check forbids that path, so zuano reads it from `chain/`)
-holds one event per line with `seq`, `prev_hash`
-and `hash` (hex) next to the event's own fields; `hash` is
-`sha256(prev_hash bytes || canonical JSON of the line without hash and prev_hash)`.
-A checkpoint line is `{"org_id", "date", "last_seq", "head_hash", "kid",
-"signature"}` with the signature (base64 ed25519) over the canonical JSON of
-`org_id`, `date`, `last_seq` and `head_hash`. `chain/verification.json`
-(`{"ok", "to_seq", "recomputed_head"}`) is the gateway's own result and is
-checked against the recomputed one.
+A bundle (format 1) is one zip, or numbered volumes of a large one (the manifest
+is in the last). Its files: `manifest.json`, `manifest.sig`, `controls.csv`,
+`summary.pdf`, `README.txt`, `evidence/`, `customer-evidence/`,
+`audit/events.part-NNN.jsonl`, `audit/checkpoints.jsonl`,
+`audit/verification.json` and `keys/public-keys.json`
+(`{"audit": [key], "evidence": [key]}`). The manifest is `{"format": 1,
+"exportId", "pack": {"id", "version"}, "mapping", "org": {"id", "slug"},
+"range": {"from", "to"}, "auditRange": {"from", "to"}, "generatedAt",
+"generator", "requestedBy", "volumes", "files": [{"path", "sha256", "size",
+"volume"}], "coverage", "disclaimer", "evidenceKeyId"}` and does not list itself
+or its signature. `manifest.sig` is `{"purpose": "compliance-manifest", "kid",
+"alg": "ed25519", "signature"}` with the base64 Ed25519 signature over the
+canonical JSON (keys sorted by UTF-16 code unit, no spaces) of
+`{"purpose":"compliance-manifest","document":<manifest>}`. An audit row is one
+canonical JSON object per line with at least `id`, `orgId` and `ts`; its leaf is
+`SHA-256(0x00 || canonical JSON of the row without its null columns)`. A
+checkpoint line is `{"orgId", "hourStart", "rowCount", "firstId", "lastId",
+"root", "kid", "signature"}` (the root hex, one per UTC hour with rows) with the
+base64 Ed25519 signature over the canonical JSON of `{"purpose":
+"audit-checkpoint", "orgId", "hourStart", "rowCount", "firstId", "lastId",
+"root"}`. `audit/verification.json` (`{"hours", "verified", "unsigned",
+"failures", "ok"}`) is the gateway's own result and is compared with the one
+recomputed. `internal/evidence/evidencetest` writes a bundle of this shape with
+test keys; with `ZUANO_GATEWAY_BUNDLE` (the volume files, separated like a PATH)
+and `ZUANO_GATEWAY_EVIDENCE_KEYS` (the published key document) set, a test
+verifies a bundle the gateway built.
 
-Source: DLP and compliance packs plan (export bundle, API and CLI sections). The
-plan names the routes, the bundle layout and exit codes 45 and 46 for `verify`;
-the exact manifest and checkpoint fields, the event hash input and the response
-wrappers are this client's reading and must match what the gateway writes.
+Source: the gateway's `lib/compliance/export/{bundle,manifest,audit,verify,zip}.ts`
+and `docs/reference/compliance-bundle.md` on the integration branch.
 
 ## Agent inventory and access reviews
 

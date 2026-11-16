@@ -1294,34 +1294,38 @@ identifier; the CLI refuses an argument with another prefix before sending it.
 
 ## Recipes
 
-Bearer auth, under `/api/v1`. The routes and the recipe shape are the plan's;
-the wrappers, `signature.signed` and the key document are this client's
-decisions.
+Bearer auth, under `/api/v1`, as the gateway's OpenAPI document describes them.
+The gateway's signed Gmail recipe (`contract-fixtures/recipes/gmail-send-email.json`)
+is the shape the CLI verifies.
 
 | Request | Carries / answers |
 |---|---|
-| `GET /recipes?service=&q=&source=&status=&cursor=&limit=&forCaller=true` | `{"items": [RECIPE], "nextCursor"?}`; with `forCaller` each step carries `risk` and `approval` for the caller |
-| `GET /recipes/{id or slug}?version=&forCaller=true` | `{"recipe": RECIPE}` |
-| `GET /recipes/{id}/versions` | `{"items": [{"version", "status", "at", "by"?}]}` |
-| `POST /recipes/{id}:promote` | `{}`; `201` `{"skill": {"id", "slug", "url"}, "versionId"}` |
-| `GET /org/recipe-settings`, `PUT /org/recipe-settings` | `{"settings": {"contributeCrossOrg", "serveRecipes": "all\|org_only\|off", "mineOrgPrivate"}}`; PUT takes any of the three |
-| `GET /recipes/keys` | public: `{"keys": [{"kid", "alg": "ed25519", "publicKey": base64}]}` |
+| `GET /recipes?service=&q=&source=&status=&cursor=&limit=` | `{"items": [SUMMARY], "nextCursor"?}`; no other query parameter is accepted |
+| `GET /recipes/{id}?version=` | `{"recipe": RECIPE}`; by id only |
+| `GET /recipes/{id}/versions` | `{"versions": [{"version", "title", "contentHash", "createdAt"}]}` |
+| `GET /org/recipe-settings`, `PUT /org/recipe-settings` | `{"serveRecipes": "all\|org_only\|off"}`; PUT takes that one field |
+| `GET /recipes/keys` | public, `Cache-Control: public, max-age=300`: `{"keys": [{"keyId", "alg": "ed25519", "publicKey": base64}]}` |
+
+`POST /recipes/{id}:promote` is not in the gateway's OpenAPI document; `recipes
+promote` calls it and expects `201` `{"skill": {"id", "slug", "url"}, "versionId"}`.
 
 ```json
-RECIPE = {"id", "slug", "version", "title", "useCase", "services", "difficulty": {"level", "reason"}, "primaryTools", "relatedTools",
-          "steps": [{"order", "kind", "condition"?, "fallbackFor"?, "tool", "instruction", "risk"?, "approval"?}],
-          "pitfalls": [{"tool", "errorCodes"?, "text", "fix"}], "tools": [{"tool", "idempotency", "idempotencyParam"?}],
-          "source", "overrides"?, "status", "evidence": {"successRate", "successRateLow", "sampleSize", "windowDays", "lastEval"?},
-          "signature": {"alg", "keyId", "signer": "platform|org", "contentHash": hex sha256, "sig": base64, "signed": SIGNED}, "url"}
-SIGNED = the object that was signed: id, version, title, useCase, services, difficulty, primaryTools, relatedTools,
-         steps (without risk and approval), pitfalls, and anything else the gateway signs
+SUMMARY = {"id", "slug", "title", "useCase", "services", "source", "status", "version", "stepCount", "pitfallCount", "updatedAt"}
+RECIPE = {"id", "slug", "version", "currentVersion", "latestVersion", "services", "source": "platform|mined|org", "overrides", "status",
+          "contentHash": hex sha256, "signature": {"keyId", "signature": base64, "scope": "platform|org", "orgId": string|null} | null,
+          "editable", "title", "useCase", "difficulty": {"level", "reason"}, "primaryTools", "relatedTools",
+          "steps": [{"order", "kind", "condition"?, "fallbackFor"?, "tool", "instruction"}],
+          "pitfalls": [{"tool", "errorCodes"?, "text", "fix"}], "createdAt", "updatedAt"}
 ```
 
-`sig` is an Ed25519 signature over the canonical JSON (sorted keys, no
-whitespace) of `signed`; `contentHash` is the hex SHA-256 of the same bytes.
-The CLI compares the fields it prints with `signed`, so a changed step does not
-verify; other keys in `signed` (the catalog version, scope, organisation) are
-signed but not compared.
+`contentHash` is the hex SHA-256 of the canonical JSON (keys in UTF-16 order, no
+whitespace) of `{title, useCase, difficulty, primaryTools, relatedTools, steps,
+pitfalls}` as served. The signature is Ed25519, base64, over the canonical JSON
+of `{contentHash, orgId, recipeId, scope, version}`: the recipe's `id` and
+`version`, the hash, and the signature's `scope` and `orgId` (null for a platform
+recipe). The key is the one in the published set with the signature's `keyId`.
+A step or pitfall field the CLI does not know stays in the hash, so a recipe
+that carries one verifies only if the gateway signed it.
 
 ## Catalog and custom connectors
 

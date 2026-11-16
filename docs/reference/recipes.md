@@ -1,31 +1,28 @@
 # Recipes
 
 A recipe is a playbook for using a few tools well: the steps in order, which
-are optional or fall back to another, the pitfalls and what to do instead, and
-how well it has worked. The gateway serves the best matching ones next to tool
-search results. They come from the platform, from your organisation, or are
-mined from its usage.
+are optional or fall back to another, and the pitfalls and what to do instead.
+The gateway serves the best matching ones next to tool search results. They come
+from the platform, from your organisation, or are mined from its usage.
 
 | Command | |
 |---|---|
-| `zuano recipes list [--service S] [--source platform\|mined\|org] [--status S] [--query Q] [--limit N] [--cursor C]` | id, title, services, steps, pitfalls, success rate, source, version |
-| `zuano recipes show <id\|slug> [--version N]` | the recipe in full, with its signature checked |
-| `zuano recipes versions <id>` | the versions of a recipe |
+| `zuano recipes list [--service S] [--source platform\|mined\|org] [--status S] [--query Q] [--limit N] [--cursor C]` | id, title, services, steps, pitfalls, source, status, version |
+| `zuano recipes show <id> [--version N] [--org ORG]` | the recipe in full, printed only when its signature checks |
+| `zuano recipes versions <id>` | the versions of a recipe with the hash of each version's content |
 | `zuano recipes promote <id>` | make it into a draft skill; prints the next commands |
-| `zuano recipes settings [--contribute on\|off] [--serve all\|org_only\|off] [--mine on\|off]` | show or change how the organisation takes part |
+| `zuano recipes settings [--serve all\|org_only\|off]` | show or change which recipes tool search offers |
 
 `--json` prints what the gateway sent, and `--gateway-url` names the gateway.
+Recipes are read by id (`rcp_...`, as `list` shows it), not by slug.
 
 ## What `show` prints
 
 The title and a header line (services, steps, pitfalls, source, version,
 status); the difficulty with its reason; the primary and related tools; the
-numbered steps, with `optional` and `fallback` steps carrying their condition,
-and for you the tool's risk, whether it needs your approval or is covered by a
-grant, and whether a retry is safe (`idempotent`, `auto key` for a call the
-gateway keys itself, `not idempotent`); the pitfalls grouped by tool with their
-error codes and the fix; the evidence (success rate over the last 30 days, its
-95 % lower bound, how many runs, the last eval); and the signature line.
+numbered steps, with `optional` and `fallback` steps carrying their condition;
+the pitfalls grouped by tool with their error codes and the fix; and the
+signature line.
 
 Output has no colour, so `NO_COLOR` needs nothing. Text in a recipe may come
 from outside your organisation, so control, bidirectional-override and
@@ -33,28 +30,44 @@ zero-width characters are removed from everything printed.
 
 ## Signatures
 
-The platform signs a platform recipe with its recipe key, and an organisation
-signs its own when it activates one. `show` checks the signature without asking
-the gateway to vouch for it:
+The platform signs a platform recipe with its recipe key, and an organisation's
+recipe is signed for that organisation when it is activated. `show` checks the
+signature without asking the gateway to vouch for it, and each check refuses the
+recipe when it fails:
 
-1. the content the signature covers hashes to the recipe's `contentHash`;
-2. the signature is by a key the gateway publishes at `/api/v1/recipes/keys`
-   (kept for 24 hours and fetched again when a recipe names a key it does not
-   have, as after a rotation);
-3. the recipe shown is that content: its title, use case, services, difficulty,
-   tools, steps (order, kind, condition, tool, instruction) and pitfalls.
+1. the keys come from the gateway you are signed in to, at
+   `/api/v1/recipes/keys` over https, never from the recipe's own answer. They
+   are reused only for as long as the gateway's answer allows (five minutes
+   today, an hour at most) and fetched again when a recipe names a key the set does not
+   have, as after a rotation; a key the gateway has withdrawn stops verifying
+   once that time has passed. A set that has a key without a `keyId`, still
+   uses the older `kid` field or repeats an id is refused whole;
+2. the key named by the signature's `keyId` is in that set and is an `ed25519`
+   key; no other algorithm is accepted;
+3. the content hash is computed again from the recipe as received (its title,
+   use case, difficulty, primary and related tools, steps and pitfalls, with
+   nothing dropped or added) and equals the recipe's `contentHash`;
+4. the signature verifies over the hash together with the recipe's id, its
+   version, its scope and its organisation, so a version cannot be moved to
+   another recipe, version or organisation;
+5. the recipe, version, scope and organisation are the ones asked for. A
+   platform recipe is signed with scope `platform` and no organisation. An
+   organisation recipe verifies only for the organisation named by `--org` (or
+   the client organisation you act for), because the gateway does not tell the
+   client which organisation it belongs to; without it, and for any other
+   organisation, the recipe is refused.
 
-The risk, approval and idempotency notes are worked out for you after signing
-and are not covered. A recipe that fails any check is printed with
-`signature: NOT VERIFIED` and the reason, and the command exits 4. Do not follow
-it.
+An answer with a repeated JSON key is refused. Slug, status, services, source and
+timestamps are not signed and are shown as the gateway sent them.
+
+A recipe that fails any check is not printed, not shown as verified and not kept:
+the command prints `signature: NOT VERIFIED` with the reason and exits 4. Do not
+follow it.
 
 ## Settings
 
-Without flags, `settings` prints them. `--contribute` shares anonymised
-tool-usage patterns to improve recipes for everyone; `--serve` chooses which
-recipes tool search serves (`all`, only your organisation's, or none); `--mine`
-turns on mining your own usage for private recipes. Changing them is an
+Without flags, `settings` prints them. `--serve` chooses which recipes tool
+search offers (`all`, only your organisation's, or none). Changing it is an
 administrator's and is audited; it is refused in an agent session (exit 10).
 
 ## Exit status

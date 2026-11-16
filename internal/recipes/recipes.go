@@ -1,21 +1,25 @@
 // Package recipes holds the shape of a tool recipe (a playbook for using a
-// few tools well) and checks its signature without asking the gateway again.
+// few tools well) and checks its signature against the keys the gateway publishes.
 package recipes
 
 import (
-	"bytes"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/patrikmichi/zuano-cli/internal/signing"
 )
 
-// KeysPath is where the gateway publishes the keys recipes are signed with.
-const KeysPath = "/api/v1/recipes/keys"
+// Platform and Org are the two scopes a recipe is signed for.
+const (
+	Platform = "platform"
+	Org      = "org"
+)
 
 // Step is one step of a recipe.
 type Step struct {
@@ -25,10 +29,6 @@ type Step struct {
 	FallbackFor int    `json:"fallbackFor,omitempty"`
 	Tool        string `json:"tool"`
 	Instruction string `json:"instruction"`
-	// Risk and Approval are worked out for the caller when served; they are
-	// never signed.
-	Risk     string `json:"risk,omitempty"`
-	Approval string `json:"approval,omitempty"`
 }
 
 // Pitfall is a way a step goes wrong and what to do instead.
@@ -39,179 +39,249 @@ type Pitfall struct {
 	Fix        string   `json:"fix"`
 }
 
-// ToolHint says whether a tool call can be retried.
-type ToolHint struct {
-	Tool             string `json:"tool"`
-	Idempotency      string `json:"idempotency"`
-	IdempotencyParam string `json:"idempotencyParam,omitempty"`
-}
-
-// Evidence is how well a recipe has worked.
-type Evidence struct {
-	SuccessRate    *float64 `json:"successRate"`
-	SuccessRateLow *float64 `json:"successRateLow"`
-	SampleSize     *int     `json:"sampleSize"`
-	WindowDays     int      `json:"windowDays"`
-	LastEval       *struct {
-		At     string  `json:"at"`
-		Score  float64 `json:"score"`
-		RunID  string  `json:"runId"`
-		Passed bool    `json:"passed"`
-	} `json:"lastEval"`
-}
-
-// Signature is what vouches for a recipe's content. Signed is the exact
-// content that was signed, so a copy that was altered afterwards differs from it.
+// Signature names the key that signed a recipe and the place it was signed for.
 type Signature struct {
-	Alg         string         `json:"alg"`
-	KeyID       string         `json:"keyId"`
-	Signer      string         `json:"signer"`
-	ContentHash string         `json:"contentHash"`
-	Sig         string         `json:"sig"`
-	Signed      map[string]any `json:"signed"`
+	KeyID     string  `json:"keyId"`
+	Signature string  `json:"signature"`
+	Scope     string  `json:"scope"`
+	OrgID     *string `json:"orgId"`
 }
 
 // Recipe is a recipe as the gateway serves it.
 type Recipe struct {
-	ID         string   `json:"id"`
-	Slug       string   `json:"slug"`
-	Version    int      `json:"version"`
-	Title      string   `json:"title"`
-	UseCase    string   `json:"useCase"`
-	Services   []string `json:"services"`
-	Difficulty struct {
+	ID             string     `json:"id"`
+	Slug           string     `json:"slug"`
+	Version        int        `json:"version"`
+	CurrentVersion *int       `json:"currentVersion"`
+	LatestVersion  int        `json:"latestVersion"`
+	Services       []string   `json:"services"`
+	Source         string     `json:"source"`
+	Overrides      *string    `json:"overrides"`
+	Status         string     `json:"status"`
+	ContentHash    string     `json:"contentHash"`
+	Signature      *Signature `json:"signature"`
+	Editable       bool       `json:"editable"`
+	Title          string     `json:"title"`
+	UseCase        string     `json:"useCase"`
+	Difficulty     struct {
 		Level  string `json:"level"`
 		Reason string `json:"reason"`
 	} `json:"difficulty"`
-	PrimaryTools []string   `json:"primaryTools"`
-	RelatedTools []string   `json:"relatedTools"`
-	Steps        []Step     `json:"steps"`
-	Pitfalls     []Pitfall  `json:"pitfalls"`
-	Tools        []ToolHint `json:"tools"`
-	Source       string     `json:"source"`
-	Overrides    string     `json:"overrides,omitempty"`
-	Status       string     `json:"status"`
-	Evidence     Evidence   `json:"evidence"`
-	Signature    Signature  `json:"signature"`
-	URL          string     `json:"url"`
+	PrimaryTools []string  `json:"primaryTools"`
+	RelatedTools []string  `json:"relatedTools"`
+	Steps        []Step    `json:"steps"`
+	Pitfalls     []Pitfall `json:"pitfalls"`
+	CreatedAt    string    `json:"createdAt"`
+	UpdatedAt    string    `json:"updatedAt"`
 }
 
-// shown is the part of a recipe the signature covers, as it is displayed.
-func (r Recipe) shown() map[string]any {
-	steps := make([]any, len(r.Steps))
-	for i, s := range r.Steps {
-		m := map[string]any{"order": s.Order, "kind": s.Kind, "tool": s.Tool, "instruction": s.Instruction}
-		if s.Condition != "" {
-			m["condition"] = s.Condition
-		}
-		if s.FallbackFor != 0 {
-			m["fallbackFor"] = s.FallbackFor
-		}
-		steps[i] = m
-	}
-	pits := make([]any, len(r.Pitfalls))
-	for i, p := range r.Pitfalls {
-		m := map[string]any{"tool": p.Tool, "text": p.Text, "fix": p.Fix}
-		if len(p.ErrorCodes) > 0 {
-			m["errorCodes"] = strs(p.ErrorCodes)
-		}
-		pits[i] = m
-	}
-	return map[string]any{
-		"id": r.ID, "version": r.Version, "title": r.Title, "useCase": r.UseCase, "services": strs(r.Services),
-		"difficulty":   map[string]any{"level": r.Difficulty.Level, "reason": r.Difficulty.Reason},
-		"primaryTools": strs(r.PrimaryTools), "relatedTools": strs(r.RelatedTools), "steps": steps, "pitfalls": pits,
-	}
+// Summary is one entry of a list of recipes.
+type Summary struct {
+	ID           string   `json:"id"`
+	Slug         string   `json:"slug"`
+	Title        string   `json:"title"`
+	UseCase      string   `json:"useCase"`
+	Services     []string `json:"services"`
+	Source       string   `json:"source"`
+	Status       string   `json:"status"`
+	Version      int      `json:"version"`
+	StepCount    int      `json:"stepCount"`
+	PitfallCount int      `json:"pitfallCount"`
+	UpdatedAt    string   `json:"updatedAt"`
 }
 
-func strs(list []string) []any {
-	out := make([]any, len(list))
-	for i, s := range list {
-		out[i] = s
-	}
-	return out
+// Expect is what the caller asked for; a recipe that answers something else is refused.
+type Expect struct {
+	// ID is the recipe id that was requested.
+	ID string
+	// Version is the version that was requested; 0 means the served one.
+	Version int
+	// OrgID is the organisation the caller reads recipes for. An organisation
+	// recipe verifies only for this one; it may be empty when the caller reads
+	// platform recipes only.
+	OrgID string
 }
 
 // Verification is the outcome of checking a recipe's signature.
 type Verification struct {
 	Verified bool
-	Signer   string
+	Scope    string
 	KeyID    string
 	Reason   string
 }
 
-// Verify checks that the signature is by a published key over the signed
-// content, that the content hashes to what the signature says, and that the
-// recipe shown is that content. keys are the published keys.
-func Verify(r Recipe, keys []signing.Key) Verification {
-	s := r.Signature
-	v := Verification{Signer: s.Signer, KeyID: s.KeyID}
-	fail := func(format string, a ...any) Verification {
+// KeySource returns the published keys, given the id of the key a recipe names.
+type KeySource func(keyID string) ([]Key, error)
+
+// contentFields are the parts of a recipe the content hash covers.
+var contentFields = []string{"title", "useCase", "difficulty", "primaryTools", "relatedTools", "steps", "pitfalls"}
+
+// Open reads the gateway's answer to a recipe request and verifies it. The
+// recipe comes back only when every check passed: the keys come from keys,
+// never from the answer; the content hash is recomputed from the content as
+// received; the signature covers that hash with the recipe's id, version, scope
+// and organisation; and those match what was asked for.
+func Open(raw []byte, want Expect, keys KeySource) (Recipe, Verification) {
+	var v Verification
+	fail := func(format string, a ...any) (Recipe, Verification) {
+		v.Verified = false
 		v.Reason = fmt.Sprintf(format, a...)
-		return v
+		return Recipe{}, v
 	}
-	if s.Sig == "" || s.KeyID == "" || s.Signed == nil {
+	doc, err := signing.DecodeStrict(raw)
+	if err != nil {
+		return fail("the answer is not a clean JSON document: %v", err)
+	}
+	rec, ok := field[map[string]any](doc, "recipe")
+	if !ok {
+		return fail("the answer holds no recipe")
+	}
+	id, _ := field[string](rec, "id")
+	if id == "" || id != want.ID {
+		return fail("the answer is not the recipe that was asked for")
+	}
+	version, ok := intField(rec, "version")
+	if !ok || version < 1 {
+		return fail("the recipe has no valid version")
+	}
+	if want.Version > 0 && version != want.Version {
+		return fail("the answer is version %d, not the version asked for", version)
+	}
+	sigObj, ok := field[map[string]any](rec, "signature")
+	if !ok {
 		return fail("the recipe is not signed")
 	}
-	if s.Alg != "" && s.Alg != "ed25519" {
-		return fail("unsupported algorithm %q", s.Alg)
+	keyID, _ := field[string](sigObj, "keyId")
+	sigText, _ := field[string](sigObj, "signature")
+	scope, _ := field[string](sigObj, "scope")
+	if keyID == "" || sigText == "" {
+		return fail("the recipe is not signed")
 	}
-	signed, err := signing.CanonicalJSON(s.Signed)
+	v.KeyID, v.Scope = keyID, scope
+	var orgID any
+	rawOrg, present := sigObj["orgId"]
+	switch o := rawOrg.(type) {
+	case nil:
+		if !present {
+			return fail("the signature names no organisation field")
+		}
+	case string:
+		orgID = o
+	default:
+		return fail("the signature names no valid organisation")
+	}
+
+	published, err := keys(keyID)
 	if err != nil {
-		return fail("the signed content cannot be read: %v", err)
+		return fail("the published keys could not be read: %v", err)
 	}
-	sum := sha256.Sum256(signed)
-	if s.ContentHash != "" && hex.EncodeToString(sum[:]) != s.ContentHash {
-		return fail("the signed content does not match its hash")
-	}
-	sig, err := base64.StdEncoding.DecodeString(s.Sig)
+	pub, err := publicKeyFor(published, keyID)
 	if err != nil {
-		return fail("the signature is not base64")
-	}
-	if err := signing.VerifyMessage(keys, s.KeyID, signed, sig); err != nil {
 		return fail("%v", err)
 	}
-	want, err := signing.CanonicalJSON(subset(s.Signed, r.shown()))
+
+	hash, err := contentHash(rec)
 	if err != nil {
-		return fail("the signed content cannot be compared: %v", err)
+		return fail("%v", err)
 	}
-	got, err := signing.CanonicalJSON(r.shown())
+	if shown, _ := field[string](rec, "contentHash"); shown != hash {
+		return fail("the content does not match its hash")
+	}
+
+	envelope, err := signing.CanonicalJSON(map[string]any{
+		"contentHash": hash, "orgId": orgID, "recipeId": id, "scope": scope, "version": json.Number(strconv.Itoa(version)),
+	})
 	if err != nil {
-		return fail("the recipe cannot be compared: %v", err)
+		return fail("the signed envelope cannot be built: %v", err)
 	}
-	if !bytes.Equal(want, got) {
-		return fail("the recipe shown differs from the content that was signed")
+	sig, err := base64.StdEncoding.DecodeString(sigText)
+	if err != nil || len(sig) != ed25519.SignatureSize || !ed25519.Verify(pub, envelope, sig) {
+		return fail("the signature does not match the content")
+	}
+
+	switch scope {
+	case Platform:
+		if orgID != nil {
+			return fail("a platform recipe is signed for no organisation")
+		}
+	case Org:
+		org, _ := orgID.(string)
+		switch {
+		case org == "":
+			return fail("an organisation recipe names no organisation")
+		case want.OrgID == "":
+			return fail("this is an organisation recipe and your organisation is not known; pass --org to say which")
+		case org != want.OrgID:
+			return fail("the recipe is signed for another organisation")
+		}
+	default:
+		return fail("the signature has an unknown scope")
+	}
+
+	var parsed struct {
+		Recipe Recipe `json:"recipe"`
+	}
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		return fail("the recipe cannot be read: %v", err)
 	}
 	v.Verified = true
-	return v
+	return parsed.Recipe, v
 }
 
-// subset keeps from signed only the keys that shown has, normalised through
-// JSON so numbers compare equal.
-func subset(signed, shown map[string]any) map[string]any {
-	out := map[string]any{}
-	for k := range shown {
-		if v, ok := signed[k]; ok {
-			out[k] = v
+// contentHash is the SHA-256 of the canonical JSON of the content fields of rec,
+// taken from the document as received so that nothing in them is dropped or added.
+func contentHash(rec map[string]any) (string, error) {
+	content := make(map[string]any, len(contentFields))
+	for _, name := range contentFields {
+		value, ok := rec[name]
+		if !ok || value == nil {
+			return "", fmt.Errorf("the recipe has no %s", name)
 		}
+		content[name] = value
 	}
-	return out
+	canon, err := signing.CanonicalJSON(content)
+	if err != nil {
+		return "", fmt.Errorf("the content cannot be hashed: %v", err)
+	}
+	sum := sha256.Sum256(canon)
+	return hex.EncodeToString(sum[:]), nil
+}
+
+func publicKeyFor(keys []Key, keyID string) (ed25519.PublicKey, error) {
+	for _, k := range keys {
+		if k.KeyID != keyID {
+			continue
+		}
+		if k.Alg != Algorithm {
+			return nil, fmt.Errorf("the key %q uses the algorithm %q, which is not accepted", keyID, k.Alg)
+		}
+		raw, err := base64.StdEncoding.DecodeString(k.PublicKey)
+		if err != nil || len(raw) != ed25519.PublicKeySize {
+			return nil, fmt.Errorf("the key %q is not a valid Ed25519 public key", keyID)
+		}
+		return ed25519.PublicKey(raw), nil
+	}
+	return nil, ErrNoKey
 }
 
 // ErrNoKey is returned when a key set holds no key with the signature's id.
-var ErrNoKey = errors.New("no published key has that id")
+var ErrNoKey = errors.New("no published key has the id the recipe is signed with")
 
-// Decode reads a recipe and its envelope.
-func Decode(raw []byte) (Recipe, error) {
-	var doc struct {
-		Recipe Recipe `json:"recipe"`
+func field[T any](m any, name string) (T, bool) {
+	obj, ok := m.(map[string]any)
+	if !ok {
+		var zero T
+		return zero, false
 	}
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	if err := dec.Decode(&doc); err != nil {
-		return Recipe{}, err
+	v, ok := obj[name].(T)
+	return v, ok
+}
+
+func intField(m map[string]any, name string) (int, bool) {
+	n, ok := field[json.Number](m, name)
+	if !ok {
+		return 0, false
 	}
-	if doc.Recipe.ID == "" {
-		return Recipe{}, errors.New("the answer holds no recipe")
-	}
-	return doc.Recipe, nil
+	i, err := strconv.Atoi(n.String())
+	return i, err == nil && strconv.Itoa(i) == n.String()
 }

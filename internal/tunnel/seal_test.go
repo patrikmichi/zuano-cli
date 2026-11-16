@@ -310,7 +310,7 @@ func TestGuard(t *testing.T) {
 		}
 	}
 	// A skewed clock is corrected by the server's offset.
-	g.Offset = -2 * time.Minute
+	g.SetOffset(-2 * time.Minute)
 	skewed := baseHeader(RequestHeader{Target: "erp", IssuedAtMs: now.Add(-2 * time.Minute).UnixMilli()})
 	if err := g.Check(skewed, now); err != nil {
 		t.Errorf("skew correction: %v", err)

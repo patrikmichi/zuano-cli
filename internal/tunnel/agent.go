@@ -153,6 +153,7 @@ func NewAgent(o AgentOptions) (*Agent, error) {
 		stdio: map[string]*StdioSupervisor{}, metrics: newMetrics(), started: o.Now(),
 		reloadCh: make(chan struct{}, 1), statusNow: make(chan struct{}, 1), rotateNow: make(chan struct{}, 1), restartCh: make(chan struct{}, 1),
 	}
+	a.guard.SetStart(a.started)
 	a.cfgPtr.Store(cfg)
 	a.noteConfigFile()
 	return a, nil
@@ -176,9 +177,7 @@ func (a *Agent) identity() *Identity {
 }
 
 func (a *Agent) checkGuard(h RequestHeader, now time.Time) error {
-	a.idMu.Lock()
-	defer a.idMu.Unlock()
-	a.guard.Offset = time.Duration(a.offset.Load())
+	a.guard.SetOffset(time.Duration(a.offset.Load()))
 	return a.guard.Check(h, now)
 }
 

@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -311,7 +312,14 @@ type Request struct {
 	digest     [32]byte
 	stream     *streamCipher
 	gateway    ed25519.PublicKey
+	// mu guards ended: the stream is read in order by one reader, but its state must not depend on that.
+	mu    sync.Mutex
+	ended bool
 }
+
+// ErrStreamEnded means a chunk was offered after the stream ended, by the final
+// chunk or by a chunk that did not open.
+var ErrStreamEnded = fmt.Errorf("%w: the request stream has ended", ErrDecrypt)
 
 // OpenRequest unwraps the content key with one of the agent's keys, checks the
 // gateway's signature over the header and opens the header. It does not check
@@ -377,12 +385,33 @@ func OpenRequest(env OpenEnvelope, keys []AgentKey, gw GatewayKeys) (*Request, e
 	return &Request{Header: h, Routing: routing, GatewayKID: env.GatewayKID, digest: d, stream: stream, gateway: pub}, nil
 }
 
-// Chunk opens the next body chunk.
-func (r *Request) Chunk(ct []byte) ([]byte, error) { return r.stream.open(kindData, ct) }
+// Chunk opens the next body chunk. What it returns has not been checked against
+// the gateway's signature over the whole stream: that happens in Final, so the
+// body must not be acted on before Final returns nil. A chunk that does not
+// open ends the stream, and so does Final.
+func (r *Request) Chunk(ct []byte) ([]byte, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.ended {
+		return nil, ErrStreamEnded
+	}
+	pt, err := r.stream.open(kindData, ct)
+	if err != nil {
+		r.ended = true
+	}
+	return pt, err
+}
 
 // Final opens the last chunk and checks the gateway's signature over the whole
-// stream, so a body that was cut, reordered or altered is refused.
+// stream, so a body that was cut, reordered or altered is refused. It can be
+// called once; afterwards the stream accepts nothing.
 func (r *Request) Final(ct []byte) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.ended {
+		return ErrStreamEnded
+	}
+	r.ended = true
 	raw, err := r.stream.open(kindFinal, ct)
 	if err != nil {
 		return err
@@ -457,14 +486,23 @@ func (r *ResponseSealer) End(t ResponseTrailer) ([]byte, error) {
 	return r.stream.seal(kindFinal, raw), nil
 }
 
+// restartSkew is how far before its start the agent still accepts a request:
+// the clock the broker reported is only as exact as one round trip.
+const restartSkew = 5 * time.Second
+
 // Guard refuses requests that are stale, repeated or meant for someone else.
+// It remembers nonces and request ids for Memory, in this process only, so a
+// request seen before a restart is not remembered: SetStart closes that gap by
+// refusing what was issued before the process started. Safe for concurrent use.
 type Guard struct {
 	OrgID, NetworkID string
 	Window           time.Duration
 	Memory           time.Duration
-	// Offset is the gateway's clock minus the agent's, from HELLO_ACK.
-	Offset time.Duration
-	seen   map[string]time.Time
+	mu               sync.Mutex
+	// offset is the gateway's clock minus the agent's, from HELLO_ACK.
+	offset  time.Duration
+	started time.Time
+	seen    map[string]time.Time
 }
 
 // NewGuard starts a guard for one identity.
@@ -472,8 +510,27 @@ func NewGuard(orgID, networkID string) *Guard {
 	return &Guard{OrgID: orgID, NetworkID: networkID, Window: 60 * time.Second, Memory: 5 * time.Minute, seen: map[string]time.Time{}}
 }
 
+// SetOffset sets the gateway's clock minus the agent's.
+func (g *Guard) SetOffset(d time.Duration) {
+	g.mu.Lock()
+	g.offset = d
+	g.mu.Unlock()
+}
+
+// SetStart records when this process started, on the agent's clock. A request
+// issued before then, beyond restartSkew, is refused even inside the freshness
+// window, because a copy of it could have been seen before the replay memory
+// was lost. Without a start there is no such floor.
+func (g *Guard) SetStart(t time.Time) {
+	g.mu.Lock()
+	g.started = t
+	g.mu.Unlock()
+}
+
 // Check validates freshness, identity and uniqueness of a request header.
 func (g *Guard) Check(h RequestHeader, now time.Time) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	if h.V != ProtoVersion {
 		return fmt.Errorf("%w: header version %d", ErrDecrypt, h.V)
 	}
@@ -481,8 +538,11 @@ func (g *Guard) Check(h RequestHeader, now time.Time) error {
 		return fmt.Errorf("%w: the request is for another organisation or network", ErrSignature)
 	}
 	issued := time.UnixMilli(h.IssuedAtMs)
-	if d := now.Add(g.Offset).Sub(issued); d > g.Window || d < -g.Window {
+	if d := now.Add(g.offset).Sub(issued); d > g.Window || d < -g.Window {
 		return ErrExpired
+	}
+	if !g.started.IsZero() && issued.Before(g.started.Add(g.offset).Add(-restartSkew)) {
+		return fmt.Errorf("%w: issued before this agent started", ErrExpired)
 	}
 	if len(h.Nonce) != 16 {
 		return fmt.Errorf("%w: nonce", ErrDecrypt)

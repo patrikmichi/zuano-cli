@@ -35,7 +35,9 @@ type sealedRequest struct {
 	env     OpenEnvelope
 	chunks  [][]byte
 	final   []byte
-	respKey *ecdh.PrivateKey
+	// lateData and lateFinal each follow final directly, so each would open if the agent let it.
+	lateData, lateFinal []byte
+	respKey             *ecdh.PrivateKey
 }
 
 func baseHeader(h RequestHeader) RequestHeader {
@@ -140,6 +142,10 @@ func (g *testGateway) seal(h RequestHeader, body [][]byte, agents ...AgentKey) *
 	}
 	trailer, _ := json.Marshal(RequestTrailer{Sig: ed25519.Sign(endKey, endSigMessage(d, stream.roll))})
 	out.final = stream.seal(kindFinal, trailer)
+	// What a misbehaving gateway could send after the end: data, and a second end.
+	afterData, afterFinal := *stream, *stream
+	out.lateData = afterData.seal(kindData, []byte("late"))
+	out.lateFinal = afterFinal.seal(kindFinal, trailer)
 	return out
 }
 

@@ -1,0 +1,9 @@
+{
+  "secret": "whsec_enVhbm8tdGVzdC12ZWN0b3Itc2VjcmV0LTAxMjM0NTY=",
+  "previousSecret": "whsec_enVhbm8tcHJldmlvdXMtc2VjcmV0LTAxMjM0NTY3ODk=",
+  "id": "evt_vec1",
+  "timestamp": 1792922400,
+  "body": "{\"id\":\"evt_vec1\",\"type\":\"zuano.trigger.event\",\"version\":1,\"timestamp\":\"2026-10-25T10:00:00.000Z\",\"metadata\":{\"trigger_id\":\"wtr_1\",\"trigger_type\":\"github.push\",\"connected_account_id\":\"ca_1\",\"auth_config_id\":null,\"user_id\":\"user-1\",\"org_id\":\"org_1\",\"project_id\":\"prj_1\",\"trace_id\":null},\"data\":{\"ref\":\"refs/heads/main\"}}",
+  "signature": "v1,B5XBmpQWSTHAIzTbJ3MPmA5Knpc8AgRVcA9/V+17Auo=",
+  "previousSignature": "v1,CVKmek6vdrhRoqF+H5jgS6T08kd8Qt6k1wF2MMUbpNA="
+}

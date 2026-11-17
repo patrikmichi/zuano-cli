@@ -258,7 +258,10 @@ func RotateKeys(ctx context.Context, c *http.Client, id *Identity, stateDir stri
 	if err != nil {
 		return err
 	}
-	old := id.Current()
+	old, err := id.SigningKey(now)
+	if err != nil {
+		return err
+	}
 	token, err := MintJWT(old, id.AgentID, app.String(), id.NetworkID, now)
 	if err != nil {
 		return err
@@ -282,6 +285,10 @@ func RotateKeys(ctx context.Context, c *http.Client, id *Identity, stateDir stri
 	body := map[string]any{
 		"agent_id": id.AgentID, "new_sign_pub": next.SignPub(), "new_enc_pub": next.EncPub(),
 		"nonce": ch.Nonce, "old_kid": old.KID(), "signature": ed25519.Sign(old.SignPriv, msg),
+	}
+	// The gateway remembers every token id for the token's lifetime, so the challenge's token cannot sign this request too.
+	if token, err = MintJWT(old, id.AgentID, app.String(), id.NetworkID, now); err != nil {
+		return err
 	}
 	if err := appRequest(ctx, c, http.MethodPost, app.String()+"/api/networks/agents/rotate", token, body, &res); err != nil {
 		return err
@@ -318,7 +325,11 @@ func ConfigHints(ctx context.Context, c *http.Client, id *Identity, now time.Tim
 	if err != nil {
 		return nil, err
 	}
-	token, err := MintJWT(id.Current(), id.AgentID, app.String(), id.NetworkID, now)
+	key, err := id.SigningKey(now)
+	if err != nil {
+		return nil, err
+	}
+	token, err := MintJWT(key, id.AgentID, app.String(), id.NetworkID, now)
 	if err != nil {
 		return nil, err
 	}

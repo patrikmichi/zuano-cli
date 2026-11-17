@@ -56,6 +56,20 @@ type identityFile struct {
 // Current is the key the agent signs with and receives on.
 func (id *Identity) Current() AgentKey { return id.Keys[0] }
 
+// ErrKeyExpired means no key is left to sign with: the gateway refuses a token
+// signed by an expired or rotated-out key, and only enrollment makes a new one.
+var ErrKeyExpired = fmt.Errorf("the agent has no valid signing key (the current one is past its expiry or was rotated out); enroll it again with `%s enroll --token nxt_...`", BinaryName)
+
+// SigningKey is the key a request to the gateway or the broker is signed with:
+// the current one, unless it is past its expiry or was rotated out.
+func (id *Identity) SigningKey(now time.Time) (AgentKey, error) {
+	k := id.Current()
+	if k.RetiredAt != nil || (!k.NotAfter.IsZero() && !now.Before(k.NotAfter)) {
+		return AgentKey{}, fmt.Errorf("%w (key %s)", ErrKeyExpired, k.KID())
+	}
+	return k, nil
+}
+
 // ActiveKeys are the keys that may still open a request: the current one and
 // any retired less than KeyOverlap ago.
 func (id *Identity) ActiveKeys(now time.Time) []AgentKey {

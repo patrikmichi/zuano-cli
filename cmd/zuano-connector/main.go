@@ -50,7 +50,7 @@ Commands:
   update   [--check] [--allow-downgrade]                 update this binary
   version                                                print the version
 
-Exit status: 0 ok, 1 failure, 2 invalid config or usage, 3 the agent was revoked.
+Exit status: 0 ok, 1 failure, 2 invalid config or usage, 3 the agent was revoked or has no valid key left.
 `
 
 type common struct {
@@ -115,7 +115,7 @@ func exitFor(err error) int {
 		return exitOK
 	case errors.As(err, &ce), errors.Is(err, tunnel.ErrNotEnrolled):
 		return exitConfig
-	case errors.Is(err, tunnel.ErrRevoked):
+	case errors.Is(err, tunnel.ErrRevoked), errors.Is(err, tunnel.ErrKeyExpired):
 		return exitRevoked
 	}
 	return exitFailure

@@ -463,6 +463,9 @@ func (a *Agent) Run(parent context.Context) error {
 		case errors.Is(kind, ErrRevoked):
 			a.log.Event("error", "revoked", map[string]any{"error": kind.Error()})
 			return kind
+		case errors.Is(err, ErrKeyExpired):
+			a.log.Event("error", "key_expired", map[string]any{"error": err.Error()})
+			return err
 		default:
 			a.log.Event("warn", "disconnected", map[string]any{"error": err.Error()})
 		}
@@ -546,12 +549,17 @@ func (a *Agent) rotate(ctx context.Context) error {
 	cp := *a.id
 	cp.Keys = append([]AgentKey(nil), a.id.Keys...)
 	a.idMu.Unlock()
-	if err := RotateKeys(ctx, a.opts.HTTP, &cp, a.stateDir(), a.now()); err != nil {
+	err := RotateKeys(ctx, a.opts.HTTP, &cp, a.stateDir(), a.now())
+	// A failed save leaves the gateway on the new key, so the old one must not sign again.
+	if err != nil && cp.Current().KID() == a.identity().Current().KID() {
 		return err
 	}
 	a.idMu.Lock()
 	a.id.Keys = cp.Keys
 	a.idMu.Unlock()
+	if err != nil {
+		a.log.Event("error", "identity_save_failed", map[string]any{"error": err.Error()})
+	}
 	a.log.Event("info", "rotated", map[string]any{"kid": cp.Current().KID()})
 	// The broker learns the new key from the gateway; reconnect so the
 	// connection is authenticated with it.

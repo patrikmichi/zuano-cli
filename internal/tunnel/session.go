@@ -96,7 +96,11 @@ func (a *Agent) session(ctx context.Context) (stable bool, err error) {
 		return false, &ErrConfig{[]string{err.Error()}}
 	}
 	u, _ := url.Parse(endpoint)
-	token, err := MintJWT(id.Current(), id.AgentID, u.Scheme+"://"+u.Host, id.NetworkID, a.now())
+	key, err := id.SigningKey(a.now())
+	if err != nil {
+		return false, err
+	}
+	token, err := MintJWT(key, id.AgentID, u.Scheme+"://"+u.Host, id.NetworkID, a.now())
 	if err != nil {
 		return false, err
 	}

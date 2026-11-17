@@ -431,7 +431,7 @@ func TestRunEnrollsAContainerFromItsEnvironment(t *testing.T) {
 }
 
 func TestExitFor(t *testing.T) {
-	for err, want := range map[error]int{nil: 0, errors.New("x"): 1, tunnel.ErrRevoked: 3, tunnel.ErrNotEnrolled: 2, &tunnel.ErrConfig{Problems: []string{"p"}}: 2} {
+	for err, want := range map[error]int{nil: 0, errors.New("x"): 1, tunnel.ErrRevoked: 3, tunnel.ErrKeyExpired: 3, tunnel.ErrNotEnrolled: 2, &tunnel.ErrConfig{Problems: []string{"p"}}: 2} {
 		if got := exitFor(err); got != want {
 			t.Errorf("exitFor(%v) = %d, want %d", err, got, want)
 		}

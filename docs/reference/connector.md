@@ -52,7 +52,7 @@ agent connects but receives nothing until an administrator approves it
 | `zuano-connector version` | version, protocol, commit, build date |
 
 Exit status: 0 ok, 1 failure, 2 invalid config or usage (systemd does not
-restart on it), 3 the agent was revoked (nor on this). `status`, `pause`,
+restart on it), 3 the agent was revoked or has no valid key left (nor on this). `status`, `pause`,
 `resume` and `rotate` talk to the running agent over `<state-dir>/control.sock`,
 which only the agent's user can open.
 
@@ -147,4 +147,6 @@ version that does not connect within two minutes is rolled back.
 ## Keys
 
 Keys rotate before they expire (a third of their life before); the old key
-still opens requests for 24 hours. A revoked agent exits with status 3.
+still opens requests for 24 hours. The agent signs only with its current key, never with one that is past
+its expiry or was rotated out; when none is left (rotation kept failing until the key expired) it stops with a
+message to enroll again, and a revoked agent stops the same way. Both exit with status 3.

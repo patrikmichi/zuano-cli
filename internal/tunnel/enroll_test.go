@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -28,6 +29,10 @@ type fakeApp struct {
 	mu      sync.Mutex
 	enrolls []enrollRequest
 	rotated []map[string]any
+	// raw holds the request bodies of enrollment and rotation as they came off the wire.
+	raw [][]byte
+	// tokens holds the bearer token of every signed request.
+	tokens []string
 	status  int
 	key     AgentKey
 	hints   []string
@@ -39,8 +44,10 @@ func newFakeApp(t *testing.T) *fakeApp {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/networks/enroll", func(w http.ResponseWriter, r *http.Request) {
 		var req enrollRequest
-		_ = json.NewDecoder(r.Body).Decode(&req)
+		rawBody, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(rawBody, &req)
 		app.mu.Lock()
+		app.raw = append(app.raw, rawBody)
 		app.enrolls = append(app.enrolls, req)
 		st := app.status
 		app.mu.Unlock()
@@ -80,8 +87,10 @@ func newFakeApp(t *testing.T) *fakeApp {
 			Signature []byte `json:"signature"`
 			OldKID    string `json:"old_kid"`
 		}
-		_ = json.NewDecoder(r.Body).Decode(&body)
+		rawBody, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(rawBody, &body)
 		app.mu.Lock()
+		app.raw = append(app.raw, rawBody)
 		key := app.key
 		app.mu.Unlock()
 		if !app.verifyJWT(r.Header.Get("Authorization")) || !ed25519.Verify(key.SignPub(), digestOf("ctun.v1 rotate", body.Nonce, body.NewSign, body.NewEnc), body.Signature) {
@@ -110,6 +119,9 @@ func newFakeApp(t *testing.T) *fakeApp {
 }
 
 func (a *fakeApp) verifyJWT(h string) bool {
+	a.mu.Lock()
+	a.tokens = append(a.tokens, strings.TrimPrefix(h, "Bearer "))
+	a.mu.Unlock()
 	parts := strings.Split(strings.TrimPrefix(h, "Bearer "), ".")
 	if len(parts) != 3 {
 		return false

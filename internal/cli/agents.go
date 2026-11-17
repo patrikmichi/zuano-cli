@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -42,7 +43,7 @@ person, refused while ZUANO_AGENT is set (exit 10), and resume and revoke ask
 for a passkey confirmation (exit 14 when nobody can give it). A suspended,
 revoked or expired identity's own requests end with exit 33.`,
 	}
-	cmd.AddCommand(agentsListCmd(), agentsShowCmd(), agentsActivityCmd(), agentsStateCmd("suspend"), agentsStateCmd("resume"), agentsStateCmd("revoke"), agentsDevicesCmd(), agentsShadowCmd(), agentsQuarantineCmd())
+	cmd.AddCommand(agentsListCmd(), agentsShowCmd(), agentsActivityCmd(), agentsAccessCmd(), agentsStateCmd("suspend"), agentsStateCmd("resume"), agentsStateCmd("revoke"), agentsDevicesCmd(), agentsShadowCmd(), agentsQuarantineCmd())
 	return cmd
 }
 
@@ -241,6 +242,71 @@ func agentsActivityCmd() *cobra.Command {
 	f.bind(cmd, "Print the response body unchanged")
 	cmd.Flags().StringVar(&from, "from", "", "First day, YYYY-MM-DD")
 	cmd.Flags().StringVar(&to, "to", "", "Last day, YYYY-MM-DD")
+	return cmd
+}
+
+func agentsAccessCmd() *cobra.Command {
+	var f approvalFlags
+	var service string
+	cmd := &cobra.Command{
+		Use:   "access <id> --service SERVICE",
+		Short: "Show what an identity may do with one service, worked out from the live policy",
+		Long: `For each risk level of the service, prints the mode (allowed, approval or off),
+what decides it and the tools in it. A cell whose tools are decided by different
+things is decided by "mixed"; its tools list their own mode and source.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if service == "" {
+				return errors.New("--service is required")
+			}
+			c, err := approvalsClient(f.gatewayURL)
+			if err != nil {
+				return err
+			}
+			var doc struct {
+				Service string `json:"service"`
+				Cells   []struct {
+					Risk   string `json:"risk"`
+					Mode   string `json:"mode"`
+					Source string `json:"source"`
+					Tools  []struct {
+						Tool   string `json:"tool"`
+						Mode   string `json:"mode"`
+						Source string `json:"source"`
+						RuleID string `json:"ruleId"`
+					} `json:"tools"`
+				} `json:"cells"`
+			}
+			path := "/api/agents/" + url.PathEscape(args[0]) + "/access?" + url.Values{"service": {service}}.Encode()
+			raw, err := gatewayJSON(cmd.Context(), c, http.MethodGet, path, nil, &doc)
+			if err != nil {
+				return err
+			}
+			out := cmd.OutOrStdout()
+			if f.jsonOut {
+				printRaw(out, raw)
+				return nil
+			}
+			fmt.Fprintf(out, "%s\n", textsafe.Clean(doc.Service))
+			for _, cell := range doc.Cells {
+				decided := orDash(textsafe.Clean(cell.Source))
+				if cell.Source == "mixed" {
+					decided += " (tools differ)"
+				}
+				fmt.Fprintf(out, "  %-12s %-10s decided by %s\n", textsafe.Clean(cell.Risk), textsafe.Clean(cell.Mode), decided)
+				for _, tool := range cell.Tools {
+					rule := ""
+					if tool.RuleID != "" {
+						rule = " " + textsafe.Clean(tool.RuleID)
+					}
+					fmt.Fprintf(out, "    %-24s %-10s %s%s\n", textsafe.Clean(tool.Tool), textsafe.Clean(tool.Mode), orDash(textsafe.Clean(tool.Source)), rule)
+				}
+			}
+			return nil
+		},
+	}
+	f.bind(cmd, "Print the response body unchanged")
+	cmd.Flags().StringVar(&service, "service", "", "The service to work out the access of (required)")
 	return cmd
 }
 

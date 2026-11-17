@@ -5,23 +5,10 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
-
-// chatFixture reads a response document of the chat and approval-route
-// routes. The gateway ships no fixtures for them; these follow the response
-// schemas of its OpenAPI document.
-func chatFixture(t *testing.T, name string) string {
-	t.Helper()
-	raw, err := os.ReadFile(filepath.Join("testdata", "chat", name))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(raw)
-}
 
 // firstRoute is the stored route of the approval-routes fixture, the body of
 // the route read.
@@ -30,7 +17,7 @@ func firstRoute(t *testing.T) string {
 	var doc struct {
 		Routes []json.RawMessage `json:"routes"`
 	}
-	if err := json.Unmarshal([]byte(chatFixture(t, "approval-routes.json")), &doc); err != nil || len(doc.Routes) == 0 {
+	if err := json.Unmarshal([]byte(contractFixture(t, "chat-approval-routes.json")), &doc); err != nil || len(doc.Routes) == 0 {
 		t.Fatalf("fixture: %v", err)
 	}
 	return string(doc.Routes[0])
@@ -39,15 +26,15 @@ func firstRoute(t *testing.T) string {
 func TestApprovalsRoutes(t *testing.T) {
 	var testBody map[string]any
 	ps := packGateway(t, routeMap{
-		"GET /api/admin/approval-routes":       jsonReply(200, chatFixture(t, "approval-routes.json")),
+		"GET /api/admin/approval-routes":       jsonReply(200, contractFixture(t, "chat-approval-routes.json")),
 		"GET /api/admin/approval-routes/rte_1": jsonReply(200, `{"route":`+firstRoute(t)+`}`),
-		"POST /api/admin/approval-routes/test": jsonReply(200, chatFixture(t, "approval-route-test.json")),
+		"POST /api/admin/approval-routes/test": jsonReply(200, contractFixture(t, "chat-approval-route-test.json")),
 	})
 	out, err := runCommand(t, ApprovalsCmd(), "routes", "list")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"rte_1", "Finance writes", "stripe,fakturoid", "write,outward", "dm_requester, dm_group grp_fin, channel C1 (chi_1)", "Default (default)", "any"} {
+	for _, want := range []string{"rte_1", "Finance writes", "stripe,fakturoid", "write,outward", "dm_requester, dm_group grp_fin, dm_group grp_gone, channel C1 (chi_1)", "Default (default)", "1000", "any"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("list lacks %q:\n%s", want, out)
 		}
@@ -69,7 +56,7 @@ func TestApprovalsRoutes(t *testing.T) {
 	if testBody["service"] != "stripe" || testBody["tool"] != "create_refund" || testBody["risk"] != "write" || testBody["source"] != "agent" || testBody["requester"] != "ann@example.com" {
 		t.Errorf("body = %v", testBody)
 	}
-	for _, want := range []string{`Matches route "Finance writes" (detail keys)`, "requester ann@acme.test: mapped", "group bob@acme.test (group grp_fin): unmapped", "channel C1 (chi_1)", "groups without a reachable member: grp_empty", "Nothing was sent."} {
+	for _, want := range []string{`Matches route "Finance writes" (detail keys)`, "group bob@acme.test (group grp_fin): mapped", "group di@acme.test (group grp_fin): opted_out", "group ed@acme.test (group grp_fin): unmapped", "channel C1 (chi_1)", "groups without a reachable member: grp_gone", "Nothing was sent."} {
 		if !strings.Contains(out, want) {
 			t.Errorf("test lacks %q:\n%s", want, out)
 		}
@@ -135,20 +122,20 @@ func chatRoutes(installs, identities string) routeMap {
 
 func TestChatStatus(t *testing.T) {
 	packGateway(t, routeMap{
-		"GET /api/me/chat-identities":       jsonReply(200, chatFixture(t, "chat-identities.json")),
-		"GET /api/admin/chat/installations": jsonReply(200, chatFixture(t, "chat-installations.json")),
-		"GET /api/admin/chat/reachability":  jsonReply(200, chatFixture(t, "chat-reachability.json")),
+		"GET /api/me/chat-identities":       jsonReply(200, contractFixture(t, "chat-identities.json")),
+		"GET /api/admin/chat/installations": jsonReply(200, contractFixture(t, "chat-installations.json")),
+		"GET /api/admin/chat/reachability":  jsonReply(200, contractFixture(t, "chat-reachability.json")),
 	})
 	out, err := runCommand(t, ChatCmd(), "status")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Slack", "Acme", "Microsoft Teams", "0a1b2c3d-0000-4000-8000-123456789abc", "admin consent needed", "3 of 5 approvers can be reached", "Linked: Slack as U0ANN in Acme (direct messages off)"} {
+	for _, want := range []string{"Slack", "Acme", "Microsoft Teams", "0a1b2c3d-0000-4000-8000-123456789abc", "admin consent needed", "1 of 5 approvers can be reached", "Linked: Slack as U0ANN in Acme (direct messages off)"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("status lacks %q:\n%s", want, out)
 		}
 	}
-	if out, err := runCommand(t, ChatCmd(), "status", "--json"); err != nil || !strings.Contains(out, `"reachability":{"total":5,"reachable":3}`) {
+	if out, err := runCommand(t, ChatCmd(), "status", "--json"); err != nil || !strings.Contains(out, `"reachability":{"total":5,"reachable":1}`) {
 		t.Errorf("json: %q %v", out, err)
 	}
 }
@@ -230,4 +217,53 @@ func TestDoctorChat(t *testing.T) {
 	if ok, d := check(); !ok || !strings.Contains(d, "not available") {
 		t.Errorf("unavailable: %v %q", ok, d)
 	}
+}
+
+// The gateway's list of the requests its chat and approval-route fixtures
+// answer is replayed against the commands: each request is one the client
+// sends, with the body the gateway recorded.
+func TestContract_ChatRequestsAreTheOnesTheClientSends(t *testing.T) {
+	var reqs []struct {
+		Request string         `json:"request"`
+		Body    map[string]any `json:"body"`
+		Status  int            `json:"status"`
+		Fixture string         `json:"fixture"`
+	}
+	if err := json.Unmarshal([]byte(contractFixture(t, "chat-cli-requests.json")), &reqs); err != nil || len(reqs) == 0 {
+		t.Fatalf("chat-cli-requests.json: %v", err)
+	}
+	routes := routeMap{}
+	for _, r := range reqs {
+		routes[r.Request] = jsonReply(r.Status, contractFixture(t, r.Fixture+".json"))
+	}
+	ps := packGateway(t, routes)
+	for _, r := range reqs {
+		var err error
+		switch r.Request {
+		case "GET /api/admin/chat/installations", "GET /api/admin/chat/reachability", "GET /api/me/chat-identities":
+			_, err = runCommand(t, ChatCmd(), "status")
+		case "GET /api/admin/approval-routes":
+			_, err = runCommand(t, ApprovalsCmd(), "routes", "list")
+		case "POST /api/admin/approval-routes/test":
+			_, err = runCommand(t, ApprovalsCmd(), "routes", "test", "--service", str(r.Body["service"]), "--tool", str(r.Body["tool"]), "--risk", str(r.Body["risk"]),
+				"--source", str(r.Body["source"]), "--requester", str(r.Body["requester"]), "--route-hint", str(r.Body["routeHint"]))
+			if got := ps.body(r.Request, 0); !reflect.DeepEqual(got, r.Body) {
+				t.Errorf("%s: sent %v, the gateway recorded %v", r.Request, got, r.Body)
+			}
+		default:
+			t.Errorf("the gateway records %q, which no command here sends", r.Request)
+			continue
+		}
+		if err != nil {
+			t.Errorf("%s: %v", r.Request, err)
+		}
+		if ps.count(r.Request) == 0 {
+			t.Errorf("%s was never sent", r.Request)
+		}
+	}
+}
+
+func str(v any) string {
+	s, _ := v.(string)
+	return s
 }

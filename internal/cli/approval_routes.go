@@ -159,9 +159,9 @@ func routesShowCmd() *cobra.Command {
 
 func routesTestCmd() *cobra.Command {
 	var f approvalFlags
-	var service, tool, risk, source, requester string
+	var service, tool, risk, source, requester, routeHint string
 	cmd := &cobra.Command{
-		Use:   "test --service S --tool T --risk R [--source agent|workflow|cli] [--requester EMAIL]",
+		Use:   "test --service S --tool T --risk R [--source agent|workflow|cli] [--requester EMAIL] [--route-hint HINT]",
 		Short: "Show which route a call would take and who would be asked, without sending anything",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -188,6 +188,9 @@ func routesTestCmd() *cobra.Command {
 			}
 			if requester != "" {
 				body["requester"] = requester
+			}
+			if routeHint != "" {
+				body["routeHint"] = routeHint
 			}
 			var doc struct {
 				Route struct {
@@ -239,5 +242,6 @@ func routesTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&risk, "risk", "", "The call's risk: read, write, destructive or outward")
 	cmd.Flags().StringVar(&source, "source", "", "Where the call comes from: agent (default), workflow or cli")
 	cmd.Flags().StringVar(&requester, "requester", "", "The member who asked (default: you)")
+	cmd.Flags().StringVar(&routeHint, "route-hint", "", "The hint the call carries for choosing a route, such as finance")
 	return cmd
 }

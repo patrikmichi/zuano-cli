@@ -1830,6 +1830,16 @@
               }
             }
           },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
           "429": {
             "description": "Refusal.",
             "content": {
@@ -7671,6 +7681,248 @@
         ]
       }
     },
+    "/agents/{id}/access": {
+      "get": {
+        "operationId": "agents.access",
+        "summary": "One service of an agent identity's access worked out from the live policy: each risk cell with the mode, what decides it (`mixed` when its tools are decided by different things) and every tool in it.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "service": {
+                      "type": "string"
+                    },
+                    "cells": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "risk": {
+                            "type": "string",
+                            "enum": [
+                              "read",
+                              "write",
+                              "destructive",
+                              "outward"
+                            ]
+                          },
+                          "mode": {
+                            "type": "string",
+                            "enum": [
+                              "allowed",
+                              "approval",
+                              "off"
+                            ]
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "read_only_scope",
+                              "no_grant",
+                              "org_tool_override",
+                              "argument_rule",
+                              "org_matrix",
+                              "default",
+                              "mixed"
+                            ]
+                          },
+                          "tools": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "tool": {
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "type": "string",
+                                  "enum": [
+                                    "allowed",
+                                    "approval",
+                                    "off"
+                                  ]
+                                },
+                                "source": {
+                                  "type": "string",
+                                  "enum": [
+                                    "read_only_scope",
+                                    "no_grant",
+                                    "org_tool_override",
+                                    "argument_rule",
+                                    "org_matrix",
+                                    "default"
+                                  ]
+                                },
+                                "ruleId": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "tool",
+                                "mode",
+                                "source"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "risk",
+                          "mode",
+                          "source",
+                          "tools"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "service",
+                    "cells"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalReauth"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api"
+          }
+        ]
+      }
+    },
     "/agents/{id}/activity": {
       "get": {
         "operationId": "agents.activity",
@@ -10776,7 +11028,7 @@
                           "priority": {
                             "type": "integer",
                             "minimum": 1,
-                            "maximum": 999
+                            "maximum": 1000
                           },
                           "match": {
                             "type": "object",
@@ -11469,7 +11721,7 @@
                         "priority": {
                           "type": "integer",
                           "minimum": 1,
-                          "maximum": 999
+                          "maximum": 1000
                         },
                         "match": {
                           "type": "object",
@@ -12038,7 +12290,7 @@
                         "priority": {
                           "type": "integer",
                           "minimum": 1,
-                          "maximum": 999
+                          "maximum": 1000
                         },
                         "match": {
                           "type": "object",
@@ -12736,7 +12988,7 @@
                         "priority": {
                           "type": "integer",
                           "minimum": 1,
-                          "maximum": 999
+                          "maximum": 1000
                         },
                         "match": {
                           "type": "object",
@@ -18375,6 +18627,26 @@
                           "consented": {
                             "type": "boolean"
                           },
+                          "intended_mode": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "new_skill",
+                                  "eval_cases"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "intended_skill_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "expires_at": {
                             "type": "string"
                           },
@@ -18394,6 +18666,8 @@
                           "redaction",
                           "injection_flagged",
                           "consented",
+                          "intended_mode",
+                          "intended_skill_id",
                           "expires_at",
                           "created_at"
                         ],
@@ -18712,6 +18986,26 @@
                         "consented": {
                           "type": "boolean"
                         },
+                        "intended_mode": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "new_skill",
+                                "eval_cases"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "intended_skill_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
                         "expires_at": {
                           "type": "string"
                         },
@@ -18731,6 +19025,8 @@
                         "redaction",
                         "injection_flagged",
                         "consented",
+                        "intended_mode",
+                        "intended_skill_id",
                         "expires_at",
                         "created_at"
                       ],
@@ -19110,7 +19406,7 @@
       },
       "get": {
         "operationId": "session_skills.captures.get",
-        "summary": "One of the caller’s own captures with its redacted session. Anyone else, administrators included, gets not found.",
+        "summary": "One of the caller’s own captures with its redacted session and the newest draft made from it. Anyone else, administrators included, gets not found.",
         "security": [
           {
             "browserSession": []
@@ -19207,6 +19503,26 @@
                         "consented": {
                           "type": "boolean"
                         },
+                        "intended_mode": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "new_skill",
+                                "eval_cases"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "intended_skill_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
                         "expires_at": {
                           "type": "string"
                         },
@@ -19226,6 +19542,8 @@
                         "redaction",
                         "injection_flagged",
                         "consented",
+                        "intended_mode",
+                        "intended_skill_id",
                         "expires_at",
                         "created_at"
                       ],
@@ -19244,11 +19562,105 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "extraction": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "capture_id": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "mode": {
+                              "type": "string",
+                              "enum": [
+                                "new_skill",
+                                "eval_cases"
+                              ]
+                            },
+                            "target_resource_id": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "queued",
+                                "running",
+                                "succeeded",
+                                "failed",
+                                "cancelled",
+                                "superseded"
+                              ]
+                            },
+                            "proposal": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "error": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "error_class": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "created_at": {
+                              "type": "string"
+                            },
+                            "finished_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "capture_id",
+                            "mode",
+                            "target_resource_id",
+                            "status",
+                            "proposal",
+                            "error",
+                            "error_class",
+                            "created_at",
+                            "finished_at"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
                     "capture",
-                    "session"
+                    "session",
+                    "extraction"
                   ],
                   "additionalProperties": false
                 }
@@ -19357,7 +19769,7 @@
     "/captures/{id}/consent": {
       "post": {
         "operationId": "session_skills.captures.consent",
-        "summary": "Accept the statement for a capture that arrived without consent; nothing reads it before.",
+        "summary": "Accept the statement for a capture that arrived without consent; nothing reads it before. A capture an AI app asked to draft a skill from is queued for drafting at once, with the mode and skill it named.",
         "security": [
           {
             "browserSession": []
@@ -19472,6 +19884,26 @@
                     "consented": {
                       "type": "boolean"
                     },
+                    "intended_mode": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "new_skill",
+                            "eval_cases"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "intended_skill_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "expires_at": {
                       "type": "string"
                     },
@@ -19491,6 +19923,8 @@
                     "redaction",
                     "injection_flagged",
                     "consented",
+                    "intended_mode",
+                    "intended_skill_id",
                     "expires_at",
                     "created_at"
                   ],
@@ -20010,6 +20444,26 @@
                     "consented": {
                       "type": "boolean"
                     },
+                    "intended_mode": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "new_skill",
+                            "eval_cases"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "intended_skill_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "expires_at": {
                       "type": "string"
                     },
@@ -20029,6 +20483,8 @@
                     "redaction",
                     "injection_flagged",
                     "consented",
+                    "intended_mode",
+                    "intended_skill_id",
                     "expires_at",
                     "created_at"
                   ],
@@ -20097,6 +20553,300 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RefusalConflict"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/skills/from-session"
+          }
+        ]
+      }
+    },
+    "/captures/upload": {
+      "post": {
+        "operationId": "session_skills.captures.upload",
+        "summary": "Keep a redacted copy of a session sent as a multipart form: one text file in the part `file` (.jsonl, .json, .md, .markdown or .txt), `format` (a documented source; markdown and plain text may follow from the file name), optional `conversation_id`, `consent_statement_version` and repeated `redact_term`. Redacted and scanned like a pasted session, and kept for the uploader alone.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "capture": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "agent_run",
+                            "mcp_session",
+                            "claude_code",
+                            "codex",
+                            "gemini_cli",
+                            "opencode",
+                            "cline",
+                            "claude_ai_export",
+                            "chatgpt_export",
+                            "markdown",
+                            "plain_text"
+                          ]
+                        },
+                        "via": {
+                          "type": "string",
+                          "enum": [
+                            "dashboard",
+                            "cli",
+                            "mcp"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "received",
+                            "ready",
+                            "extracting",
+                            "extracted",
+                            "accepted",
+                            "failed",
+                            "discarded",
+                            "expired"
+                          ]
+                        },
+                        "goal": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "bytes": {
+                          "type": "number"
+                        },
+                        "turns": {
+                          "type": "number"
+                        },
+                        "tool_calls": {
+                          "type": "number"
+                        },
+                        "redaction": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {}
+                        },
+                        "injection_flagged": {
+                          "type": "boolean"
+                        },
+                        "consented": {
+                          "type": "boolean"
+                        },
+                        "intended_mode": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "new_skill",
+                                "eval_cases"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "intended_skill_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "expires_at": {
+                          "type": "string"
+                        },
+                        "created_at": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "source",
+                        "via",
+                        "status",
+                        "goal",
+                        "bytes",
+                        "turns",
+                        "tool_calls",
+                        "redaction",
+                        "injection_flagged",
+                        "consented",
+                        "intended_mode",
+                        "intended_skill_id",
+                        "expires_at",
+                        "created_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "extraction": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "capture",
+                    "extraction"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalReauth"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlan"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalConflict"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
                 }
               }
             }
@@ -42528,10 +43278,164 @@
         }
       }
     },
+    "/link/{provider}/start": {
+      "get": {
+        "operationId": "chatLink.start",
+        "summary": "Browser redirect: send the signed-in member to Slack or Microsoft to prove which chat account is theirs. Answers 303 with the provider address in `Location`; a browser follows it and comes back to the link page.",
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "slack",
+                "teams"
+              ]
+            }
+          },
+          {
+            "name": "tenant",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "Redirect.",
+            "headers": {
+              "Location": {
+                "description": "Where to go next.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalValidation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalReauth"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalSuspended"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalConflict"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalRateLimited"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusalPlain"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalBillingUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "https://app.zuano.ai/api/chat"
+          }
+        ]
+      }
+    },
     "/link/complete": {
       "post": {
         "operationId": "chatLink.complete",
-        "summary": "Link the chat account of a link ticket to the signed-in member. Needs a passkey confirmation; a ticket works once.",
+        "summary": "Link the chat account of a link ticket to the signed-in member. Needs a passkey confirmation; a ticket works once. When the chat provider gave no address for the account, also needs the six-digit code the bot showed the chat user.",
         "security": [
           {
             "browserSession": []
@@ -42549,6 +43453,10 @@
                     "type": "string",
                     "minLength": 20,
                     "maxLength": 4000
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
                   }
                 },
                 "required": [
@@ -42805,6 +43713,9 @@
                     },
                     "emailVerified": {
                       "type": "boolean"
+                    },
+                    "codeRequired": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -42812,7 +43723,8 @@
                     "workspace",
                     "name",
                     "memberEmail",
-                    "emailVerified"
+                    "emailVerified",
+                    "codeRequired"
                   ],
                   "additionalProperties": false
                 }
@@ -55954,7 +56866,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefusalPlain"
+                  "$ref": "#/components/schemas/RefusalPolicyInvalid"
                 }
               }
             }
@@ -58017,7 +58929,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefusalPlain"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPolicyInvalid"
+                    }
+                  ]
                 }
               }
             }
@@ -59132,7 +60051,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefusalPlain"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RefusalPlain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RefusalPolicyInvalid"
+                    }
+                  ]
                 }
               }
             }
@@ -59664,7 +60590,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefusalPlain"
+                  "$ref": "#/components/schemas/RefusalPolicyInvalid"
                 }
               }
             }
@@ -61289,7 +62215,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefusalPlain"
+                  "$ref": "#/components/schemas/RefusalPolicyInvalid"
                 }
               }
             }
@@ -89525,6 +90451,82 @@
         ],
         "additionalProperties": false
       },
+      "RefusalPolicyInvalid": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "policy_invalid"
+          },
+          "message": {
+            "type": "string"
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "policy_syntax",
+                    "policy_duplicate_key",
+                    "policy_invalid",
+                    "policy_version",
+                    "policy_org_mismatch",
+                    "policy_kind_unknown",
+                    "policy_kind_version",
+                    "policy_kind_duplicate",
+                    "policy_unknown_reference",
+                    "policy_unknown_category",
+                    "policy_widening",
+                    "policy_duplicate_id",
+                    "policy_too_large",
+                    "secret_in_policy",
+                    "plan_required",
+                    "policy_pack_unknown",
+                    "pack_unverified",
+                    "policy_pack_invalid",
+                    "policy_pack_deny_removed",
+                    "policy_pack_remove_unknown"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "file": {
+                  "type": "string"
+                },
+                "line": {
+                  "type": "number"
+                },
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "file",
+                "line",
+                "path"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "error",
+          "message"
+        ],
+        "additionalProperties": false
+      },
       "RefusalPlain": {
         "type": "object",
         "properties": {
@@ -89538,6 +90540,28 @@
               "internal_error",
               "request_too_large",
               "response_too_large",
+              "a2a_agent_unavailable",
+              "a2a_skill_unknown",
+              "a2a_agent_identity_required",
+              "a2a_delegate_scope_missing",
+              "a2a_edge_denied",
+              "a2a_loop",
+              "a2a_depth_exceeded",
+              "a2a_chain_limit",
+              "a2a_scope_exceeded",
+              "chain_killed",
+              "chain_budget_exhausted",
+              "a2a_token_invalid",
+              "agent_not_pinned",
+              "agent_card_changed",
+              "a2a_skill_denied",
+              "identity_suspended",
+              "policy_off",
+              "a2a_dlp_blocked",
+              "a2a_part_unsupported",
+              "a2a_dispatch_unavailable",
+              "approval_refused",
+              "a2a_chain_unavailable",
               "auth_config_required",
               "auth_config_invalid",
               "auth_config_disabled",
@@ -89656,7 +90680,6 @@
               "upload_expired",
               "revision_conflict",
               "policy_conflict",
-              "policy_invalid",
               "policy_kind_duplicate",
               "policy_kind_unknown",
               "policy_kind_unsupported",

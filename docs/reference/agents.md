@@ -11,6 +11,7 @@ lists access review campaigns and exports their evidence.
 |---|---|
 | `zuano agents list [--kind K] [--status S] [--owner EMAIL] [--label k=v] [--stale] [--exposure low\|medium\|high] [--can svc[.tool] [--risk R] [--mode M]] [--json]` | `GET /api/agents` |
 | `zuano agents show <id>`, `activity <id> [--from DAY] [--to DAY]` | `GET /api/agents/{id}`, `/activity` |
+| `zuano agents access <id> --service S [--json]` | `GET /api/agents/{id}/access?service=S`: per risk level the mode (`allowed`, `approval`, `off`), what decides it (`read_only_scope`, `no_grant`, `org_tool_override`, `argument_rule`, `org_matrix`, `default`, or `mixed` when its tools differ) and the tools, each with its own mode and source |
 | `zuano agents suspend <id> --reason T`, `resume <id>`, `revoke <id> --reason T [--yes]` | `POST /api/agents/{id}/suspend\|resume\|revoke` |
 | `zuano agents devices`, `shadow-mcp` | `GET /api/agents/devices`, `/shadow-mcp` |
 | `zuano agents quarantine apply [--dry-run]` | `GET /api/agents/shadow-mcp/quarantine`, then `POST .../actions` |

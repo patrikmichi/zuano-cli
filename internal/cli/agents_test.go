@@ -383,3 +383,54 @@ func TestDoctorDeviceRow(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+const agentAccessJSON = `{"service":"stripe","cells":[` +
+	`{"risk":"read","mode":"allowed","source":"org_matrix","tools":[{"tool":"list_invoices","mode":"allowed","source":"org_matrix"}]},` +
+	`{"risk":"write","mode":"approval","source":"mixed","tools":[{"tool":"create_invoice","mode":"approval","source":"org_matrix"},{"tool":"create_refund","mode":"off","source":"argument_rule","ruleId":"rule_7"}]}]}`
+
+func TestAgentsAccess(t *testing.T) {
+	var q string
+	packGateway(t, routeMap{
+		"GET /api/agents/agt_1/access": func(_ *packServer, w http.ResponseWriter, r *http.Request) {
+			q = r.URL.RawQuery
+			_, _ = io.WriteString(w, agentAccessJSON)
+		},
+	})
+	out, err := runCommand(t, AgentsCmd(), "access", "agt_1", "--service", "stripe")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if q != "service=stripe" {
+		t.Errorf("query = %q", q)
+	}
+	for _, want := range []string{
+		"stripe", "read", "allowed", "decided by org_matrix", "list_invoices",
+		"write", "approval", "decided by mixed (tools differ)", "create_invoice", "create_refund", "off", "argument_rule", "rule_7",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("access lacks %q:\n%s", want, out)
+		}
+	}
+	raw, err := runCommand(t, AgentsCmd(), "access", "agt_1", "--service", "stripe", "--json")
+	if err != nil || strings.TrimSpace(raw) != agentAccessJSON {
+		t.Errorf("--json = %q, %v", raw, err)
+	}
+	if _, err := runCommand(t, AgentsCmd(), "access", "agt_1"); err == nil {
+		t.Error("access without --service was accepted")
+	}
+}
+
+func TestAgentsAccess_EscapesTheServiceAndStopsOnARefusal(t *testing.T) {
+	var q string
+	packGateway(t, routeMap{
+		"GET /api/agents/agt_1/access": func(_ *packServer, w http.ResponseWriter, r *http.Request) {
+			q = r.URL.RawQuery
+			w.WriteHeader(404)
+			_, _ = io.WriteString(w, `{"error":"not_found","message":"no such agent"}`)
+		},
+	})
+	_, err := runCommand(t, AgentsCmd(), "access", "agt_1", "--service", "a b&c")
+	if err == nil || q != "service=a+b%26c" {
+		t.Errorf("err = %v, query = %q", err, q)
+	}
+}

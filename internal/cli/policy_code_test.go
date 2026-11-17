@@ -491,3 +491,53 @@ func TestCISignInWithoutAToken(t *testing.T) {
 		t.Error("not in CI")
 	}
 }
+
+// The gateway lists a policy's problems as `diagnostics`; a section it refuses
+// answers with a sentence only. Both end with status 40 and show what is wrong.
+func TestPolicyValidate_ReadsTheGatewaysDiagnostics(t *testing.T) {
+	good := policyDir(t, goodPolicy)
+	for name, c := range map[string]struct {
+		body string
+		want []string
+	}{
+		"diagnostics": {
+			`{"error":"policy_invalid","message":"The policy does not compile: 2 problems.","diagnostics":[{"code":"policy_widening","message":"widens the platform floor","file":"policy.yaml","line":4,"path":"risk.matrix.stripe"},{"code":"secret_in_policy","message":"a credential is in the file","file":"policy.yaml","line":9,"path":"a2a.token"}]}`,
+			[]string{"policy.yaml:4: widens the platform floor", "policy.yaml:9: a credential is in the file", "(2 problem(s))"},
+		},
+		"sentence only": {
+			`{"error":"policy_invalid","message":"firewall: unknown upstream nope"}`,
+			[]string{"firewall: unknown upstream nope"},
+		},
+	} {
+		policyGateway(t, routeMap{"POST /api/policy/validate": jsonReply(422, c.body)})
+		out, err := runCommand(t, PolicyCmd(), "validate", "--dir", good)
+		if exitCodeOf(err) != 40 {
+			t.Errorf("%s: exit %d (%v)", name, exitCodeOf(err), err)
+			continue
+		}
+		all := out + err.Error()
+		for _, want := range c.want {
+			if !strings.Contains(all, want) {
+				t.Errorf("%s: output lacks %q:\n%s%v", name, want, out, err)
+			}
+		}
+	}
+}
+
+// Every code the gateway gives a policy diagnostic ends the command with the
+// policy status, whatever the code says about the problem.
+func TestPolicyValidate_EveryDiagnosticCodeEndsWithThePolicyStatus(t *testing.T) {
+	good := policyDir(t, goodPolicy)
+	for _, code := range []string{
+		"policy_syntax", "policy_duplicate_key", "policy_invalid", "policy_version", "policy_org_mismatch", "policy_kind_unknown",
+		"policy_kind_version", "policy_kind_duplicate", "policy_unknown_reference", "policy_unknown_category", "policy_widening",
+		"policy_duplicate_id", "policy_too_large", "secret_in_policy", "plan_required", "policy_pack_unknown", "pack_unverified",
+		"policy_pack_invalid", "policy_pack_deny_removed", "policy_pack_remove_unknown",
+	} {
+		policyGateway(t, routeMap{"POST /api/policy/validate": jsonReply(422, `{"error":"policy_invalid","message":"m","diagnostics":[{"code":"`+code+`","message":"problem","file":"policy.yaml","line":2,"path":"a.b"}]}`)})
+		out, err := runCommand(t, PolicyCmd(), "validate", "--dir", good)
+		if exitCodeOf(err) != 40 || !strings.Contains(out, "policy.yaml:2: problem") {
+			t.Errorf("%s: exit %d, %q, %v", code, exitCodeOf(err), out, err)
+		}
+	}
+}

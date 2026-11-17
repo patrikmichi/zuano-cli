@@ -72,13 +72,30 @@ func loadPolicy(cmd *cobra.Command, dir string) (*policyfile.Doc, error) {
 // policyFailure maps a failed policy request to its exit status.
 func policyFailure(w io.Writer, r gatewayReply) error {
 	var body struct {
-		Error  string            `json:"error"`
+		Error       string            `json:"error"`
+		Message     string            `json:"message"`
+		Diagnostics []policyfile.Diag `json:"diagnostics"`
+		Problems    []string          `json:"problems"`
+		// Errors is the list's earlier name, still read for a gateway that sends it.
 		Errors []policyfile.Diag `json:"errors"`
 	}
 	_ = json.Unmarshal(r.Body, &body)
 	switch body.Error {
 	case "policy_invalid":
-		return invalidPolicy(w, body.Errors)
+		diags := body.Diagnostics
+		if len(diags) == 0 {
+			diags = body.Errors
+		}
+		if len(diags) == 0 {
+			// A section or pack the gateway refuses lists sentences, or only the message.
+			for _, p := range body.Problems {
+				diags = append(diags, policyfile.Diag{Message: p})
+			}
+		}
+		if len(diags) == 0 && body.Message != "" {
+			diags = []policyfile.Diag{{Message: body.Message}}
+		}
+		return invalidPolicy(w, diags)
 	case "policy_conflict":
 		return &ExitError{Code: exitPolicyConflict, Msg: fmt.Sprintf("the live policy changed since the plan was made: run `%s` again", brand.Cmd("policy plan"))}
 	case "policy_managed_in_git":

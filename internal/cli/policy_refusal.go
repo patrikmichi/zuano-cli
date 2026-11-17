@@ -48,6 +48,18 @@ var refusalCodes = map[string]int{
 	"response_too_large":         1,
 	"spec_fetch_blocked":         1,
 	"federated_mode_unsupported": 1,
+
+	// Agent-to-agent refusals: the chain may not take another hop, the caller
+	// lacks an authority, or the pipeline could not carry the call.
+	"a2a_edge_denied":             exitA2AChainRefused,
+	"a2a_token_invalid":           exitA2AChainRefused,
+	"a2a_agent_identity_required": exitDenied,
+	"a2a_delegate_scope_missing":  exitDenied,
+	"a2a_skill_denied":            exitDenied,
+	"approval_refused":            exitDenied,
+	"a2a_part_unsupported":        1,
+	"a2a_dispatch_unavailable":    1,
+	"a2a_chain_unavailable":       1,
 }
 
 // policyRefusal recognises a call the organisation's or the platform's risk

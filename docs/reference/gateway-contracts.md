@@ -23,16 +23,15 @@ billing and suspension refusal, which must end with the exit code the registry
 gives it), the `plugin-*.json` documents and `skill-requirements.json`. Ids and
 timestamps are stable placeholders,
 so a fixture changes only when a route's shape does. The `billing-*.json` documents are the gateway's own
-(`gateway/contract-fixtures/`, which also names the request each answers); the chat and approval-route
-documents in `internal/cli/testdata/chat/` are written from the response schemas in the OpenAPI document,
-because the gateway ships none for them. The compliance bundle, its tampered copy and the public evidence key
+(`gateway/contract-fixtures/`, which also names the request each answers); so are the `chat-*.json`
+documents of the chat and approval-route routes, with `chat-cli-requests.json` naming the requests. The compliance bundle, its tampered copy and the public evidence key
 in `internal/evidence/testdata/` come from the gateway's `compliance:fixture` script and hold no private key.
 
 The gateway's OpenAPI document (`gateway/openapi/v1.json`) is vendored as
 `internal/cli/testdata/contracts/openapi-v1.json`; `ZUANO_GATEWAY_OPENAPI`
 names the gateway's own copy. The vendored copy is the integration branch's
-document as it stood at 15fcb4fcf, unedited (`make gen-openapi` copies it): the run, firewall, knowledge base,
-approval, billing, chat, approval-route and SDK session routes are all in it, so nothing is merged in by
+document as it stood at 81fba9cf2, unedited (`make gen-openapi` copies it): the run, firewall, knowledge base,
+approval, billing, chat, approval-route, agent-to-agent and SDK session routes are all in it, so nothing is merged in by
 hand. Regenerate it by copying `gateway/openapi/v1.json` from the integration
 branch. An operation names its own `servers` entry when it is not under
 `/api/v1`, and the test follows it. The contract tests send every
@@ -108,7 +107,7 @@ the constants in the code, both ways.
 | 2 | `usage` | bad flags or unreadable input; `policy plan --detailed-exitcode` also returns 2 for "changes present" |
 | 4 | `signature_invalid` | any signature or content-hash verification failure, including `signature_invalid` from the gateway when a publisher's signature does not match; never a timeout |
 | 5 | `not_signed_in` | any `401` the gateway answers with a credential it does not accept (an expired or revoked session, a stored API key it no longer knows, `reauth_required`): the message points to `zuano login` or a valid `ZUANO_API_KEY` and never shows the credential. The retired shared `GATEWAY_API_KEY` and a token without an organisation end here too |
-| 10 | `denied` | `policy_off`, DLP block, `meta_executor_blocked`, `source_not_preferred`, `agent_not_allowed`, `denied_by_policy`, `tool_not_pinned` |
+| 10 | `denied` | `policy_off`, DLP block, `meta_executor_blocked`, `source_not_preferred`, `agent_not_allowed`, `denied_by_policy`, `tool_not_pinned`, and the agent-to-agent refusals `agent_not_pinned`, `a2a_dlp_blocked`, `a2a_agent_identity_required`, `a2a_delegate_scope_missing`, `a2a_skill_denied`, `approval_refused` |
 | 11 | `approval_expired` | |
 | 12 | `pending_approval` | held call |
 | 13 | `rate_limited` | `429` only; never a quota |
@@ -128,7 +127,7 @@ the constants in the code, both ways.
 | 32 | `billing_unavailable` | |
 | 33 | `suspended` | `org_suspended`, `seat_suspended`, `ip_not_allowed`, `identity_suspended`, `identity_revoked`, `identity_expired`, `identity_refused` |
 | 34 | `network_offline` | REST `503` with `Retry-After` and `{"ok": false, "error": text, "network": {"error": "network_offline" \| "target_not_served" \| "egress_unavailable", "network"?}}`; also the `reason`/`error` codes of an MCP result |
-| 40 | `policy_invalid` | also DLP policy documents; a diagnostic with the code `policy_unknown_category` (a data category the catalog does not have) is one of its problems |
+| 40 | `policy_invalid` | also DLP policy documents; the gateway lists the problems as `diagnostics` (`code`, `message`, `file`, `line`, `path`), and every diagnostic code ends here, such as `policy_unknown_category` (a data category the catalog does not have), `policy_widening` or `secret_in_policy`; a refusal with only a sentence (`message`, or `problems`) is printed as it is |
 | 41 | `policy_conflict` | |
 | 42 | `policy_managed_in_git` | |
 | 43 | `tool_definition_changed` | |
@@ -136,7 +135,7 @@ the constants in the code, both ways.
 | 45 | `evidence_bundle_invalid` | `compliance verify` |
 | 46 | `evidence_keys_missing` | `compliance verify` |
 | 47 | `scan_pending` | `409` `scan_pending` on `sites/{id}/activate` or `sites/{id}/sharing`: the release's data protection scan has not finished, so it cannot go live or public yet; retry shortly |
-| 50 | `a2a_chain_refused` | `a2a_loop`, `a2a_depth_exceeded`, `a2a_chain_limit`, `a2a_scope_exceeded` |
+| 50 | `a2a_chain_refused` | `a2a_loop`, `a2a_depth_exceeded`, `a2a_chain_limit`, `a2a_scope_exceeded`, `a2a_edge_denied`, `a2a_token_invalid`: the chain may not take another hop |
 | 51 | `chain_killed` | |
 | 52 | `chain_budget_exhausted` | |
 | 53 | `agent_card_changed` | |
@@ -153,6 +152,10 @@ the constants in the code, both ways.
 | 70 | `verification_failed` | `400` `invalid_token` or `409` `verification_expired` on the publisher verification routes, or a domain check that found no proof; also `409` `domain_unverified` on an organisation domain's verify |
 | 71 | `handle_unavailable` | `409` `handle_taken` or `handle_reserved` |
 | 72 | `account_not_connected` | `-32042` whose link is `/api/fw/oauth/start?upstream=<slug>`: the person has not connected their own account to a firewalled server, and no `--wait` was given or the wait ended first |
+
+The agent-to-agent refusals that say nothing about the caller (`a2a_agent_unavailable`,
+`a2a_skill_unknown`, `a2a_part_unsupported`, `a2a_dispatch_unavailable`,
+`a2a_chain_unavailable`) end with 1 and keep the code in the JSON.
 
 SDK builder and catalog refusal codes map onto these by class: `400`, `409` and
 `422` end with 1 and keep the code in the JSON, `403` with 10, `402` with 30
@@ -831,19 +834,22 @@ the gateway's when it publishes one.
 
 | Route | Request and response |
 |---|---|
-| `GET /api/me/chat-identities` | `{"identities": [{"id", "provider": "slack\|teams", "workspace", "name", "dmOptOut"}]}` |
-| `GET /api/admin/chat/installations` | `{"installations": [{"id", "provider", "workspace", "status", "detail"?}]}`; `403` for a member |
-| `GET /api/admin/chat/reachability` | `{"eligible", "reachable"}`: approvers and how many can be reached in chat |
-| `GET /api/chat/link/{provider}/start` | a page: sign in to the chat app, then a passkey confirmation |
+| `GET /api/me/chat-identities` | `{"identities": [{"id", "provider": "slack\|teams", "tenantId", "workspace", "externalUserId", "method": "chat_link", "dmOptOut", "linkedAt"}]}`; fixture `chat-identities.json` |
+| `GET /api/admin/chat/installations` | `{"installations": [{"id", "provider", "tenantId", "displayName": null\|text, "status", "statusDetail": null\|text, "enterpriseInstall", "scopes", "settings", "createdAt"}], "configured": {"slack", "teams"}}`; `403` for a member; fixture `chat-installations.json` |
+| `GET /api/admin/chat/reachability` | `{"approvers": [{"email", "role", "reachable", "providers", "optedOut"}], "reachable", "total"}`: approvers and how many can be reached in chat; fixture `chat-reachability.json` |
+| `GET /api/chat/link/{provider}/start[?tenant=]` | a browser redirect (`303`, the provider's address in `Location`) for the signed-in member to prove which chat account is theirs; the CLI opens it and never follows it |
 | `GET /api/admin/approval-routes[/{id}]` | `{"routes": [ROUTE]}`, `{"route": ROUTE}`; readable by a personal CLI session |
-| `POST /api/admin/approval-routes/test` | `{"service", "tool", "risk", "source"?, "requester"?}` answers `{"route": {"name", "detail"}, "recipients": [{"kind", "name", "channel", "status": "mapped\|unmapped\|opted_out"}], "channels": [{"installation", "name", "warning"?}]}`; sends nothing |
+| `POST /api/admin/approval-routes/test` | `{"service", "tool", "risk", "source"?, "requester"?, "routeHint"?}` answers `{"route": {"id", "name", "isDefault"}, "restrictDeciders", "fourEyes", "detail", "recipients": [{"email", "via", "groupId"?, "status": "mapped\|unmapped\|opted_out"}], "channels": [{"installationId", "conversationId"}], "droppedGroups": [id]}`; sends nothing; fixture `chat-approval-route-test.json` |
 | `GET /api/approvals/{id}` | the approval object also carries `"notified": [{"channel": "slack\|teams\|email\|inbox", "target"?, "state": "pending\|delivered\|failed", "at"?}]` |
 
 ```json
-ROUTE = {"id", "name", "priority", "default"?, "match": {"services", "tools", "risks", "sources", "routeHints"},
-         "targets": [{"kind": "dm_requester\|dm_group\|channel", "groupId"?, "installationId"?, "conversationId"?, "name"?}],
-         "restrictDeciders", "fourEyes", "detail": "preview\|keys\|digest", "reminders": [number]}
+ROUTE = {"id", "name", "priority", "match": {"services", "tools", "risks", "sources", "routeHints", "requesterGroups"},
+         "targets": [{"kind": "dm_requester\|dm_group\|channel", "groupId"?, "installationId"?, "conversationId"?}],
+         "restrictDeciders", "fourEyes", "detail": null\|"preview\|keys\|digest", "reminders": [number], "escalation": null\|{...},
+         "enabled", "isDefault", "stored", "updatedBy", "updatedAt"}
 ```
+
+The built-in default route has the id `apr_builtin_default`, priority 1000 and `stored: false`. (`GET /api/admin/approval-routes` lists it after the stored routes; fixture `chat-approval-routes.json`.)
 
 Source: chat approvals plan (routes, identity mapping, REST and CLI sections).
 The plan names the routes and the CLI commands; the `{"routes": ...}` wrappers,

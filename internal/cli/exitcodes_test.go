@@ -148,3 +148,52 @@ func TestRouteRefusalMapsUseRegisteredCodes(t *testing.T) {
 		}
 	}
 }
+
+// Every refusal of the gateway's agent-to-agent pipeline, with the status the
+// gateway answers it with, ends with a deliberate exit status: the chain
+// refusals with their own, an authority the caller lacks with denied, and the
+// ones that say nothing about the caller with the generic failure.
+func TestA2ARefusalsEndWithTheirExitStatus(t *testing.T) {
+	enum := vendoredRefusalCodes(t)
+	for code, tc := range map[string]struct{ status, want int }{
+		"a2a_agent_unavailable":       {404, 1},
+		"a2a_skill_unknown":           {404, 1},
+		"a2a_agent_identity_required": {403, exitDenied},
+		"a2a_delegate_scope_missing":  {403, exitDenied},
+		"a2a_edge_denied":             {403, exitA2AChainRefused},
+		"a2a_loop":                    {403, exitA2AChainRefused},
+		"a2a_depth_exceeded":          {403, exitA2AChainRefused},
+		"a2a_chain_limit":             {403, exitA2AChainRefused},
+		"a2a_scope_exceeded":          {403, exitA2AChainRefused},
+		"chain_killed":                {403, exitChainKilled},
+		"chain_budget_exhausted":      {403, exitChainBudget},
+		"a2a_token_invalid":           {403, exitA2AChainRefused},
+		"agent_not_pinned":            {403, exitDenied},
+		"agent_card_changed":          {403, exitAgentCardChanged},
+		"a2a_skill_denied":            {403, exitDenied},
+		"identity_suspended":          {403, 33},
+		"policy_off":                  {403, exitDenied},
+		"a2a_dlp_blocked":             {403, exitDenied},
+		"a2a_part_unsupported":        {403, 1},
+		"a2a_dispatch_unavailable":    {403, 1},
+		"approval_refused":            {403, exitDenied},
+		"a2a_chain_unavailable":       {403, 1},
+	} {
+		t.Run(code, func(t *testing.T) {
+			if !slices.Contains(enum, code) {
+				t.Errorf("%s is not in the OpenAPI refusal codes", code)
+			}
+			body := []byte(`{"error":"` + code + `","message":"refused: reason."}`)
+			err := policyRefusal(body, nil)
+			if err == nil {
+				err = gatewayStatusError(tc.status, body)
+			}
+			if got := exitCodeOf(err); got != tc.want {
+				t.Errorf("exit %d (%v), want %d", got, err, tc.want)
+			}
+			if !strings.Contains(err.Error(), "refused: reason.") {
+				t.Errorf("the gateway's sentence is lost: %v", err)
+			}
+		})
+	}
+}

@@ -228,6 +228,7 @@ var builderInvocations = []struct {
 	{name: "market publisher verify email code", cmd: MarketCmd, args: []string{"publisher", "verify", "email", "--code", "abcdefghijklmnopqrst"}},
 	{name: "market publisher verify domain", cmd: MarketCmd, args: []string{"publisher", "verify", "domain", "acme.test"}},
 	{name: "market publisher verify domain check", cmd: MarketCmd, args: []string{"publisher", "verify", "domain", "--check"}},
+	{name: "agents access", cmd: AgentsCmd, args: []string{"access", "agt_1", "--service", "stripe"}},
 	{name: "a2a agents list", cmd: A2ACmd, args: []string{"agents", "list", "--kind", "external", "--external"}},
 	{name: "a2a agents show", cmd: A2ACmd, args: []string{"agents", "show", "acme-billing"}},
 	{name: "a2a agents register", cmd: A2ACmd, args: []string{"agents", "register", "--card-url", "https://agent.example/card.json", "--auth", "per-user", "--internal"}},
